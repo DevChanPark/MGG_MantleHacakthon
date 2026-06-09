@@ -1,0 +1,165 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum BattleType {
+  OPTION
+  TEXT_OPEN
+  IMAGE_CAPTION
+}
+
+enum BattleStatus {
+  OPEN
+  CLOSED
+  JUDGING
+  SETTLED
+  FAILED
+}
+
+enum ReportStatus {
+  OPEN
+  REVIEWED
+  DISMISSED
+}
+
+model User {
+  id          String   @id @default(cuid())
+  displayName String?
+  createdAt   DateTime @default(now())
+
+  battles Battle[]
+  entries Entry[]
+  reports Report[]
+
+  @@map("users")
+}
+
+model Battle {
+  id                String       @id @default(cuid())
+  battleType        BattleType
+  status            BattleStatus @default(OPEN)
+  prompt            String?
+  imageUrl          String?
+  createdByUserId   String
+  failureReason     String?
+  createdAt         DateTime     @default(now())
+  closedAt          DateTime?
+  judgingStartedAt  DateTime?
+  settledAt         DateTime?
+
+  createdBy User           @relation(fields: [createdByUserId], references: [id])
+  options   BattleOption[]
+  entries   Entry[]
+  rules     JudgingRule[]
+  verdict   Verdict?
+  settlement Settlement?
+  reports   Report[]
+
+  @@index([battleType])
+  @@index([status])
+  @@map("battles")
+}
+
+model BattleOption {
+  id        String   @id @default(cuid())
+  battleId  String
+  text      String
+  createdAt DateTime @default(now())
+
+  battle  Battle  @relation(fields: [battleId], references: [id], onDelete: Cascade)
+  entries Entry[]
+
+  @@index([battleId])
+  @@map("battle_options")
+}
+
+model Entry {
+  id                String   @id @default(cuid())
+  battleId          String
+  optionId          String?
+  content           String
+  submittedByUserId String
+  createdAt         DateTime @default(now())
+
+  battle      Battle        @relation(fields: [battleId], references: [id], onDelete: Cascade)
+  option      BattleOption? @relation(fields: [optionId], references: [id])
+  submittedBy User         @relation(fields: [submittedByUserId], references: [id])
+
+  @@index([battleId])
+  @@index([optionId])
+  @@map("entries")
+}
+
+model JudgingRule {
+  id        String   @id @default(cuid())
+  battleId  String
+  rulesJson Json
+  rulesHash String
+  createdAt DateTime @default(now())
+
+  battle Battle @relation(fields: [battleId], references: [id], onDelete: Cascade)
+
+  @@index([battleId])
+  @@map("judging_rules")
+}
+
+model Verdict {
+  id           String   @id @default(cuid())
+  battleId     String   @unique
+  judgeOutput  Json
+  hashPackage  Json
+  modelVersion String
+  createdAt    DateTime @default(now())
+
+  battle Battle @relation(fields: [battleId], references: [id], onDelete: Cascade)
+
+  @@map("verdicts")
+}
+
+model Settlement {
+  id               String   @id @default(cuid())
+  battleId          String   @unique
+  chainId           Int
+  contractAddress   String
+  txHash            String
+  explorerUrl       String
+  contentHash       String
+  optionsHash       String?
+  entriesRoot       String
+  rulesHash         String
+  modelVersionHash  String
+  winnerHash        String
+  mvpEntryHash      String?
+  verdictHash       String
+  settledAt         DateTime
+  payloadJson       Json
+
+  battle Battle @relation(fields: [battleId], references: [id], onDelete: Cascade)
+
+  @@index([chainId])
+  @@index([txHash])
+  @@map("settlements")
+}
+
+model Report {
+  id                String       @id @default(cuid())
+  battleId          String
+  reporterUserId    String
+  targetEntryId     String?
+  reason            String
+  status            ReportStatus @default(OPEN)
+  createdAt         DateTime     @default(now())
+  reviewedAt        DateTime?
+
+  battle   Battle @relation(fields: [battleId], references: [id], onDelete: Cascade)
+  reporter User   @relation(fields: [reporterUserId], references: [id])
+
+  @@index([battleId])
+  @@index([status])
+  @@map("reports")
+}
