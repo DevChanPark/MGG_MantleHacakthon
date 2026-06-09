@@ -33,3 +33,5 @@ STORAGE_PROVIDER=local
 ```
 
 Real AI and Mantle modes are backend-only. The frontend must never receive provider keys or private keys.
+
+Prisma stores battle type and status as strings. Valid values must come from `packages/shared`, not from duplicated Prisma enums.

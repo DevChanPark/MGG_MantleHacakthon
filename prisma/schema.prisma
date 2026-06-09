@@ -7,20 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum BattleType {
-  OPTION
-  TEXT_OPEN
-  IMAGE_CAPTION
-}
-
-enum BattleStatus {
-  OPEN
-  CLOSED
-  JUDGING
-  SETTLED
-  FAILED
-}
-
 enum ReportStatus {
   OPEN
   REVIEWED
@@ -41,8 +27,8 @@ model User {
 
 model Battle {
   id                String       @id @default(cuid())
-  battleType        BattleType
-  status            BattleStatus @default(OPEN)
+  battleType        String       @db.VarChar(32)
+  status            String       @default("OPEN") @db.VarChar(32)
   prompt            String?
   imageUrl          String?
   createdByUserId   String

@@ -98,6 +98,53 @@ Returns settled result:
 
 If result is not settled, returns `409 RESULT_NOT_READY`.
 
+Result response shape:
+
+```json
+{
+  "battle": {
+    "id": "battle-id",
+    "battleType": "TEXT_OPEN",
+    "status": "SETTLED",
+    "prompt": "Prompt text",
+    "imageUrl": null,
+    "options": [],
+    "createdAt": "2026-06-09T00:00:00.000Z",
+    "closedAt": "2026-06-09T00:01:00.000Z",
+    "settledAt": "2026-06-09T00:02:00.000Z"
+  },
+  "entries": [],
+  "verdict": {
+    "winnerType": "ENTRY",
+    "winnerOptionId": null,
+    "winnerEntryId": "entry-id",
+    "topEntries": [{ "rank": 1, "entryId": "entry-id", "score": 88, "reason": "Strongest answer." }],
+    "scoreTable": [{ "entryId": "entry-id", "optionId": null, "score": 88, "reason": "Strongest answer." }],
+    "verdictTitle": "AI verdict title",
+    "verdictText": "AI verdict text",
+    "shareSummary": "Short share text"
+  },
+  "hashPackage": {
+    "contentHash": "0x...",
+    "optionsHash": null,
+    "entriesRoot": "0x...",
+    "rulesHash": "0x...",
+    "modelVersionHash": "0x...",
+    "winnerHash": "0x...",
+    "mvpEntryHash": "0x...",
+    "verdictHash": "0x..."
+  },
+  "settlement": {
+    "id": "settlement-id",
+    "chainId": 5003,
+    "contractAddress": "0x...",
+    "txHash": "0x...",
+    "explorerUrl": "https://sepolia.mantlescan.xyz/tx/0x...",
+    "settledAt": "2026-06-09T00:02:00.000Z"
+  }
+}
+```
+
 ## `GET /api/archive`
 
 Returns settled battles only.
@@ -115,3 +162,9 @@ MVP local upload. The backend stores the raw image off-chain and returns a local
 ```
 
 On-chain settlement records only hashes from the verdict package. It never records raw comments, raw images, or personal data.
+
+## Shared Contracts
+
+`BattleType`, `BattleStatus`, `JudgeInput`, `JudgeOutput`, and `ResultResponse` are owned by `packages/shared`.
+
+Prisma stores `battleType` and `status` as strings so the shared package remains the single source of truth for valid battle/status values.

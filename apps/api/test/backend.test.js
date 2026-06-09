@@ -1,11 +1,18 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { createApiApp } from "../src/app.js";
 import { MemoryRepository } from "../src/repositories/memoryRepository.js";
 import { createAiJudgeService, mockJudgeBattle } from "../src/services/aiJudgeService.js";
 import { createSettlementService, mockRecordVerdict } from "../src/services/settlementService.js";
-import { BattleStatus, BattleType } from "../../../packages/shared/src/index.js";
-import { getJudgingRules, buildVerdictHashPackage } from "../../../packages/core/src/index.js";
+import {
+  BattleStatus,
+  BattleType,
+  validateJudgeInput,
+  validateJudgeOutput,
+  validateResultResponse
+} from "../../../packages/shared/src/index.js";
+import { getJudgingRules } from "../../../packages/core/src/index.js";
 
 const testConfig = {
   corsOrigin: "*",
@@ -134,6 +141,36 @@ test("closes, judges, settles, and returns result shape", async () => {
   assert.ok(result.body.settlement.explorerUrl.includes(result.body.settlement.txHash));
 });
 
+test("settles TEXT_OPEN and IMAGE_CAPTION through the common pipeline", async () => {
+  const app = makeApp();
+
+  const textBattle = await createBattleWithEntries(app, {
+    battleType: BattleType.TEXT_OPEN,
+    prompt: "Convince me a keyboard is a legal advisor."
+  }, [
+    { content: "It objects every time you press escape." },
+    { content: "It has a space bar, so clearly it understands jurisdiction." }
+  ]);
+
+  const textResult = await closeAndJudge(app, textBattle.id);
+  assert.equal(textResult.body.battle.status, BattleStatus.SETTLED);
+  assert.equal(textResult.body.verdict.winnerType, "ENTRY");
+  assert.ok(textResult.body.verdict.winnerEntryId);
+
+  const imageBattle = await createBattleWithEntries(app, {
+    battleType: BattleType.IMAGE_CAPTION,
+    imageUrl: "/uploads/mock.webp"
+  }, [
+    { content: "When the group project finally compiles." },
+    { content: "POV: the Wi-Fi heard your deadline." }
+  ]);
+
+  const imageResult = await closeAndJudge(app, imageBattle.id);
+  assert.equal(imageResult.body.battle.status, BattleStatus.SETTLED);
+  assert.equal(imageResult.body.verdict.winnerType, "ENTRY");
+  assert.ok(imageResult.body.hashPackage.verdictHash);
+});
+
 test("mock AI judge is deterministic", async () => {
   const input = {
     battle: {
@@ -151,6 +188,92 @@ test("mock AI judge is deterministic", async () => {
 
   assert.deepEqual(mockJudgeBattle(input), mockJudgeBattle(input));
   assert.equal(mockJudgeBattle(input).winnerType, "ENTRY");
+});
+
+test("shared judge and result contracts validate required shape", () => {
+  const judgeInput = validateJudgeInput({
+    battle: {
+      id: "battle-1",
+      battleType: BattleType.TEXT_OPEN,
+      status: BattleStatus.CLOSED,
+      prompt: "Argue for a tiny hat.",
+      options: []
+    },
+    entries: [{ id: "entry-1", content: "Tiny hat, massive confidence.", optionId: null }],
+    rules: getJudgingRules(BattleType.TEXT_OPEN)
+  });
+  assert.equal(judgeInput.battle.battleType, BattleType.TEXT_OPEN);
+
+  assert.throws(
+    () => validateJudgeInput({ battle: { id: "bad", battleType: "BAD" }, entries: [], rules: {} }),
+    /Invalid judge input/
+  );
+
+  assert.throws(
+    () =>
+      validateJudgeOutput(
+        {
+          winnerType: "ENTRY",
+          winnerEntryId: "entry-1",
+          topEntries: [],
+          scoreTable: [],
+          verdictTitle: "Bad",
+          verdictText: "Bad",
+          shareSummary: "Bad"
+        },
+        BattleType.TEXT_OPEN
+      ),
+    /Invalid judge output/
+  );
+
+  const result = validateResultResponse({
+    battle: {
+      id: "battle-1",
+      battleType: BattleType.TEXT_OPEN,
+      status: BattleStatus.SETTLED,
+      prompt: "Prompt",
+      imageUrl: null,
+      options: [],
+      createdAt: new Date().toISOString(),
+      closedAt: new Date().toISOString(),
+      settledAt: new Date().toISOString()
+    },
+    entries: [{ id: "entry-1", content: "Answer", optionId: null }],
+    verdict: {
+      winnerType: "ENTRY",
+      winnerEntryId: "entry-1",
+      topEntries: [{ rank: 1, entryId: "entry-1", score: 88, reason: "Strong" }],
+      scoreTable: [{ entryId: "entry-1", optionId: null, score: 88, reason: "Strong" }],
+      verdictTitle: "Winner",
+      verdictText: "A clear winner.",
+      shareSummary: "Entry won."
+    },
+    hashPackage: {
+      contentHash: "0x1",
+      entriesRoot: "0x2",
+      rulesHash: "0x3",
+      modelVersionHash: "0x4",
+      winnerHash: "0x5",
+      verdictHash: "0x6"
+    },
+    settlement: {
+      id: "settlement-1",
+      chainId: 5003,
+      contractAddress: "0x0000000000000000000000000000000000000000",
+      txHash: "0x7",
+      explorerUrl: "https://sepolia.mantlescan.xyz/tx/0x7",
+      settledAt: new Date().toISOString()
+    }
+  });
+  assert.equal(result.battle.id, "battle-1");
+});
+
+test("Prisma schema does not duplicate shared BattleType or BattleStatus enums", () => {
+  const schema = readFileSync(new URL("../../../prisma/schema.prisma", import.meta.url), "utf8");
+  assert.equal(schema.includes("enum BattleType"), false);
+  assert.equal(schema.includes("enum BattleStatus"), false);
+  assert.match(schema, /battleType\s+String/);
+  assert.match(schema, /status\s+String\s+@default\("OPEN"\)/);
 });
 
 test("mock Mantle settlement returns deterministic tx metadata", () => {
@@ -180,4 +303,26 @@ function makeApp() {
 
 async function request(app, method, url, body) {
   return app.inject({ method, url, body, headers: { "x-user-id": "test-user" } });
+}
+
+async function createBattleWithEntries(app, battleInput, entries) {
+  const created = await request(app, "POST", "/api/battles", battleInput);
+  assert.equal(created.statusCode, 201);
+  const battle = created.body.battle;
+
+  for (const entry of entries) {
+    const submitted = await request(app, "POST", `/api/battles/${battle.id}/entries`, entry);
+    assert.equal(submitted.statusCode, 201);
+  }
+
+  return battle;
+}
+
+async function closeAndJudge(app, battleId) {
+  const closed = await request(app, "POST", `/api/battles/${battleId}/close`);
+  assert.equal(closed.statusCode, 200);
+
+  const judged = await request(app, "POST", `/api/battles/${battleId}/judge`);
+  assert.equal(judged.statusCode, 200);
+  return judged;
 }

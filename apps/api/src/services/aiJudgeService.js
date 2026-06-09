@@ -1,5 +1,5 @@
 import { sha256Hex } from "../../../../packages/core/src/index.js";
-import { BattleType, validateJudgeOutput, WinnerType } from "../../../../packages/shared/src/index.js";
+import { BattleType, validateJudgeInput, validateJudgeOutput, WinnerType } from "../../../../packages/shared/src/index.js";
 
 export class AiJudgeError extends Error {
   constructor(message) {
@@ -19,37 +19,39 @@ export function createAiJudgeService(config) {
 }
 
 export async function judgeBattle(input, config = {}) {
+  const judgeInput = validateJudgeInput(input);
   if (config.mockAi) {
-    return mockJudgeBattle(input);
+    return mockJudgeBattle(judgeInput);
   }
 
-  if (input.battle.battleType === BattleType.OPTION) {
-    return judgeOptionBattle(input, config);
+  if (judgeInput.battle.battleType === BattleType.OPTION) {
+    return judgeOptionBattle(judgeInput, config);
   }
-  if (input.battle.battleType === BattleType.TEXT_OPEN) {
-    return judgeTextOpenBattle(input, config);
+  if (judgeInput.battle.battleType === BattleType.TEXT_OPEN) {
+    return judgeTextOpenBattle(judgeInput, config);
   }
-  if (input.battle.battleType === BattleType.IMAGE_CAPTION) {
-    return judgeImageCaptionBattle(input, config);
+  if (judgeInput.battle.battleType === BattleType.IMAGE_CAPTION) {
+    return judgeImageCaptionBattle(judgeInput, config);
   }
 
-  throw new AiJudgeError(`Unsupported battleType: ${input.battle.battleType}`);
+  throw new AiJudgeError(`Unsupported battleType: ${judgeInput.battle.battleType}`);
 }
 
 export async function judgeOptionBattle(input, config = {}) {
-  return callStructuredJudge(input, config);
+  return callStructuredJudge(validateJudgeInput(input), config);
 }
 
 export async function judgeTextOpenBattle(input, config = {}) {
-  return callStructuredJudge(input, config);
+  return callStructuredJudge(validateJudgeInput(input), config);
 }
 
 export async function judgeImageCaptionBattle(input, config = {}) {
-  return callStructuredJudge(input, config);
+  return callStructuredJudge(validateJudgeInput(input), config);
 }
 
 export function mockJudgeBattle(input) {
-  const scoredEntries = input.entries
+  const judgeInput = validateJudgeInput(input);
+  const scoredEntries = judgeInput.entries
     .map((entry) => {
       const seed = Number.parseInt(sha256Hex(`${entry.id}:${entry.content}`).slice(2, 10), 16);
       const humor = 45 + (seed % 50);
@@ -82,8 +84,8 @@ export function mockJudgeBattle(input) {
     reason: entry.reason
   }));
 
-  if (input.battle.battleType === BattleType.OPTION) {
-    const optionScores = input.battle.options
+  if (judgeInput.battle.battleType === BattleType.OPTION) {
+    const optionScores = judgeInput.battle.options
       .map((option) => {
         const entries = scoredEntries.filter((entry) => entry.optionId === option.id);
         const score =
@@ -113,13 +115,13 @@ export function mockJudgeBattle(input) {
         verdictText: "The winning side had the strongest mix of absurd confidence, meme energy, and argument quality.",
         shareSummary: "AI judged the comments, not the vote count, and crowned the side with the best nonsense."
       },
-      input.battle.battleType
+      judgeInput.battle.battleType
     );
   }
 
   const winner = scoredEntries[0];
   const title =
-    input.battle.battleType === BattleType.IMAGE_CAPTION
+    judgeInput.battle.battleType === BattleType.IMAGE_CAPTION
       ? "Mock AI found the most shareable caption"
       : "Mock AI picked the strongest open answer";
 
@@ -133,7 +135,7 @@ export function mockJudgeBattle(input) {
       verdictText: "The winning entry balanced humor, confidence, originality, and clean meme impact.",
       shareSummary: "AI selected a winner with deterministic mock scoring for local development."
     },
-    input.battle.battleType
+    judgeInput.battle.battleType
   );
 }
 
