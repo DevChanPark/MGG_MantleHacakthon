@@ -2,38 +2,35 @@ import { createServer } from "node:http";
 import { createReadStream } from "node:fs";
 import { stat } from "node:fs/promises";
 import { extname, join, resolve, sep } from "node:path";
+import { pathToFileURL } from "node:url";
 import { loadConfig } from "./config.js";
 import { createApiApp } from "./app.js";
 import { JsonFileRepository } from "./repositories/fileRepository.js";
 
-const config = loadConfig();
-const repository = await createRepository(config);
-const app = createApiApp({ repository, config });
+export async function createHttpServer({ config = loadConfig(), repository } = {}) {
+  const resolvedRepository = repository ?? (await createRepository(config));
+  const app = createApiApp({ repository: resolvedRepository, config });
 
-const server = createServer(async (req, res) => {
-  if (req.method === "OPTIONS") {
-    res.statusCode = 204;
-    res.setHeader("access-control-allow-origin", config.corsOrigin);
-    res.setHeader("access-control-allow-headers", "content-type, x-user-id");
-    res.setHeader("access-control-allow-methods", "GET,POST,OPTIONS");
-    res.end();
-    return;
-  }
+  return createServer(async (req, res) => {
+    if (req.method === "OPTIONS") {
+      res.statusCode = 204;
+      res.setHeader("access-control-allow-origin", config.corsOrigin);
+      res.setHeader("access-control-allow-headers", "content-type, x-user-id");
+      res.setHeader("access-control-allow-methods", "GET,POST,OPTIONS");
+      res.end();
+      return;
+    }
 
-  if (req.method === "GET" && req.url?.startsWith("/uploads/")) {
-    await serveLocalUpload(req, res, config);
-    return;
-  }
+    if (req.method === "GET" && req.url?.startsWith("/uploads/")) {
+      await serveLocalUpload(req, res, config);
+      return;
+    }
 
-  await app.respond(req, res);
-});
+    await app.respond(req, res);
+  });
+}
 
-server.listen(config.apiPort, () => {
-  console.log(`MGG API listening on http://localhost:${config.apiPort}`);
-  console.log(`Repository provider: ${config.repositoryProvider}`);
-});
-
-async function createRepository(config) {
+export async function createRepository(config) {
   if (config.repositoryProvider === "prisma") {
     if (!config.databaseUrl) {
       throw new Error("DATABASE_URL is required when REPOSITORY_PROVIDER=prisma");
@@ -45,7 +42,7 @@ async function createRepository(config) {
   return JsonFileRepository.open(join(".data", "mgg-api.json"));
 }
 
-async function serveLocalUpload(req, res, config) {
+export async function serveLocalUpload(req, res, config) {
   const storageKey = decodeURIComponent(new URL(req.url, "http://mgg.local").pathname.replace("/uploads/", ""));
   if (!storageKey || storageKey.includes("/") || storageKey.includes("\\") || storageKey.includes("..")) {
     res.statusCode = 400;
@@ -92,4 +89,17 @@ function contentTypeForPath(path) {
   if (extension === ".webp") return "image/webp";
   if (extension === ".gif") return "image/gif";
   return "application/octet-stream";
+}
+
+if (isMainModule()) {
+  const config = loadConfig();
+  const server = await createHttpServer({ config });
+  server.listen(config.apiPort, () => {
+    console.log(`MGG API listening on http://localhost:${config.apiPort}`);
+    console.log(`Repository provider: ${config.repositoryProvider}`);
+  });
+}
+
+function isMainModule() {
+  return process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
 }

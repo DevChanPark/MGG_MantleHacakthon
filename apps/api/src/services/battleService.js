@@ -56,12 +56,19 @@ async function submitEntry(repository, battleId, input, userId) {
   }
 
   const user = await repository.getOrCreateUser(normalized.submittedByUserId || userId);
-  return repository.addEntry({
+  const entry = await repository.addEntry({
     battleId,
     content: normalized.content,
     optionId: normalized.optionId,
-    submittedByUserId: user.id
+    submittedByUserId: user.id,
+    expectedBattleStatus: BattleStatus.OPEN
   });
+
+  if (!entry) {
+    throw new ApiError(409, "BATTLE_NOT_OPEN", "Entries can only be submitted while battle status is OPEN");
+  }
+
+  return entry;
 }
 
 async function closeBattle(repository, battleId) {
@@ -73,10 +80,16 @@ async function closeBattle(repository, battleId) {
     throw new ApiError(409, "BATTLE_CANNOT_CLOSE", error.message);
   }
 
-  return repository.updateBattle(battleId, {
+  const closed = await repository.transitionBattleStatus(battleId, BattleStatus.OPEN, {
     status: BattleStatus.CLOSED,
     closedAt: new Date().toISOString()
   });
+
+  if (!closed) {
+    throw new ApiError(409, "BATTLE_CANNOT_CLOSE", "Only OPEN battles can be closed");
+  }
+
+  return closed;
 }
 
 async function judgeBattle(repository, aiJudgeService, settlementService, config, battleId) {
@@ -92,14 +105,18 @@ async function judgeBattle(repository, aiJudgeService, settlementService, config
     throw new ApiError(409, "NO_ENTRIES", "Cannot judge a battle without entries");
   }
 
-  await repository.updateBattle(battleId, {
+  const judgingBattle = await repository.transitionBattleStatus(battleId, BattleStatus.CLOSED, {
     status: BattleStatus.JUDGING,
     judgingStartedAt: new Date().toISOString(),
     failureReason: null
   });
 
+  if (!judgingBattle) {
+    throw new ApiError(409, "BATTLE_CANNOT_JUDGE", "Only one judge run can start from CLOSED status");
+  }
+
   try {
-    const currentBattle = await getBattleOrThrow(repository, battleId);
+    const currentBattle = judgingBattle;
     const judgeInput = validateJudgeInput({
       battle: currentBattle,
       entries,

@@ -89,7 +89,23 @@ export class MemoryRepository {
     return clone(battle);
   }
 
+  async transitionBattleStatus(battleId, expectedStatus, patch) {
+    const battle = this.state.battles.find((item) => item.id === battleId);
+    if (!battle || battle.status !== expectedStatus) {
+      return null;
+    }
+
+    Object.assign(battle, patch);
+    await this.afterMutation();
+    return clone(battle);
+  }
+
   async addEntry(input) {
+    const battle = this.state.battles.find((item) => item.id === input.battleId);
+    if (input.expectedBattleStatus && battle?.status !== input.expectedBattleStatus) {
+      return null;
+    }
+
     const entry = {
       id: randomUUID(),
       battleId: input.battleId,

@@ -1,7 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { createApiApp } from "../src/app.js";
+import { createHttpServer } from "../src/server.js";
 import { MemoryRepository } from "../src/repositories/memoryRepository.js";
 import { createAiJudgeService, mockJudgeBattle } from "../src/services/aiJudgeService.js";
 import { createSettlementService, mockRecordVerdict } from "../src/services/settlementService.js";
@@ -139,6 +143,28 @@ test("closes, judges, settles, and returns result shape", async () => {
   assert.equal(result.body.battle.id, battle.id);
   assert.ok(Array.isArray(result.body.verdict.scoreTable));
   assert.ok(result.body.settlement.explorerUrl.includes(result.body.settlement.txHash));
+});
+
+test("blocks repeated close and judge lifecycle calls", async () => {
+  const app = makeApp();
+  const battle = await createBattleWithEntries(app, {
+    battleType: BattleType.TEXT_OPEN,
+    prompt: "Give a vending machine a campaign slogan."
+  }, [
+    { content: "Exact change, exact justice." }
+  ]);
+
+  const firstClose = await request(app, "POST", `/api/battles/${battle.id}/close`);
+  assert.equal(firstClose.statusCode, 200);
+
+  const secondClose = await request(app, "POST", `/api/battles/${battle.id}/close`);
+  assert.equal(secondClose.statusCode, 409);
+
+  const firstJudge = await request(app, "POST", `/api/battles/${battle.id}/judge`);
+  assert.equal(firstJudge.statusCode, 200);
+
+  const secondJudge = await request(app, "POST", `/api/battles/${battle.id}/judge`);
+  assert.equal(secondJudge.statusCode, 409);
 });
 
 test("settles TEXT_OPEN and IMAGE_CAPTION through the common pipeline", async () => {
@@ -292,6 +318,42 @@ test("mock Mantle settlement returns deterministic tx metadata", () => {
   assert.equal(first.chainId, 5003);
 });
 
+test("local image upload stores and serves uploaded file over HTTP", async () => {
+  const localStorageDir = await mkdtemp(join(tmpdir(), "mgg-upload-"));
+  const server = await createHttpServer({
+    repository: new MemoryRepository(),
+    config: { ...testConfig, localStorageDir }
+  });
+  const baseUrl = await listenOnRandomPort(server);
+
+  try {
+    const uploadResponse = await fetch(`${baseUrl}/api/uploads/image`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        fileName: "pixel.gif",
+        contentType: "image/gif",
+        base64Data: "R0lGODlhAQABAAAAACw="
+      })
+    });
+
+    assert.equal(uploadResponse.status, 201);
+    const uploadBody = await uploadResponse.json();
+    assert.match(uploadBody.upload.imageUrl, /^\/uploads\/[a-f0-9]+\.gif$/);
+
+    const imageResponse = await fetch(`${baseUrl}${uploadBody.upload.imageUrl}`);
+    assert.equal(imageResponse.status, 200);
+    assert.equal(imageResponse.headers.get("content-type"), "image/gif");
+    assert.ok((await imageResponse.arrayBuffer()).byteLength > 0);
+
+    const traversalResponse = await fetch(`${baseUrl}/uploads/%2e%2e%2fsecret.gif`);
+    assert.equal(traversalResponse.status, 400);
+  } finally {
+    await closeServer(server);
+    await rm(localStorageDir, { recursive: true, force: true });
+  }
+});
+
 function makeApp() {
   return createApiApp({
     repository: new MemoryRepository(),
@@ -325,4 +387,16 @@ async function closeAndJudge(app, battleId) {
   const judged = await request(app, "POST", `/api/battles/${battleId}/judge`);
   assert.equal(judged.statusCode, 200);
   return judged;
+}
+
+async function listenOnRandomPort(server) {
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const address = server.address();
+  return `http://127.0.0.1:${address.port}`;
+}
+
+async function closeServer(server) {
+  await new Promise((resolve, reject) => {
+    server.close((error) => (error ? reject(error) : resolve()));
+  });
 }

@@ -76,16 +76,49 @@ export class PrismaRepository {
     }
   }
 
-  async addEntry(input) {
-    const entry = await this.prisma.entry.create({
-      data: {
-        battleId: input.battleId,
-        optionId: input.optionId || null,
-        content: input.content,
-        submittedByUserId: input.submittedByUserId
-      }
+  async transitionBattleStatus(battleId, expectedStatus, patch) {
+    const result = await this.prisma.battle.updateMany({
+      where: {
+        id: battleId,
+        status: expectedStatus
+      },
+      data: normalizeBattlePatch(patch)
     });
-    return formatEntry(entry);
+
+    if (result.count === 0) {
+      return null;
+    }
+
+    return this.getBattle(battleId);
+  }
+
+  async addEntry(input) {
+    const entry = await this.prisma.$transaction(async (tx) => {
+      if (input.expectedBattleStatus) {
+        const rows = await tx.$queryRaw`
+          SELECT "status"
+          FROM "battles"
+          WHERE "id" = ${input.battleId}
+          FOR UPDATE
+        `;
+        const battle = rows[0];
+
+        if (!battle || battle.status !== input.expectedBattleStatus) {
+          return null;
+        }
+      }
+
+      return tx.entry.create({
+        data: {
+          battleId: input.battleId,
+          optionId: input.optionId || null,
+          content: input.content,
+          submittedByUserId: input.submittedByUserId
+        }
+      });
+    });
+
+    return entry ? formatEntry(entry) : null;
   }
 
   async listEntriesByBattle(battleId) {

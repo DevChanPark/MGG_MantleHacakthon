@@ -4,6 +4,16 @@ Base URL: `http://localhost:4000`
 
 All request bodies are JSON. The frontend may pass `x-user-id` for MVP demo identity. If omitted, the backend uses `demo-user`.
 
+## Mobile-First Notes
+
+The MVP backend is designed for a mobile-first frontend:
+
+- The frontend should drive the UI from `battle.status`.
+- The frontend should not execute AI judging or Mantle transactions.
+- Result screens should use `verdict`, `hashPackage`, and `settlement` from `GET /api/battles/:battleId/result`.
+- Local images are uploaded through the backend and served from `/uploads/:storageKey`.
+- Repeated `close` or `judge` calls return `409` instead of starting duplicate lifecycle work.
+
 ## `GET /api/health`
 
 Returns service health.
@@ -78,6 +88,8 @@ TEXT_OPEN and IMAGE_CAPTION:
 
 Transitions an `OPEN` battle to `CLOSED`.
 
+Returns `409 BATTLE_CANNOT_CLOSE` if the battle is no longer `OPEN`.
+
 ## `POST /api/battles/:battleId/judge`
 
 Runs the common battle pipeline:
@@ -85,6 +97,8 @@ Runs the common battle pipeline:
 `CLOSED -> JUDGING -> AI judge -> hash package -> Mantle settlement -> SETTLED`
 
 If AI or settlement fails, the battle transitions to `FAILED` with a sanitized error.
+
+Returns `409 BATTLE_CANNOT_JUDGE` if the battle is not `CLOSED` or another judge run already started.
 
 ## `GET /api/battles/:battleId/result`
 
