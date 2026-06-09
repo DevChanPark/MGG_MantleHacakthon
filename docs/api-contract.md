@@ -104,7 +104,7 @@ Returns settled battles only.
 
 ## `POST /api/uploads/image`
 
-MVP local upload. The backend stores the raw image off-chain and returns a local URL.
+MVP local upload. The backend stores the raw image off-chain and returns a local URL. The API server serves local files back from `GET /uploads/:storageKey`.
 
 ```json
 {

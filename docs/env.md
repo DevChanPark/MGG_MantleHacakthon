@@ -5,6 +5,7 @@ Required backend env examples:
 | Variable | Required | Notes |
 | --- | --- | --- |
 | `DATABASE_URL` | yes for Prisma | PostgreSQL URL used by Prisma migrations/client. |
+| `REPOSITORY_PROVIDER` | yes | Use `prisma` for PostgreSQL persistence. Use `json` only for lightweight local fallback. |
 | `API_PORT` | yes | Defaults to `4000`. |
 | `CORS_ORIGIN` | yes | Frontend origin, for example `http://localhost:3000`. |
 | `MOCK_AI` | yes | `true` for deterministic local judging. |
@@ -25,6 +26,7 @@ Required backend env examples:
 Local development should use:
 
 ```bash
+REPOSITORY_PROVIDER=prisma
 MOCK_AI=true
 MOCK_MANTLE=true
 STORAGE_PROVIDER=local

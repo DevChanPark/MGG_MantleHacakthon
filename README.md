@@ -56,6 +56,8 @@ frontend-b /
 
 ```bash
 npm install
+npm run prisma:generate
+npm run prisma:migrate
 npm run dev:api
 ```
 
