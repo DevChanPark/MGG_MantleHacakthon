@@ -167,6 +167,7 @@ test("JSON file repository backfills judgingRules for legacy local data", async 
 
     assert.equal(created.statusCode, 201);
     assert.equal(repository.exportState().judgingRules.length, 1);
+    assert.ok(Array.isArray(repository.exportState().reports));
   } finally {
     await rm(tempDir, { recursive: true, force: true });
   }
@@ -225,6 +226,51 @@ test("requires optionId for OPTION entries", async () => {
     content: "Mercury is in retrograde and also parked badly."
   });
   assert.equal(missingOption.statusCode, 400);
+});
+
+test("creates reports for battles and validates report targets", async () => {
+  const repository = new MemoryRepository();
+  const app = createApiApp({
+    repository,
+    config: testConfig,
+    aiJudgeService: createAiJudgeService(testConfig),
+    settlementService: createSettlementService(testConfig)
+  });
+  const created = await request(app, "POST", "/api/battles", {
+    battleType: BattleType.TEXT_OPEN,
+    prompt: "Defend a suspicious mug."
+  });
+  assert.equal(created.statusCode, 201);
+  const battleId = created.body.battle.id;
+
+  const submitted = await request(app, "POST", `/api/battles/${battleId}/entries`, {
+    content: "The mug is not suspicious; it is just holding evidence."
+  });
+  assert.equal(submitted.statusCode, 201);
+
+  const report = await request(app, "POST", `/api/battles/${battleId}/reports`, {
+    targetEntryId: submitted.body.entry.id,
+    reason: "Spam or unsafe content review request"
+  });
+  assert.equal(report.statusCode, 201);
+  assert.equal(report.body.report.battleId, battleId);
+  assert.equal(report.body.report.targetEntryId, submitted.body.entry.id);
+  assert.equal(report.body.report.reporterUserId, "test-user");
+  assert.equal(report.body.report.status, "OPEN");
+  assert.equal(repository.exportState().reports.length, 1);
+
+  const invalidTarget = await request(app, "POST", `/api/battles/${battleId}/reports`, {
+    targetEntryId: "missing-entry",
+    reason: "This target does not belong here"
+  });
+  assert.equal(invalidTarget.statusCode, 400);
+  assert.equal(invalidTarget.body.error.code, "INVALID_REPORT_TARGET");
+
+  const missingReason = await request(app, "POST", `/api/battles/${battleId}/reports`, {
+    targetEntryId: submitted.body.entry.id
+  });
+  assert.equal(missingReason.statusCode, 400);
+  assert.equal(missingReason.body.error.code, "VALIDATION_ERROR");
 });
 
 test("closes, judges, settles, and returns result shape", async () => {

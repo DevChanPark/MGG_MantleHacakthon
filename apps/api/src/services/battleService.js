@@ -18,12 +18,15 @@ import { ApiError, sanitizeFailureMessage } from "../errors.js";
 import { validateJudgeOutputReferences } from "./aiJudgeService.js";
 import { moderateEntryContent } from "./moderationService.js";
 
+const MAX_REPORT_REASON_LENGTH = 240;
+
 export function createBattleService({ repository, aiJudgeService, settlementService, config }) {
   return {
     createBattle: (input, userId) => createBattle(repository, input, userId),
     listBattles: () => repository.listBattles(),
     getBattle: (battleId) => getBattleOrThrow(repository, battleId),
     submitEntry: (battleId, input, userId) => submitEntry(repository, battleId, input, userId),
+    createReport: (battleId, input, userId) => createReport(repository, battleId, input, userId),
     closeBattle: (battleId) => closeBattle(repository, battleId),
     judgeBattle: (battleId) => judgeBattle(repository, aiJudgeService, settlementService, config, battleId),
     getResult: (battleId) => getResult(repository, battleId),
@@ -78,6 +81,26 @@ async function submitEntry(repository, battleId, input, userId) {
   }
 
   return entry;
+}
+
+async function createReport(repository, battleId, input, userId) {
+  await getBattleOrThrow(repository, battleId);
+  const normalized = validateCreateReportRequest(input);
+
+  if (normalized.targetEntryId) {
+    const entries = await repository.listEntriesByBattle(battleId);
+    if (!entries.some((entry) => entry.id === normalized.targetEntryId)) {
+      throw new ApiError(400, "INVALID_REPORT_TARGET", "targetEntryId does not belong to this battle");
+    }
+  }
+
+  const user = await repository.getOrCreateUser(userId);
+  return repository.createReport({
+    battleId,
+    reporterUserId: user.id,
+    targetEntryId: normalized.targetEntryId,
+    reason: normalized.reason
+  });
 }
 
 async function closeBattle(repository, battleId) {
@@ -206,6 +229,32 @@ async function getResult(repository, battleId) {
   ]);
 
   return toResultResponse({ battle, entries, verdict, settlement });
+}
+
+function validateCreateReportRequest(input) {
+  const body = input && typeof input === "object" && !Array.isArray(input) ? input : {};
+  const details = [];
+  const reason = typeof body.reason === "string" ? body.reason.trim() : "";
+  const targetEntryId = typeof body.targetEntryId === "string" ? body.targetEntryId.trim() : "";
+
+  if (!reason) {
+    details.push("reason is required");
+  } else if (reason.length > MAX_REPORT_REASON_LENGTH) {
+    details.push(`reason must be ${MAX_REPORT_REASON_LENGTH} characters or fewer`);
+  }
+
+  if (body.targetEntryId !== undefined && !targetEntryId) {
+    details.push("targetEntryId must be a non-empty string when provided");
+  }
+
+  if (details.length > 0) {
+    throw new ApiError(400, "VALIDATION_ERROR", "Invalid report request", details);
+  }
+
+  return {
+    reason,
+    targetEntryId: targetEntryId || null
+  };
 }
 
 async function getOrCreateJudgingRule(repository, battle) {

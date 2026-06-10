@@ -204,6 +204,18 @@ export class PrismaRepository {
     });
     return settlement ? formatSettlement(settlement) : null;
   }
+
+  async createReport(input) {
+    const report = await this.prisma.report.create({
+      data: {
+        battleId: input.battleId,
+        reporterUserId: input.reporterUserId,
+        targetEntryId: input.targetEntryId || null,
+        reason: input.reason
+      }
+    });
+    return formatReport(report);
+  }
 }
 
 function battleInclude() {
@@ -299,6 +311,19 @@ function formatSettlement(settlement) {
     verdictHash: settlement.verdictHash,
     settledAt: toIso(settlement.settledAt),
     payloadJson: settlement.payloadJson
+  };
+}
+
+function formatReport(report) {
+  return {
+    id: report.id,
+    battleId: report.battleId,
+    reporterUserId: report.reporterUserId,
+    targetEntryId: report.targetEntryId,
+    reason: report.reason,
+    status: report.status,
+    createdAt: toIso(report.createdAt),
+    reviewedAt: toIso(report.reviewedAt)
   };
 }
 

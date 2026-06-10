@@ -121,6 +121,17 @@ The frontend should use `GET /api/battles/:battleId/result` as the source of tru
 | `RESULT_NOT_READY` | Keep loading or return to battle detail state. |
 | `INVALID_JSON` / `INVALID_PATH` | Treat as client request bug and log locally. |
 
+## Safety Reports
+
+The mobile frontend may call `POST /api/battles/:battleId/reports` to submit a simple moderation report. This is optional for the MVP flow and must not block the battle loop.
+
+```json
+{
+  "targetEntryId": "optional-entry-id",
+  "reason": "Review reason"
+}
+```
+
 ## Security Boundaries
 
 - Never send `SERVER_WALLET_PRIVATE_KEY` to the frontend.

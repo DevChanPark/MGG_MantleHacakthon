@@ -13,6 +13,7 @@ export class MemoryRepository {
       reports: []
     };
     this.state.judgingRules ??= [];
+    this.state.reports ??= [];
   }
 
   exportState() {
@@ -211,6 +212,22 @@ export class MemoryRepository {
         .filter((settlement) => settlement.battleId === battleId)
         .sort((a, b) => b.settledAt.localeCompare(a.settledAt))[0] ?? null
     );
+  }
+
+  async createReport(input) {
+    const report = {
+      id: randomUUID(),
+      battleId: input.battleId,
+      reporterUserId: input.reporterUserId,
+      targetEntryId: input.targetEntryId || null,
+      reason: input.reason,
+      status: "OPEN",
+      createdAt: now(),
+      reviewedAt: null
+    };
+    this.state.reports.push(report);
+    await this.afterMutation();
+    return clone(report);
   }
 
   async afterMutation() {}

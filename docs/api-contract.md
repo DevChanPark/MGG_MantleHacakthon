@@ -110,6 +110,19 @@ TEXT_OPEN and IMAGE_CAPTION:
 }
 ```
 
+## `POST /api/battles/:battleId/reports`
+
+Creates a simple MVP moderation report for a battle or one entry. This does not change battle state and is not part of AI judging or Mantle settlement.
+
+```json
+{
+  "targetEntryId": "optional-entry-id",
+  "reason": "Spam, abuse, unsafe content, or other review reason"
+}
+```
+
+`targetEntryId` must belong to the battle when provided.
+
 ## `POST /api/battles/:battleId/close`
 
 Transitions an `OPEN` battle to `CLOSED`.

@@ -14,6 +14,7 @@ export class JsonFileRepository extends MemoryRepository {
       const raw = await readFile(filePath, "utf8");
       repository.state = JSON.parse(raw);
       repository.state.judgingRules ??= [];
+      repository.state.reports ??= [];
     } catch (error) {
       if (error.code !== "ENOENT") {
         throw error;

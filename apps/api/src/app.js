@@ -72,6 +72,10 @@ export function createApiApp({ repository, config, aiJudgeService, settlementSer
           return created({ entry: await battleService.submitEntry(battleId, request.body, userId) });
         }
 
+        if (method === "POST" && action === "reports") {
+          return created({ report: await battleService.createReport(battleId, request.body, userId) });
+        }
+
         if (method === "POST" && action === "close") {
           return ok({ battle: await battleService.closeBattle(battleId) });
         }
