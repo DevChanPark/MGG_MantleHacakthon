@@ -43,7 +43,15 @@ export async function createRepository(config) {
 }
 
 export async function serveLocalUpload(req, res, config) {
-  const storageKey = decodeURIComponent(new URL(req.url, "http://mgg.local").pathname.replace("/uploads/", ""));
+  let storageKey;
+  try {
+    storageKey = decodeURIComponent(new URL(req.url, "http://mgg.local").pathname.replace("/uploads/", ""));
+  } catch {
+    res.statusCode = 400;
+    res.end("Invalid upload path");
+    return;
+  }
+
   if (!storageKey || storageKey.includes("/") || storageKey.includes("\\") || storageKey.includes("..")) {
     res.statusCode = 400;
     res.end("Invalid upload path");

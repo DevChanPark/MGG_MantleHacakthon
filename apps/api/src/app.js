@@ -49,7 +49,7 @@ export function createApiApp({ repository, config }) {
 
       const battleMatch = path.match(/^\/api\/battles\/([^/]+)(?:\/([^/]+))?$/);
       if (battleMatch) {
-        const battleId = decodeURIComponent(battleMatch[1]);
+        const battleId = safeDecodePathComponent(battleMatch[1]);
         const action = battleMatch[2];
 
         if (method === "GET" && !action) {
@@ -84,13 +84,18 @@ export function createApiApp({ repository, config }) {
   }
 
   async function respond(req, res) {
-    const body = await readJsonBody(req);
-    const result = await handle({
-      method: req.method,
-      url: req.url,
-      headers: req.headers,
-      body
-    });
+    let result;
+    try {
+      const body = await readJsonBody(req);
+      result = await handle({
+        method: req.method,
+        url: req.url,
+        headers: req.headers,
+        body
+      });
+    } catch (error) {
+      result = errorResponse(error);
+    }
 
     res.statusCode = result.statusCode;
     res.setHeader("content-type", "application/json; charset=utf-8");
@@ -131,6 +136,14 @@ function errorResponse(error) {
 
 function normalizeHeaders(headers = {}) {
   return Object.fromEntries(Object.entries(headers).map(([key, value]) => [key.toLowerCase(), String(value)]));
+}
+
+function safeDecodePathComponent(value) {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    throw new ApiError(400, "INVALID_PATH", "URL path contains invalid encoding");
+  }
 }
 
 async function readJsonBody(req) {

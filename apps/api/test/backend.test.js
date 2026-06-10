@@ -354,6 +354,35 @@ test("local image upload stores and serves uploaded file over HTTP", async () =>
   }
 });
 
+test("HTTP server returns safe 400 responses for malformed mobile requests", async () => {
+  const localStorageDir = await mkdtemp(join(tmpdir(), "mgg-bad-request-"));
+  const server = await createHttpServer({
+    repository: new MemoryRepository(),
+    config: { ...testConfig, localStorageDir }
+  });
+  const baseUrl = await listenOnRandomPort(server);
+
+  try {
+    const badJsonResponse = await fetch(`${baseUrl}/api/battles`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "{"
+    });
+    assert.equal(badJsonResponse.status, 400);
+    assert.equal((await badJsonResponse.json()).error.code, "INVALID_JSON");
+
+    const badBattlePathResponse = await fetch(`${baseUrl}/api/battles/%E0%A4%A`);
+    assert.equal(badBattlePathResponse.status, 400);
+    assert.equal((await badBattlePathResponse.json()).error.code, "INVALID_PATH");
+
+    const badUploadPathResponse = await fetch(`${baseUrl}/uploads/%E0%A4%A`);
+    assert.equal(badUploadPathResponse.status, 400);
+  } finally {
+    await closeServer(server);
+    await rm(localStorageDir, { recursive: true, force: true });
+  }
+});
+
 function makeApp() {
   return createApiApp({
     repository: new MemoryRepository(),
