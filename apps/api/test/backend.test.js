@@ -1,12 +1,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createApiApp } from "../src/app.js";
 import { createHttpServer } from "../src/server.js";
 import { MemoryRepository } from "../src/repositories/memoryRepository.js";
+import { JsonFileRepository } from "../src/repositories/fileRepository.js";
 import { createAiJudgeService, mockJudgeBattle, validateJudgeOutputReferences } from "../src/services/aiJudgeService.js";
 import {
   ZERO_ADDRESS,
@@ -23,7 +24,7 @@ import {
   validateJudgeOutput,
   validateResultResponse
 } from "../../../packages/shared/src/index.js";
-import { getJudgingRules } from "../../../packages/core/src/index.js";
+import { getJudgingRules, sha256Hex } from "../../../packages/core/src/index.js";
 
 const testConfig = {
   corsOrigin: "*",
@@ -100,6 +101,75 @@ test("creates battles for all three battle types", async () => {
   });
   assert.equal(image.statusCode, 201);
   assert.equal(image.body.battle.battleType, BattleType.IMAGE_CAPTION);
+});
+
+test("stores judging rules snapshot and uses it for verdict hashing", async () => {
+  const repository = new MemoryRepository();
+  const app = createApiApp({
+    repository,
+    config: testConfig,
+    aiJudgeService: createAiJudgeService(testConfig),
+    settlementService: createSettlementService(testConfig)
+  });
+  const created = await request(app, "POST", "/api/battles", {
+    battleType: BattleType.TEXT_OPEN,
+    prompt: "Defend a suspicious toaster."
+  });
+  assert.equal(created.statusCode, 201);
+
+  const battle = created.body.battle;
+  const expectedRules = getJudgingRules(BattleType.TEXT_OPEN);
+  const expectedRulesHash = sha256Hex(expectedRules);
+  const rulesAfterCreate = repository.exportState().judgingRules.filter((rule) => rule.battleId === battle.id);
+  assert.equal(rulesAfterCreate.length, 1);
+  assert.deepEqual(rulesAfterCreate[0].rulesJson, expectedRules);
+  assert.equal(rulesAfterCreate[0].rulesHash, expectedRulesHash);
+
+  await request(app, "POST", `/api/battles/${battle.id}/entries`, {
+    content: "The toaster is not suspicious; it is conducting thermal research."
+  });
+  await request(app, "POST", `/api/battles/${battle.id}/close`);
+
+  const judged = await request(app, "POST", `/api/battles/${battle.id}/judge`);
+  assert.equal(judged.statusCode, 200);
+  assert.equal(judged.body.hashPackage.rulesHash, expectedRulesHash);
+  assert.equal(repository.exportState().judgingRules.filter((rule) => rule.battleId === battle.id).length, 1);
+});
+
+test("JSON file repository backfills judgingRules for legacy local data", async () => {
+  const tempDir = await mkdtemp(join(tmpdir(), "mgg-legacy-json-"));
+  const filePath = join(tempDir, "mgg-api.json");
+  await writeFile(
+    filePath,
+    JSON.stringify({
+      users: [],
+      battles: [],
+      entries: [],
+      verdicts: [],
+      settlements: [],
+      reports: []
+    })
+  );
+
+  try {
+    const repository = await JsonFileRepository.open(filePath);
+    const app = createApiApp({
+      repository,
+      config: testConfig,
+      aiJudgeService: createAiJudgeService(testConfig),
+      settlementService: createSettlementService(testConfig)
+    });
+
+    const created = await request(app, "POST", "/api/battles", {
+      battleType: BattleType.TEXT_OPEN,
+      prompt: "Explain why old data still deserves a chair."
+    });
+
+    assert.equal(created.statusCode, 201);
+    assert.equal(repository.exportState().judgingRules.length, 1);
+  } finally {
+    await rm(tempDir, { recursive: true, force: true });
+  }
 });
 
 test("validates OPTION battles require 2 to 4 options", async () => {

@@ -54,6 +54,8 @@ Returns all battles.
 
 Creates a battle.
 
+The backend stores a judging-rule snapshot for the battle type at creation time and later uses that snapshot for AI judging and `rulesHash` generation.
+
 OPTION:
 
 ```json

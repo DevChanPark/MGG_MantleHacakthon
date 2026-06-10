@@ -28,7 +28,15 @@ export class PrismaRepository {
         createdByUserId: input.createdByUserId,
         options: {
           create: (input.options || []).map((option) => ({ text: option.text }))
-        }
+        },
+        rules: input.judgingRule
+          ? {
+              create: {
+                rulesJson: input.judgingRule.rulesJson,
+                rulesHash: input.judgingRule.rulesHash
+              }
+            }
+          : undefined
       },
       include: battleInclude()
     });
@@ -127,6 +135,25 @@ export class PrismaRepository {
       orderBy: { createdAt: "asc" }
     });
     return entries.map(formatEntry);
+  }
+
+  async createJudgingRule(input) {
+    const judgingRule = await this.prisma.judgingRule.create({
+      data: {
+        battleId: input.battleId,
+        rulesJson: input.rulesJson,
+        rulesHash: input.rulesHash
+      }
+    });
+    return formatJudgingRule(judgingRule);
+  }
+
+  async getJudgingRuleByBattle(battleId) {
+    const judgingRule = await this.prisma.judgingRule.findFirst({
+      where: { battleId },
+      orderBy: { createdAt: "desc" }
+    });
+    return judgingRule ? formatJudgingRule(judgingRule) : null;
   }
 
   async createVerdict(input) {
@@ -241,6 +268,16 @@ function formatVerdict(verdict) {
     hashPackage: verdict.hashPackage,
     modelVersion: verdict.modelVersion,
     createdAt: toIso(verdict.createdAt)
+  };
+}
+
+function formatJudgingRule(judgingRule) {
+  return {
+    id: judgingRule.id,
+    battleId: judgingRule.battleId,
+    rulesJson: judgingRule.rulesJson,
+    rulesHash: judgingRule.rulesHash,
+    createdAt: toIso(judgingRule.createdAt)
   };
 }
 

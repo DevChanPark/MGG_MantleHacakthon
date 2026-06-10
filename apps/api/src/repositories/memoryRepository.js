@@ -7,10 +7,12 @@ export class MemoryRepository {
       users: [],
       battles: [],
       entries: [],
+      judgingRules: [],
       verdicts: [],
       settlements: [],
       reports: []
     };
+    this.state.judgingRules ??= [];
   }
 
   exportState() {
@@ -54,6 +56,15 @@ export class MemoryRepository {
     };
 
     this.state.battles.push(battle);
+    if (input.judgingRule) {
+      this.state.judgingRules.push({
+        id: randomUUID(),
+        battleId: battle.id,
+        rulesJson: input.judgingRule.rulesJson,
+        rulesHash: input.judgingRule.rulesHash,
+        createdAt: now()
+      });
+    }
     await this.afterMutation();
     return clone(battle);
   }
@@ -124,6 +135,27 @@ export class MemoryRepository {
       this.state.entries
         .filter((entry) => entry.battleId === battleId)
         .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+    );
+  }
+
+  async createJudgingRule(input) {
+    const judgingRule = {
+      id: randomUUID(),
+      battleId: input.battleId,
+      rulesJson: input.rulesJson,
+      rulesHash: input.rulesHash,
+      createdAt: now()
+    };
+    this.state.judgingRules.push(judgingRule);
+    await this.afterMutation();
+    return clone(judgingRule);
+  }
+
+  async getJudgingRuleByBattle(battleId) {
+    return clone(
+      this.state.judgingRules
+        .filter((rule) => rule.battleId === battleId)
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0] ?? null
     );
   }
 

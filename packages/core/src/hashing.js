@@ -4,7 +4,7 @@ import { canonicalJson, sha256Hex } from "./hashUtils.js";
 
 export { ZERO_HASH, canonicalJson, normalizeOptionalHash, sha256Hex } from "./hashUtils.js";
 
-export function buildVerdictHashPackage({ battle, entries, judgeOutput, modelVersion }) {
+export function buildVerdictHashPackage({ battle, entries, judgeOutput, modelVersion, rules }) {
   const contentHash = sha256Hex({
     battleId: battle.id,
     battleType: battle.battleType,
@@ -25,7 +25,7 @@ export function buildVerdictHashPackage({ battle, entries, judgeOutput, modelVer
     }))
   );
 
-  const rulesHash = sha256Hex(getJudgingRules(battle.battleType));
+  const rulesHash = sha256Hex(rules ?? getJudgingRules(battle.battleType));
   const modelVersionHash = sha256Hex(modelVersion);
   const winnerHash = sha256Hex({
     winnerType: judgeOutput.winnerType,

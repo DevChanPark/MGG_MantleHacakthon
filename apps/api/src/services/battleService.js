@@ -4,7 +4,8 @@ import {
   assertCanSubmitEntry,
   assertBattleStatusTransition,
   buildVerdictHashPackage,
-  getJudgingRules
+  getJudgingRules,
+  sha256Hex
 } from "../../../../packages/core/src/index.js";
 import {
   BattleStatus,
@@ -34,7 +35,15 @@ export function createBattleService({ repository, aiJudgeService, settlementServ
 async function createBattle(repository, input, userId) {
   const normalized = validateCreateBattleRequest({ ...input, createdByUserId: input?.createdByUserId || userId });
   const user = await repository.getOrCreateUser(normalized.createdByUserId || userId);
-  return repository.createBattle({ ...normalized, createdByUserId: user.id });
+  const rulesJson = getJudgingRules(normalized.battleType);
+  return repository.createBattle({
+    ...normalized,
+    createdByUserId: user.id,
+    judgingRule: {
+      rulesJson,
+      rulesHash: sha256Hex(rulesJson)
+    }
+  });
 }
 
 async function submitEntry(repository, battleId, input, userId) {
@@ -117,10 +126,11 @@ async function judgeBattle(repository, aiJudgeService, settlementService, config
 
   try {
     const currentBattle = judgingBattle;
+    const judgingRule = await getOrCreateJudgingRule(repository, currentBattle);
     const judgeInput = validateJudgeInput({
       battle: currentBattle,
       entries,
-      rules: getJudgingRules(currentBattle.battleType)
+      rules: judgingRule.rulesJson
     });
     const judgeOutput = validateJudgeOutputReferences(await aiJudgeService.judgeBattle(judgeInput), judgeInput);
     const modelVersion = config.mockAi ? "mock-mgg-judge-v1" : config.openAiModel;
@@ -128,8 +138,13 @@ async function judgeBattle(repository, aiJudgeService, settlementService, config
       battle: currentBattle,
       entries,
       judgeOutput,
-      modelVersion
+      modelVersion,
+      rules: judgingRule.rulesJson
     });
+
+    if (hashPackage.rulesHash !== judgingRule.rulesHash) {
+      throw new Error("Stored judging rules hash does not match verdict hash package");
+    }
 
     const verdict = await repository.createVerdict({
       battleId,
@@ -191,6 +206,26 @@ async function getResult(repository, battleId) {
   ]);
 
   return toResultResponse({ battle, entries, verdict, settlement });
+}
+
+async function getOrCreateJudgingRule(repository, battle) {
+  const existing = await repository.getJudgingRuleByBattle?.(battle.id);
+  if (existing) {
+    return existing;
+  }
+
+  const rulesJson = getJudgingRules(battle.battleType);
+  const fallback = {
+    battleId: battle.id,
+    rulesJson,
+    rulesHash: sha256Hex(rulesJson)
+  };
+
+  if (repository.createJudgingRule) {
+    return repository.createJudgingRule(fallback);
+  }
+
+  return fallback;
 }
 
 async function getBattleOrThrow(repository, battleId) {
