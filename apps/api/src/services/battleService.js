@@ -11,10 +11,10 @@ import {
   validateCreateBattleRequest,
   validateCreateEntryRequest,
   validateJudgeInput,
-  validateJudgeOutput,
   toResultResponse
 } from "../../../../packages/shared/src/index.js";
 import { ApiError, sanitizeFailureMessage } from "../errors.js";
+import { validateJudgeOutputReferences } from "./aiJudgeService.js";
 import { moderateEntryContent } from "./moderationService.js";
 
 export function createBattleService({ repository, aiJudgeService, settlementService, config }) {
@@ -122,7 +122,7 @@ async function judgeBattle(repository, aiJudgeService, settlementService, config
       entries,
       rules: getJudgingRules(currentBattle.battleType)
     });
-    const judgeOutput = validateJudgeOutput(await aiJudgeService.judgeBattle(judgeInput), currentBattle.battleType);
+    const judgeOutput = validateJudgeOutputReferences(await aiJudgeService.judgeBattle(judgeInput), judgeInput);
     const modelVersion = config.mockAi ? "mock-mgg-judge-v1" : config.openAiModel;
     const hashPackage = buildVerdictHashPackage({
       battle: currentBattle,

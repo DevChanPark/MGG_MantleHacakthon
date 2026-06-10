@@ -7,7 +7,7 @@ import { join } from "node:path";
 import { createApiApp } from "../src/app.js";
 import { createHttpServer } from "../src/server.js";
 import { MemoryRepository } from "../src/repositories/memoryRepository.js";
-import { createAiJudgeService, mockJudgeBattle } from "../src/services/aiJudgeService.js";
+import { createAiJudgeService, mockJudgeBattle, validateJudgeOutputReferences } from "../src/services/aiJudgeService.js";
 import {
   ZERO_ADDRESS,
   createSettlementService,
@@ -37,6 +37,44 @@ const testConfig = {
   storageProvider: "local",
   localStorageDir: ".data/test-uploads"
 };
+
+test("health reports backend readiness without exposing secrets", async () => {
+  const configWithSecrets = {
+    ...testConfig,
+    mockAi: false,
+    openAiApiKey: "sk-test-secret",
+    openAiModel: "gpt-test-model",
+    mockMantle: false,
+    mantleRpcUrl: "https://secret-rpc.example",
+    mantleChainId: 5003,
+    verdictRegistryAddress: "0x1111111111111111111111111111111111111111",
+    serverWalletPrivateKey: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    localStorageDir: "secret-local-storage-dir"
+  };
+  const app = createApiApp({
+    repository: new MemoryRepository(),
+    config: configWithSecrets
+  });
+
+  const health = await request(app, "GET", "/api/health");
+
+  assert.equal(health.statusCode, 200);
+  assert.equal(health.body.ok, true);
+  assert.equal(health.body.service, "mgg-api");
+  assert.equal(health.body.ai.ready, true);
+  assert.equal(health.body.ai.mode, "real");
+  assert.equal(health.body.ai.model, "gpt-test-model");
+  assert.equal(health.body.mantle.ready, true);
+  assert.equal(health.body.mantle.chainId, 5003);
+  assert.equal(health.body.storage.ready, true);
+  assert.equal(health.body.storage.provider, "local");
+
+  const serialized = JSON.stringify(health.body);
+  assert.equal(serialized.includes(configWithSecrets.openAiApiKey), false);
+  assert.equal(serialized.includes(configWithSecrets.mantleRpcUrl), false);
+  assert.equal(serialized.includes(configWithSecrets.serverWalletPrivateKey), false);
+  assert.equal(serialized.includes(configWithSecrets.localStorageDir), false);
+});
 
 test("creates battles for all three battle types", async () => {
   const app = makeApp();
@@ -221,6 +259,105 @@ test("mock AI judge is deterministic", async () => {
 
   assert.deepEqual(mockJudgeBattle(input), mockJudgeBattle(input));
   assert.equal(mockJudgeBattle(input).winnerType, "ENTRY");
+});
+
+test("AI judge output references must match existing entries and options", () => {
+  const input = {
+    battle: {
+      id: "battle-1",
+      battleType: BattleType.OPTION,
+      status: BattleStatus.CLOSED,
+      prompt: "Pick a mascot.",
+      options: [
+        { id: "option-1", text: "Spoon" },
+        { id: "option-2", text: "Umbrella" }
+      ]
+    },
+    entries: [
+      { id: "entry-1", content: "The spoon has range.", optionId: "option-1" },
+      { id: "entry-2", content: "The umbrella owns the sky.", optionId: "option-2" }
+    ],
+    rules: getJudgingRules(BattleType.OPTION)
+  };
+
+  const valid = validateJudgeOutputReferences(
+    {
+      winnerType: "OPTION",
+      winnerOptionId: "option-1",
+      winnerEntryId: "entry-1",
+      topEntries: [{ rank: 1, entryId: "entry-1", score: 90, reason: "Strong bit." }],
+      optionScores: [
+        { optionId: "option-1", score: 90, reason: "Best comments." },
+        { optionId: "option-2", score: 70, reason: "Still good." }
+      ],
+      scoreTable: [
+        { entryId: "entry-1", optionId: "option-1", score: 90, reason: "Strong bit." },
+        { entryId: "entry-2", optionId: "option-2", score: 70, reason: "Still good." }
+      ],
+      verdictTitle: "Spoon wins",
+      verdictText: "The spoon argument landed harder.",
+      shareSummary: "AI picked spoon."
+    },
+    input
+  );
+  assert.equal(valid.winnerOptionId, "option-1");
+
+  assert.throws(
+    () =>
+      validateJudgeOutputReferences(
+        {
+          ...valid,
+          winnerEntryId: "missing-entry",
+          topEntries: [{ rank: 1, entryId: "missing-entry", score: 91, reason: "Invalid ref." }]
+        },
+        input
+      ),
+    /AI judge output referenced unknown battle data/
+  );
+});
+
+test("invalid AI judge references fail safely without settlement", async () => {
+  const repository = new MemoryRepository();
+  const app = createApiApp({
+    repository,
+    config: testConfig,
+    aiJudgeService: {
+      judgeBattle: async () => ({
+        winnerType: "ENTRY",
+        winnerEntryId: "missing-entry",
+        topEntries: [{ rank: 1, entryId: "missing-entry", score: 88, reason: "Unknown entry." }],
+        scoreTable: [{ entryId: "missing-entry", optionId: null, score: 88, reason: "Unknown entry." }],
+        verdictTitle: "Invalid AI output",
+        verdictText: "This output points outside the battle.",
+        shareSummary: "Invalid output should not settle."
+      })
+    },
+    settlementService: createSettlementService(testConfig)
+  });
+
+  const battle = await createBattleWithEntries(
+    app,
+    {
+      battleType: BattleType.TEXT_OPEN,
+      prompt: "Defend a paperclip in court."
+    },
+    [{ content: "The paperclip kept the evidence together." }]
+  );
+
+  const closed = await request(app, "POST", `/api/battles/${battle.id}/close`);
+  assert.equal(closed.statusCode, 200);
+
+  const judged = await request(app, "POST", `/api/battles/${battle.id}/judge`);
+  assert.equal(judged.statusCode, 502);
+  assert.equal(judged.body.error.code, "JUDGE_OR_SETTLEMENT_FAILED");
+  assert.match(judged.body.error.details[0], /AI judge output referenced unknown battle data/);
+
+  const result = await request(app, "GET", `/api/battles/${battle.id}/result`);
+  assert.equal(result.statusCode, 200);
+  assert.equal(result.body.battle.status, BattleStatus.FAILED);
+  assert.match(result.body.failureReason, /AI judge output referenced unknown battle data/);
+  assert.equal(await repository.getVerdictByBattle(battle.id), null);
+  assert.equal(await repository.getSettlementByBattle(battle.id), null);
 });
 
 test("shared judge and result contracts validate required shape", () => {

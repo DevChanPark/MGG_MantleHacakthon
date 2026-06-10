@@ -8,7 +8,25 @@ const ALLOWED_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/g
 
 export function createUploadService(config) {
   return {
-    uploadImage: (input) => uploadImage(input, config)
+    uploadImage: (input) => uploadImage(input, config),
+    getReadiness: () => getUploadReadiness(config)
+  };
+}
+
+export function getUploadReadiness(config = {}) {
+  if (config.storageProvider === "local") {
+    return {
+      provider: "local",
+      ready: true,
+      maxImageBytes: MAX_IMAGE_BYTES,
+      allowedTypes: [...ALLOWED_TYPES]
+    };
+  }
+
+  return {
+    provider: config.storageProvider || "unknown",
+    ready: false,
+    details: ["Only local image storage is implemented for MVP"]
   };
 }
 

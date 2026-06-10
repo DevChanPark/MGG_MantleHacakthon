@@ -16,7 +16,31 @@ The MVP backend is designed for a mobile-first frontend:
 
 ## `GET /api/health`
 
-Returns service health.
+Returns service health and backend-owned dependency readiness. This response must not expose API keys, RPC URLs, private keys, or local storage paths.
+
+```json
+{
+  "ok": true,
+  "service": "mgg-api",
+  "ai": {
+    "mode": "mock",
+    "ready": true,
+    "model": "mock-mgg-judge-v1"
+  },
+  "mantle": {
+    "mode": "mock",
+    "ready": true,
+    "chainId": 5003,
+    "contractAddress": "0x0000000000000000000000000000000000000000"
+  },
+  "storage": {
+    "provider": "local",
+    "ready": true,
+    "maxImageBytes": 3145728,
+    "allowedTypes": ["image/png", "image/jpeg", "image/webp", "image/gif"]
+  }
+}
+```
 
 ## `GET /api/users/me`
 

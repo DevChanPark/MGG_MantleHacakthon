@@ -6,14 +6,16 @@ import { ApiError, toApiError } from "./errors.js";
 
 const JSON_LIMIT_BYTES = 4 * 1024 * 1024;
 
-export function createApiApp({ repository, config }) {
+export function createApiApp({ repository, config, aiJudgeService, settlementService, uploadService }) {
+  const resolvedAiJudgeService = aiJudgeService ?? createAiJudgeService(config);
+  const resolvedSettlementService = settlementService ?? createSettlementService(config);
+  const resolvedUploadService = uploadService ?? createUploadService(config);
   const battleService = createBattleService({
     repository,
     config,
-    aiJudgeService: createAiJudgeService(config),
-    settlementService: createSettlementService(config)
+    aiJudgeService: resolvedAiJudgeService,
+    settlementService: resolvedSettlementService
   });
-  const uploadService = createUploadService(config);
 
   async function handle(request) {
     try {
@@ -24,7 +26,13 @@ export function createApiApp({ repository, config }) {
       const path = url.pathname;
 
       if (method === "GET" && path === "/api/health") {
-        return ok({ ok: true, service: "mgg-api" });
+        return ok({
+          ok: true,
+          service: "mgg-api",
+          ai: resolvedAiJudgeService.getReadiness?.() ?? { ready: true, mode: "custom" },
+          mantle: resolvedSettlementService.getSettlementReadiness?.() ?? { ready: true, mode: "custom" },
+          storage: resolvedUploadService.getReadiness?.() ?? { ready: true, provider: "custom" }
+        });
       }
 
       if (method === "GET" && path === "/api/users/me") {
@@ -44,7 +52,7 @@ export function createApiApp({ repository, config }) {
       }
 
       if (method === "POST" && path === "/api/uploads/image") {
-        return created({ upload: await uploadService.uploadImage(request.body) });
+        return created({ upload: await resolvedUploadService.uploadImage(request.body) });
       }
 
       const battleMatch = path.match(/^\/api\/battles\/([^/]+)(?:\/([^/]+))?$/);

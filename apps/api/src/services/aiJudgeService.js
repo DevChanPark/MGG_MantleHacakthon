@@ -2,9 +2,10 @@ import { sha256Hex } from "../../../../packages/core/src/index.js";
 import { BattleType, validateJudgeInput, validateJudgeOutput, WinnerType } from "../../../../packages/shared/src/index.js";
 
 export class AiJudgeError extends Error {
-  constructor(message) {
+  constructor(message, details = []) {
     super(message);
     this.name = "AiJudgeError";
+    this.details = details;
   }
 }
 
@@ -14,7 +15,25 @@ export function createAiJudgeService(config) {
     judgeOptionBattle: (input) => judgeOptionBattle(input, config),
     judgeTextOpenBattle: (input) => judgeTextOpenBattle(input, config),
     judgeImageCaptionBattle: (input) => judgeImageCaptionBattle(input, config),
-    mockJudgeBattle
+    mockJudgeBattle,
+    getReadiness: () => getAiJudgeReadiness(config)
+  };
+}
+
+export function getAiJudgeReadiness(config = {}) {
+  if (config.mockAi) {
+    return {
+      mode: "mock",
+      ready: true,
+      model: "mock-mgg-judge-v1"
+    };
+  }
+
+  return {
+    mode: "real",
+    ready: Boolean(config.openAiApiKey),
+    model: config.openAiModel,
+    details: config.openAiApiKey ? [] : ["OPENAI_API_KEY is required when MOCK_AI=false"]
   };
 }
 
@@ -103,7 +122,7 @@ export function mockJudgeBattle(input) {
     const winningOption = optionScores[0];
     const mvp = scoredEntries.find((entry) => entry.optionId === winningOption.optionId) ?? scoredEntries[0];
 
-    return validateJudgeOutput(
+    return validateJudgeOutputReferences(
       {
         winnerType: WinnerType.OPTION,
         winnerOptionId: winningOption.optionId,
@@ -115,7 +134,7 @@ export function mockJudgeBattle(input) {
         verdictText: "The winning side had the strongest mix of absurd confidence, meme energy, and argument quality.",
         shareSummary: "AI judged the comments, not the vote count, and crowned the side with the best nonsense."
       },
-      judgeInput.battle.battleType
+      judgeInput
     );
   }
 
@@ -125,7 +144,7 @@ export function mockJudgeBattle(input) {
       ? "Mock AI found the most shareable caption"
       : "Mock AI picked the strongest open answer";
 
-  return validateJudgeOutput(
+  return validateJudgeOutputReferences(
     {
       winnerType: WinnerType.ENTRY,
       winnerEntryId: winner.entryId,
@@ -135,8 +154,65 @@ export function mockJudgeBattle(input) {
       verdictText: "The winning entry balanced humor, confidence, originality, and clean meme impact.",
       shareSummary: "AI selected a winner with deterministic mock scoring for local development."
     },
-    judgeInput.battle.battleType
+    judgeInput
   );
+}
+
+export function validateJudgeOutputReferences(output, input) {
+  const judgeInput = validateJudgeInput(input);
+  const judgeOutput = validateJudgeOutput(output, judgeInput.battle.battleType);
+  const entriesById = new Map(judgeInput.entries.map((entry) => [entry.id, entry]));
+  const optionIds = new Set((judgeInput.battle.options || []).map((option) => option.id));
+  const details = [];
+
+  const ensureEntry = (entryId, path) => {
+    if (entryId && !entriesById.has(entryId)) {
+      details.push(`${path} must reference an existing entry`);
+    }
+    return entriesById.get(entryId);
+  };
+
+  const ensureOption = (optionId, path) => {
+    if (optionId && !optionIds.has(optionId)) {
+      details.push(`${path} must reference an existing option`);
+    }
+  };
+
+  const winnerEntry = ensureEntry(judgeOutput.winnerEntryId, "winnerEntryId");
+
+  if (judgeInput.battle.battleType === BattleType.OPTION) {
+    ensureOption(judgeOutput.winnerOptionId, "winnerOptionId");
+
+    if (winnerEntry?.optionId && winnerEntry.optionId !== judgeOutput.winnerOptionId) {
+      details.push("winnerEntryId must belong to winnerOptionId for OPTION battles");
+    }
+
+    for (const [index, optionScore] of judgeOutput.optionScores.entries()) {
+      ensureOption(optionScore.optionId, `optionScores[${index}].optionId`);
+    }
+  } else if (judgeOutput.winnerOptionId) {
+    details.push("winnerOptionId is only allowed for OPTION battles");
+  }
+
+  judgeOutput.topEntries.forEach((entry, index) => {
+    ensureEntry(entry.entryId, `topEntries[${index}].entryId`);
+  });
+
+  judgeOutput.scoreTable.forEach((row, index) => {
+    const scoredEntry = ensureEntry(row.entryId, `scoreTable[${index}].entryId`);
+    if (row.optionId) {
+      ensureOption(row.optionId, `scoreTable[${index}].optionId`);
+    }
+    if (scoredEntry?.optionId && row.optionId && scoredEntry.optionId !== row.optionId) {
+      details.push(`scoreTable[${index}].optionId must match the entry optionId`);
+    }
+  });
+
+  if (details.length > 0) {
+    throw new AiJudgeError("AI judge output referenced unknown battle data", details);
+  }
+
+  return judgeOutput;
 }
 
 async function callStructuredJudge(input, config) {
@@ -176,7 +252,7 @@ async function callStructuredJudge(input, config) {
       const payload = await response.json();
       const content = payload.choices?.[0]?.message?.content;
       const parsed = JSON.parse(content);
-      return validateJudgeOutput(parsed, input.battle.battleType);
+      return validateJudgeOutputReferences(parsed, input);
     } catch (error) {
       lastError = error;
     }
