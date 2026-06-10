@@ -8,7 +8,14 @@ import { createApiApp } from "../src/app.js";
 import { createHttpServer } from "../src/server.js";
 import { MemoryRepository } from "../src/repositories/memoryRepository.js";
 import { createAiJudgeService, mockJudgeBattle } from "../src/services/aiJudgeService.js";
-import { createSettlementService, mockRecordVerdict } from "../src/services/settlementService.js";
+import {
+  ZERO_ADDRESS,
+  createSettlementService,
+  getSettlementReadiness,
+  mockRecordVerdict,
+  validateMantleConfig,
+  validateSettlementPayload
+} from "../src/services/settlementService.js";
 import {
   BattleStatus,
   BattleType,
@@ -316,6 +323,43 @@ test("mock Mantle settlement returns deterministic tx metadata", () => {
   const second = mockRecordVerdict(payload, testConfig);
   assert.deepEqual(first, second);
   assert.equal(first.chainId, 5003);
+  assert.equal(first.contractAddress, ZERO_ADDRESS);
+});
+
+test("Mantle settlement validation rejects malformed payload and config", () => {
+  assert.throws(
+    () => validateSettlementPayload({ verdictHash: "0x1234" }),
+    /Invalid Mantle settlement payload/
+  );
+
+  const payload = {
+    contentHash: "0x1111111111111111111111111111111111111111111111111111111111111111",
+    entriesRoot: "0x2222222222222222222222222222222222222222222222222222222222222222",
+    rulesHash: "0x3333333333333333333333333333333333333333333333333333333333333333",
+    modelVersionHash: "0x4444444444444444444444444444444444444444444444444444444444444444",
+    winnerHash: "0x5555555555555555555555555555555555555555555555555555555555555555",
+    optionsHash: null,
+    mvpEntryHash: null,
+    verdictHash: "0x6666666666666666666666666666666666666666666666666666666666666666"
+  };
+  assert.deepEqual(validateSettlementPayload(payload), payload);
+
+  assert.throws(() => validateMantleConfig({ mantleChainId: 5003 }), /Invalid Mantle settlement config/);
+
+  const realConfig = {
+    mantleRpcUrl: "https://rpc.test",
+    mantleChainId: 5003,
+    verdictRegistryAddress: "0x1111111111111111111111111111111111111111",
+    serverWalletPrivateKey: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  };
+  assert.equal(validateMantleConfig(realConfig).mantleChainId, 5003);
+
+  assert.equal(getSettlementReadiness({ mockMantle: true, verdictRegistryAddress: "not-an-address" }).ready, true);
+  assert.equal(
+    getSettlementReadiness({ mockMantle: true, verdictRegistryAddress: "not-an-address" }).contractAddress,
+    ZERO_ADDRESS
+  );
+  assert.equal(getSettlementReadiness({ mockMantle: false, mantleChainId: 5003 }).ready, false);
 });
 
 test("local image upload stores and serves uploaded file over HTTP", async () => {
