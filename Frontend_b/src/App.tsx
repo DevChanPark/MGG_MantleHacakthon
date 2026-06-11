@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { OnboardingFeed } from './screens/OnboardingFeed';
+import { SignupProfileScreen } from './screens/SignupProfileScreen';
 import { SignupWalletScreen } from './screens/SignupWalletScreen';
 
 export default function App() {
@@ -14,6 +15,10 @@ export default function App() {
 
   if (route === 'signup') {
     return <SignupWalletScreen />;
+  }
+
+  if (route === 'signup-profile') {
+    return <SignupProfileScreen />;
   }
 
   return <OnboardingFeed />;

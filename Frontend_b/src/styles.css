@@ -183,13 +183,13 @@ select {
   background: #e3f4a6;
 }
 
-.welcome-logo-small {
+.app-logo-small {
   position: absolute;
-  z-index: 2;
-  left: 5.721393034825871%;
-  top: 2.983981693363844%;
-  width: 23.42039800995025%;
-  height: 3.423981693363844%;
+  z-index: 4;
+  left: 6.716417910447761%;
+  top: 3.203661327231121%;
+  width: 20.956467661691543%;
+  height: 3.0549771167048056%;
   object-fit: contain;
   user-select: none;
   -webkit-user-drag: none;
@@ -437,6 +437,115 @@ select {
   text-underline-position: from-font;
 }
 
+.login-modal-layer {
+  position: fixed;
+  z-index: 50;
+  inset: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  background: rgba(14, 14, 14, 0.48);
+}
+
+.login-modal {
+  position: relative;
+  width: min(307px, calc(307 / 402 * min(100vw, 402px, calc(100vh * 402 / 874))));
+  height: min(232px, calc(232 / 402 * min(100vw, 402px, calc(100vh * 402 / 874))));
+  margin-top: min(315px, calc(315 / 402 * min(100vw, 402px, calc(100vh * 402 / 874))));
+  border: 1px solid #0e0e0e;
+  border-radius: 15px;
+  background: #fdfdfd;
+}
+
+.login-modal-title {
+  position: absolute;
+  left: min(24px, calc(24 / 402 * min(100vw, 402px, calc(100vh * 402 / 874))));
+  top: min(23px, calc(23 / 402 * min(100vw, 402px, calc(100vh * 402 / 874))));
+  margin: 0;
+  color: #0e0e0e;
+  font-size: clamp(18px, calc(20 / 402 * min(100vw, 402px, calc(100vh * 402 / 874))), 20px);
+  font-weight: 400;
+  letter-spacing: -0.011em;
+  line-height: 1.5;
+}
+
+.login-modal-close {
+  position: absolute;
+  right: min(19px, calc(19 / 402 * min(100vw, 402px, calc(100vh * 402 / 874))));
+  top: min(22px, calc(22 / 402 * min(100vw, 402px, calc(100vh * 402 / 874))));
+  display: flex;
+  width: min(31px, calc(31 / 402 * min(100vw, 402px, calc(100vh * 402 / 874))));
+  aspect-ratio: 1;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #0e0e0e;
+  cursor: pointer;
+  font-size: clamp(34px, calc(36 / 402 * min(100vw, 402px, calc(100vh * 402 / 874))), 36px);
+  font-weight: 300;
+  line-height: 0.7;
+}
+
+.login-wallet-options {
+  position: absolute;
+  left: min(22px, calc(22 / 402 * min(100vw, 402px, calc(100vh * 402 / 874))));
+  top: min(70px, calc(70 / 402 * min(100vw, 402px, calc(100vh * 402 / 874))));
+  display: grid;
+  width: min(262px, calc(262 / 402 * min(100vw, 402px, calc(100vh * 402 / 874))));
+  gap: min(5px, calc(5 / 402 * min(100vw, 402px, calc(100vh * 402 / 874))));
+}
+
+.login-wallet-button {
+  display: flex;
+  width: 100%;
+  height: min(40px, calc(40 / 402 * min(100vw, 402px, calc(100vh * 402 / 874))));
+  align-items: center;
+  overflow: hidden;
+  padding: 0 min(13px, calc(13 / 402 * min(100vw, 402px, calc(100vh * 402 / 874))));
+  border: 0;
+  border-radius: 10px;
+  background: #e3f4a6;
+  color: #0e0e0e;
+  cursor: pointer;
+  font-size: clamp(13px, calc(14 / 402 * min(100vw, 402px, calc(100vh * 402 / 874))), 14px);
+  font-weight: 300;
+  letter-spacing: -0.011em;
+  line-height: 1.5;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.login-wallet-button strong {
+  font-weight: 400;
+}
+
+.login-wallet-button .wallet-icon {
+  margin-right: min(7px, calc(7 / 402 * min(100vw, 402px, calc(100vh * 402 / 874))));
+}
+
+.login-wallet-button .metamask-logo {
+  width: min(19px, calc(19 / 402 * min(100vw, 402px, calc(100vh * 402 / 874))));
+  height: min(19px, calc(19 / 402 * min(100vw, 402px, calc(100vh * 402 / 874))));
+}
+
+.login-wallet-button .okx-logo {
+  width: min(15px, calc(15 / 402 * min(100vw, 402px, calc(100vh * 402 / 874))));
+  height: min(15px, calc(15 / 402 * min(100vw, 402px, calc(100vh * 402 / 874))));
+}
+
+.login-wallet-button .walletconnect-logo {
+  width: min(28px, calc(28 / 402 * min(100vw, 402px, calc(100vh * 402 / 874))));
+  height: min(16px, calc(16 / 402 * min(100vw, 402px, calc(100vh * 402 / 874))));
+}
+
+.login-modal-close:focus-visible,
+.login-wallet-button:focus-visible {
+  outline: 2px solid #0e0e0e;
+  outline-offset: 2px;
+}
+
 .signup-feed {
   display: flex;
   width: 100vw;
@@ -482,22 +591,6 @@ select {
   background: #fdfdfd;
 }
 
-.signup-logo {
-  position: absolute;
-  z-index: 2;
-  left: 6.716417910447761%;
-  top: 2.631578947368421%;
-  color: #e3f4a6;
-  font-size: clamp(40px, calc(44 / 402 * min(100vw, 402px, calc(100vh * 402 / 874))), 44px);
-  font-weight: 800;
-  letter-spacing: 0;
-  line-height: 1;
-  paint-order: stroke fill;
-  text-shadow: 0 4px 4px rgba(0, 0, 0, 0.32);
-  -webkit-text-stroke: 1.25px #0e0e0e;
-  user-select: none;
-}
-
 .signup-title {
   position: absolute;
   z-index: 2;
@@ -521,6 +614,24 @@ select {
   border: 1px solid #0e0e0e;
   border-radius: 50%;
   background: #e3f4a6;
+}
+
+.signup-profile-photo-preview {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+}
+
+.profile-photo-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .signup-wallet-section {
@@ -606,6 +717,315 @@ select {
 .walletconnect-logo {
   width: 27px;
   height: 20px;
+}
+
+.signup-profile-white-panel {
+  position: absolute;
+  left: 0;
+  top: 31.922196796338673%;
+  width: 100%;
+  height: 68.07780320366133%;
+  background: #fdfdfd;
+}
+
+.signup-profile-white-curve {
+  position: absolute;
+  left: -39.80099502487562%;
+  top: 24.71395881006865%;
+  width: 179.60199004975124%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: #fdfdfd;
+}
+
+.signup-profile-circle-large {
+  left: 32.83582089552239%;
+  top: 16.819221967963387%;
+  width: 34.32835820895522%;
+}
+
+.signup-camera-button {
+  position: absolute;
+  z-index: 3;
+  left: 56.218905472636816%;
+  top: 27.68878718535469%;
+  display: flex;
+  width: min(39px, calc(39 / 402 * min(100vw, 402px, calc(100vh * 402 / 874))));
+  aspect-ratio: 1;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid #0e0e0e;
+  border-radius: 999px;
+  background: #fdfdfd;
+  cursor: pointer;
+}
+
+.signup-camera-button svg {
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: #0e0e0e;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1;
+}
+
+.signup-profile-form {
+  position: absolute;
+  z-index: 2;
+  left: 8.208955223880597%;
+  top: 35.81235697940503%;
+  width: 83.5820895522388%;
+  height: 59.49656750572083%;
+}
+
+.signup-form-group {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  margin: 0;
+}
+
+.signup-form-group:nth-child(1) {
+  top: 0;
+}
+
+.signup-form-group:nth-child(2) {
+  top: min(111px, calc(111 / 402 * min(100vw, 402px, calc(100vh * 402 / 874))));
+}
+
+.signup-form-group:nth-child(3) {
+  top: min(243px, calc(243 / 402 * min(100vw, 402px, calc(100vh * 402 / 874))));
+  width: 101.78571428571429%;
+}
+
+.signup-form-label {
+  display: block;
+  margin: 0 0 6px 3px;
+  color: #0e0e0e;
+  font-size: clamp(14px, calc(15 / 402 * min(100vw, 402px, calc(100vh * 402 / 874))), 15px);
+  font-weight: 300;
+  letter-spacing: -0.011em;
+  line-height: 1.5;
+}
+
+.signup-form-label span {
+  color: #f24822;
+}
+
+.signup-connected-wallet,
+.signup-text-field,
+.signup-textarea-field,
+.signup-complete-button {
+  width: 100%;
+  border-radius: 10px;
+  background: #e3f4a6;
+  color: #0e0e0e;
+}
+
+.signup-connected-wallet,
+.signup-text-field,
+.signup-textarea-field {
+  border: 0;
+}
+
+.signup-connected-wallet {
+  display: flex;
+  height: min(44px, calc(44 / 402 * min(100vw, 402px, calc(100vh * 402 / 874))));
+  align-items: center;
+  padding: 0 15px;
+  font-size: clamp(15px, calc(16 / 402 * min(100vw, 402px, calc(100vh * 402 / 874))), 16px);
+  font-weight: 300;
+  letter-spacing: -0.011em;
+  line-height: 1.5;
+}
+
+.signup-connected-wallet strong {
+  font-weight: 400;
+}
+
+.signup-connected-wallet .wallet-icon {
+  margin-right: 7px;
+}
+
+.signup-text-field,
+.signup-textarea-field {
+  display: block;
+  padding: 0 14px;
+  font-size: clamp(14px, calc(15 / 402 * min(100vw, 402px, calc(100vh * 402 / 874))), 15px);
+  font-weight: 300;
+  letter-spacing: -0.011em;
+  line-height: 1.5;
+  outline: none;
+}
+
+.signup-text-field {
+  height: min(44px, calc(44 / 402 * min(100vw, 402px, calc(100vh * 402 / 874))));
+}
+
+.signup-textarea-field {
+  height: min(112px, calc(112 / 402 * min(100vw, 402px, calc(100vh * 402 / 874))));
+  padding-top: min(12px, calc(12 / 402 * min(100vw, 402px, calc(100vh * 402 / 874))));
+  resize: none;
+}
+
+.signup-text-field::placeholder,
+.signup-textarea-field::placeholder {
+  color: #757575;
+  opacity: 1;
+}
+
+.signup-field-helper {
+  margin: 6px 0 0 14px;
+  color: #0e0e0e;
+  font-size: clamp(11px, calc(12 / 402 * min(100vw, 402px, calc(100vh * 402 / 874))), 12px);
+  font-weight: 300;
+  letter-spacing: -0.011em;
+  line-height: 1.5;
+}
+
+.signup-field-helper.is-error {
+  color: #f24822;
+}
+
+.signup-text-field:focus,
+.signup-textarea-field:focus,
+.signup-complete-button:focus-visible,
+.signup-camera-button:focus-visible,
+.signup-age-check input:focus-visible {
+  outline: 2px solid #0e0e0e;
+  outline-offset: 2px;
+}
+
+.signup-age-check {
+  position: absolute;
+  top: min(439px, calc(439 / 402 * min(100vw, 402px, calc(100vh * 402 / 874))));
+  left: 0;
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  color: #0e0e0e;
+  font-size: clamp(11px, calc(12 / 402 * min(100vw, 402px, calc(100vh * 402 / 874))), 12px);
+  font-weight: 300;
+  letter-spacing: -0.011em;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.signup-age-check input {
+  display: grid;
+  place-content: center;
+  flex: 0 0 auto;
+  width: min(14px, calc(14 / 402 * min(100vw, 402px, calc(100vh * 402 / 874))));
+  height: min(14px, calc(14 / 402 * min(100vw, 402px, calc(100vh * 402 / 874))));
+  margin: 0 8px 0 0;
+  appearance: none;
+  border: 1px solid #0e0e0e;
+  border-radius: 2px;
+  background: #fdfdfd;
+  cursor: pointer;
+}
+
+.signup-age-check input:checked {
+  background: #e3f4a6;
+}
+
+.signup-age-check a {
+  color: #0e0e0e;
+  text-decoration: underline;
+  text-underline-position: from-font;
+}
+
+.signup-complete-button {
+  position: absolute;
+  top: min(463px, calc(463 / 402 * min(100vw, 402px, calc(100vh * 402 / 874))));
+  left: 0;
+  display: flex;
+  height: min(57px, calc(57 / 402 * min(100vw, 402px, calc(100vh * 402 / 874))));
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #0e0e0e;
+  cursor: pointer;
+  font-size: clamp(18px, calc(20 / 402 * min(100vw, 402px, calc(100vh * 402 / 874))), 20px);
+  font-weight: 300;
+  letter-spacing: -0.011em;
+  line-height: 1.5;
+}
+
+.profile-photo-sheet {
+  position: absolute;
+  z-index: 10;
+  left: 0;
+  top: 73.91304347826086%;
+  width: 100%;
+  height: 28.718535469107552%;
+  overflow: hidden;
+  border: 0.5px solid #0e0e0e;
+  border-radius: 15px 15px 0 0;
+  background: #fdfdfd;
+}
+
+.profile-photo-sheet-handle {
+  position: absolute;
+  left: 50%;
+  top: min(12px, calc(12 / 402 * min(100vw, 402px, calc(100vh * 402 / 874))));
+  width: min(40px, calc(40 / 402 * min(100vw, 402px, calc(100vh * 402 / 874))));
+  height: 1px;
+  border-radius: 1px;
+  background: #0e0e0e;
+  transform: translateX(-50%);
+}
+
+.profile-photo-sheet-title {
+  position: absolute;
+  left: 0;
+  top: min(24px, calc(24 / 402 * min(100vw, 402px, calc(100vh * 402 / 874))));
+  width: 100%;
+  margin: 0;
+  color: #0e0e0e;
+  font-size: clamp(14px, calc(15 / 402 * min(100vw, 402px, calc(100vh * 402 / 874))), 15px);
+  font-weight: 300;
+  letter-spacing: -0.011em;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.profile-photo-sheet-option {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: min(43px, calc(43 / 402 * min(100vw, 402px, calc(100vh * 402 / 874))));
+  padding: 0 20px;
+  border: 0;
+  border-top: 0.5px solid #a8a8a8;
+  background: #fdfdfd;
+  color: #0e0e0e;
+  cursor: pointer;
+  font-size: clamp(14px, calc(15 / 402 * min(100vw, 402px, calc(100vh * 402 / 874))), 15px);
+  font-weight: 300;
+  letter-spacing: -0.011em;
+  line-height: 1.5;
+  text-align: left;
+}
+
+.profile-photo-sheet-option:nth-of-type(1) {
+  top: min(57px, calc(57 / 402 * min(100vw, 402px, calc(100vh * 402 / 874))));
+}
+
+.profile-photo-sheet-option:nth-of-type(2) {
+  top: min(100px, calc(100 / 402 * min(100vw, 402px, calc(100vh * 402 / 874))));
+}
+
+.profile-photo-sheet-option:nth-of-type(3) {
+  top: min(143px, calc(143 / 402 * min(100vw, 402px, calc(100vh * 402 / 874))));
+}
+
+.profile-photo-sheet-option:focus-visible {
+  outline: 2px solid #0e0e0e;
+  outline-offset: -4px;
 }
 
 @media (prefers-reduced-motion: reduce) {

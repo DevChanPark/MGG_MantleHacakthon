@@ -1,6 +1,8 @@
-import { type ReactNode, useEffect, useState } from 'react';
+import { type MouseEvent, type ReactNode, useEffect, useState } from 'react';
+import metamaskLogo from '../../assets/image13.png';
+import okxLogo from '../../assets/image14.png';
+import walletConnectLogo from '../../assets/image15.png';
 import mggLogo from '../../assets/brand/mgg-logo.png';
-import mggLogoSmall from '../../assets/brand/mgg-logo-variant-1.png';
 import mugigWordmark from '../../assets/brand/mugig-wordmark.png';
 import commentCard from '../../assets/ui/group-35.png';
 import likeBubble from '../../assets/ui/group-36.png';
@@ -19,6 +21,27 @@ const frame = {
 
 const AUTO_SLIDE_INTERVAL_MS = 3000;
 const MIN_SWIPE_DISTANCE = 48;
+
+const loginWalletOptions = [
+  {
+    iconSrc: metamaskLogo,
+    iconClassName: 'metamask-logo',
+    strongLabel: 'MetaMask',
+    suffix: '로 로그인하기',
+  },
+  {
+    iconSrc: okxLogo,
+    iconClassName: 'okx-logo',
+    strongLabel: 'OKX Wallet',
+    suffix: '으로 로그인하기',
+  },
+  {
+    iconSrc: walletConnectLogo,
+    iconClassName: 'walletconnect-logo',
+    strongLabel: 'WalletConnect',
+    suffix: '로 로그인하기',
+  },
+];
 
 const onboardingPages = [
   {
@@ -122,7 +145,7 @@ function AutoOnboardingCarousel() {
         aria-label="MGG onboarding carousel"
       >
         <div className="fixed-onboarding-hero" aria-hidden="true" />
-        <img className="welcome-logo-small" src={mggLogoSmall} alt="MGG" />
+        <img className="app-logo-small" src={mggLogo} alt="MGG" />
 
         <div
           className="onboarding-fixed-content-viewport"
@@ -241,7 +264,7 @@ function WelcomePage({ showActions = true }: AuthPageProps) {
   return (
     <div className="welcome-frame">
       <div className="welcome-hero" aria-hidden="true" />
-      <img className="welcome-logo-small" src={mggLogoSmall} alt="MGG" />
+      <img className="app-logo-small" src={mggLogo} alt="MGG" />
       <WelcomeContent />
 
       <PageDots activeIndex={0} />
@@ -274,7 +297,7 @@ function TypeSelectPage({ showActions = true }: AuthPageProps) {
   return (
     <div className="welcome-frame type-select-frame">
       <div className="type-select-hero" aria-hidden="true" />
-      <img className="welcome-logo-small" src={mggLogoSmall} alt="MGG" />
+      <img className="app-logo-small" src={mggLogo} alt="MGG" />
 
       <TypeSelectContent />
 
@@ -306,7 +329,7 @@ function AiJudgePage({ showActions = true }: AuthPageProps) {
   return (
     <div className="welcome-frame ai-judge-frame">
       <div className="ai-judge-hero" aria-hidden="true" />
-      <img className="welcome-logo-small" src={mggLogoSmall} alt="MGG" />
+      <img className="app-logo-small" src={mggLogo} alt="MGG" />
 
       <AiJudgeContent />
 
@@ -329,7 +352,7 @@ function ShareResultPage({ showActions = true }: AuthPageProps) {
   return (
     <div className="welcome-frame share-result-frame">
       <div className="share-result-hero" aria-hidden="true" />
-      <img className="welcome-logo-small" src={mggLogoSmall} alt="MGG" />
+      <img className="app-logo-small" src={mggLogo} alt="MGG" />
 
       <ShareResultContent />
 
@@ -369,13 +392,15 @@ function PageDots({ activeIndex }: PageDotsProps) {
 }
 
 function AuthActions() {
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
+
   const openSignupFeed = () => {
     window.location.hash = 'signup';
   };
 
   return (
     <div className="welcome-actions">
-      <button className="welcome-button" type="button">
+      <button className="welcome-button" type="button" onClick={() => setIsLoginOpen(true)}>
         로그인하기
       </button>
       <button className="welcome-button" type="button" onClick={openSignupFeed}>
@@ -385,6 +410,47 @@ function AuthActions() {
         계정을 생성하거나 로그인하면 당사의 <a href="#terms">이용약관(EULA)</a> 및{' '}
         <a href="#privacy">개인정보 처리 방침</a>에 동의하는 것으로 간주됩니다.
       </p>
+      {isLoginOpen ? <LoginModal onClose={() => setIsLoginOpen(false)} /> : null}
+    </div>
+  );
+}
+
+type LoginModalProps = {
+  onClose: () => void;
+};
+
+function LoginModal({ onClose }: LoginModalProps) {
+  const closeOnBackdrop = (event: MouseEvent<HTMLDivElement>) => {
+    if (event.target === event.currentTarget) {
+      onClose();
+    }
+  };
+
+  return (
+    <div className="login-modal-layer" role="presentation" onMouseDown={closeOnBackdrop}>
+      <section className="login-modal" role="dialog" aria-modal="true" aria-labelledby="login-modal-title">
+        <h2 className="login-modal-title" id="login-modal-title">로그인하기</h2>
+        <button className="login-modal-close" type="button" aria-label="로그인 팝업 닫기" onClick={onClose}>
+          ×
+        </button>
+
+        <div className="login-wallet-options">
+          {loginWalletOptions.map((option) => (
+            <button className="login-wallet-button" type="button" key={option.strongLabel}>
+              <img
+                className={`wallet-icon ${option.iconClassName}`}
+                src={option.iconSrc}
+                alt=""
+                aria-hidden="true"
+              />
+              <span>
+                <strong>{option.strongLabel}</strong>
+                {option.suffix}
+              </span>
+            </button>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }
