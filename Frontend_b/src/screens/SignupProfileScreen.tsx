@@ -163,6 +163,12 @@ export function SignupProfileScreen() {
               type="button"
               onClick={() => {
                 setProfilePhotoPreview('');
+                if (cameraInputRef.current) {
+                  cameraInputRef.current.value = '';
+                }
+                if (galleryInputRef.current) {
+                  galleryInputRef.current.value = '';
+                }
                 setIsPhotoSheetOpen(false);
               }}
             >
