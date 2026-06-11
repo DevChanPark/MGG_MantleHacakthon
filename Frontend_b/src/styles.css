@@ -1,0 +1,622 @@
+:root {
+  color: #111;
+  background: #e3f4a6;
+  font-family:
+    Pretendard, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  font-synthesis: none;
+  text-rendering: geometricPrecision;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  min-width: 320px;
+  height: 100%;
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  overflow: hidden;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+.onboarding-feed {
+  display: block;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: #e3f4a6;
+}
+
+.onboarding-track {
+  display: flex;
+  width: max-content;
+  height: 100%;
+  transition: transform 560ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+}
+
+.onboarding-carousel-frame {
+  position: relative;
+  width: min(100vw, 402px, calc(100vh * 402 / 874));
+  aspect-ratio: 402 / 874;
+  max-height: 100vh;
+  margin: 0 auto;
+  overflow: hidden;
+  background: #0e0e0e;
+}
+
+.fixed-onboarding-hero {
+  position: absolute;
+  z-index: 0;
+  left: -37.06467661691542%;
+  top: -18.993135011441648%;
+  width: 179.60199004975124%;
+  height: 82.6086956521739%;
+  border-radius: 50%;
+  background: #e3f4a6;
+}
+
+.onboarding-fixed-content-viewport {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+  cursor: grab;
+  touch-action: pan-y;
+}
+
+.onboarding-fixed-content-viewport:active {
+  cursor: grabbing;
+}
+
+.onboarding-fixed-content-track {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  transition: transform 560ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+}
+
+.onboarding-fixed-content-slide {
+  position: relative;
+  flex: 0 0 100%;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.onboarding-page {
+  position: relative;
+  display: flex;
+  flex: 0 0 100vw;
+  width: 100vw;
+  height: 100vh;
+  align-items: flex-start;
+  justify-content: center;
+  overflow: hidden;
+  background: #e3f4a6;
+}
+
+.onboarding-page#welcome {
+  background: #e3f4a6;
+}
+
+.onboarding-frame {
+  position: relative;
+  width: min(100vw, 402px, calc(100vh * 402 / 874));
+  aspect-ratio: 402 / 874;
+  max-height: 100vh;
+  overflow: hidden;
+  background: #e3f4a6;
+}
+
+.onboarding-logo {
+  position: absolute;
+  display: block;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.welcome-frame {
+  position: relative;
+  width: min(100vw, 402px, calc(100vh * 402 / 874));
+  aspect-ratio: 402 / 874;
+  max-height: 100vh;
+  overflow: hidden;
+  background: #0e0e0e;
+}
+
+.welcome-hero {
+  position: absolute;
+  left: -37.06467661691542%;
+  top: -18.993135011441648%;
+  width: 179.60199004975124%;
+  height: 82.6086956521739%;
+  border-radius: 50%;
+  background: #e3f4a6;
+}
+
+.type-select-hero {
+  position: absolute;
+  left: -38.059701492537314%;
+  top: -17.505720823798628%;
+  width: 179.60199004975124%;
+  height: 82.6086956521739%;
+  border-radius: 50%;
+  background: #e3f4a6;
+}
+
+.ai-judge-hero {
+  position: absolute;
+  left: -37.06467661691542%;
+  top: -17.505720823798628%;
+  width: 179.60199004975124%;
+  height: 82.6086956521739%;
+  border-radius: 50%;
+  background: #e3f4a6;
+}
+
+.share-result-hero {
+  position: absolute;
+  left: -43.28358208955224%;
+  top: -18.993135011441648%;
+  width: 179.60199004975124%;
+  height: 82.6086956521739%;
+  border-radius: 50%;
+  background: #e3f4a6;
+}
+
+.welcome-logo-small {
+  position: absolute;
+  z-index: 2;
+  left: 5.721393034825871%;
+  top: 2.983981693363844%;
+  width: 23.42039800995025%;
+  height: 3.423981693363844%;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.welcome-title {
+  position: absolute;
+  left: 9.45273631840796%;
+  top: 15.102974828375286%;
+  margin: 0;
+  color: #0e0e0e;
+  font-size: clamp(28px, calc(32 / 402 * min(100vw, calc(100vh * 402 / 874))), 32px);
+  font-weight: 600;
+  line-height: 1.5625;
+  letter-spacing: -0.011em;
+}
+
+.type-select-cards {
+  position: absolute;
+  inset: 0;
+}
+
+.type-card {
+  position: absolute;
+  display: block;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.type-card-open {
+  left: 16.91542288557214%;
+  top: 14.416475972540046%;
+  width: 67.66169154228855%;
+  height: 7.437070938215103%;
+}
+
+.type-card-option {
+  left: 16.417910447761194%;
+  top: 21.16704805491991%;
+  width: 68.1592039800995%;
+  height: 8.695652173913043%;
+}
+
+.type-card-image {
+  left: 16.91542288557214%;
+  top: 29.86270022883295%;
+  width: 67.66169154228855%;
+  height: 7.437070938215103%;
+}
+
+.type-select-title {
+  position: absolute;
+  left: 10.199004975124378%;
+  top: 41.53318077803204%;
+  margin: 0;
+  color: #0e0e0e;
+  font-size: clamp(28px, calc(32 / 402 * min(100vw, 402px, calc(100vh * 402 / 874))), 32px);
+  font-weight: 600;
+  line-height: 1.5625;
+  letter-spacing: -0.011em;
+  white-space: nowrap;
+}
+
+.ai-judge-title {
+  position: absolute;
+  left: 9.45273631840796%;
+  top: 14.988558352402746%;
+  margin: 0;
+  color: #0e0e0e;
+  font-size: clamp(28px, calc(32 / 402 * min(100vw, 402px, calc(100vh * 402 / 874))), 32px);
+  font-weight: 600;
+  line-height: 1.5625;
+  letter-spacing: -0.011em;
+  white-space: nowrap;
+}
+
+.ai-judge-hammer {
+  position: absolute;
+  left: 13.930348258706468%;
+  top: 20.70938215102975%;
+  width: 85.36716417910448%;
+  height: 31.59324942791762%;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.share-result-card {
+  position: absolute;
+  left: 9.45273631840796%;
+  top: 9.153318077803204%;
+  width: 75.66915422885573%;
+  height: 29.248054919908468%;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.share-result-icon {
+  position: absolute;
+  left: 75.87064676616915%;
+  top: 34.50572082379863%;
+  width: 14.877611940298507%;
+  height: 6.843020594965675%;
+  object-fit: contain;
+  transform: rotate(6.55deg);
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.share-result-title {
+  position: absolute;
+  left: 9.45273631840796%;
+  top: 41.53318077803204%;
+  margin: 0;
+  color: #0e0e0e;
+  font-size: clamp(28px, calc(32 / 402 * min(100vw, 402px, calc(100vh * 402 / 874))), 32px);
+  font-weight: 600;
+  line-height: 1.5625;
+  letter-spacing: -0.011em;
+  white-space: nowrap;
+}
+
+.welcome-art {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.welcome-comment-card {
+  position: absolute;
+  left: 21.89054726368159%;
+  top: 28.947368421052634%;
+  width: 56.27462686567164%;
+  height: 21.910869565217394%;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.welcome-like-bubble {
+  position: absolute;
+  left: 3.482587064676617%;
+  top: 31.464530892448514%;
+  width: 17.412935323383085%;
+  height: 5.377574370709382%;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.welcome-comment-bubble {
+  position: absolute;
+  left: 79.1044776119403%;
+  top: 42.33409610983982%;
+  width: 17.53731343283582%;
+  height: 5.377574370709382%;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.welcome-logo-large {
+  position: absolute;
+  left: 24.12935323383085%;
+  top: 46.10983981693364%;
+  width: 51.68706467661692%;
+  height: 9.857665903890161%;
+  object-fit: contain;
+  transform: rotate(-6.37deg);
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.welcome-dots {
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  top: 58.23844393592677%;
+  display: flex;
+  gap: 9px;
+  transform: translateX(-50%);
+}
+
+.welcome-dot {
+  width: 14px;
+  height: 14px;
+  border: 1px solid #0e0e0e;
+  border-radius: 999px;
+  background: #f4f5ff;
+}
+
+.welcome-dot.is-active {
+  background: #e3f4a6;
+}
+
+.welcome-actions {
+  position: absolute;
+  z-index: 3;
+  left: 7.213930348258706%;
+  top: 73.34096109839817%;
+  width: 85.57213930348259%;
+}
+
+.welcome-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: min(68px, calc(68 / 402 * min(100vw, calc(100vh * 402 / 874))));
+  margin: 0 0 16px;
+  border: 0;
+  border-radius: 10px;
+  background: #e3f4a6;
+  color: #000;
+  cursor: pointer;
+  font-size: clamp(22px, calc(24 / 402 * min(100vw, calc(100vh * 402 / 874))), 24px);
+  font-weight: 400;
+  letter-spacing: -0.011em;
+  line-height: 1.5;
+}
+
+.welcome-button:focus-visible {
+  outline: 3px solid #fdfdfd;
+  outline-offset: 3px;
+}
+
+.welcome-terms {
+  width: 100%;
+  margin: 2px 0 0;
+  color: #fdfdfd;
+  font-size: clamp(9px, calc(10 / 402 * min(100vw, calc(100vh * 402 / 874))), 10px);
+  font-weight: 300;
+  letter-spacing: -0.011em;
+  line-height: 1.5;
+  word-break: keep-all;
+}
+
+.welcome-terms a {
+  color: #e3f4a6;
+  text-decoration: underline;
+  text-underline-position: from-font;
+}
+
+.signup-feed {
+  display: flex;
+  width: 100vw;
+  height: 100vh;
+  align-items: flex-start;
+  justify-content: center;
+  overflow: hidden;
+  background: #e3f4a6;
+}
+
+.signup-frame {
+  position: relative;
+  width: min(100vw, 402px, calc(100vh * 402 / 874));
+  aspect-ratio: 402 / 874;
+  max-height: 100vh;
+  overflow: hidden;
+  background: #e3f4a6;
+}
+
+.signup-green-area {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 32%;
+  background: #e3f4a6;
+}
+
+.signup-white-panel {
+  position: absolute;
+  left: 0;
+  top: 32.036613272311214%;
+  width: 100%;
+  height: 67.96338672768878%;
+  background: #fdfdfd;
+}
+
+.signup-white-curve {
+  position: absolute;
+  left: -12.189054726368159%;
+  top: 26.77345537757437%;
+  width: 124.37810945273632%;
+  height: 25.171624713958813%;
+  border-radius: 50%;
+  background: #fdfdfd;
+}
+
+.signup-logo {
+  position: absolute;
+  z-index: 2;
+  left: 6.716417910447761%;
+  top: 2.631578947368421%;
+  color: #e3f4a6;
+  font-size: clamp(40px, calc(44 / 402 * min(100vw, 402px, calc(100vh * 402 / 874))), 44px);
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: 1;
+  paint-order: stroke fill;
+  text-shadow: 0 4px 4px rgba(0, 0, 0, 0.32);
+  -webkit-text-stroke: 1.25px #0e0e0e;
+  user-select: none;
+}
+
+.signup-title {
+  position: absolute;
+  z-index: 2;
+  left: 6.716417910447761%;
+  top: 11.899313501144165%;
+  margin: 0;
+  color: #0e0e0e;
+  font-size: clamp(22px, calc(24 / 402 * min(100vw, 402px, calc(100vh * 402 / 874))), 24px);
+  font-weight: 400;
+  letter-spacing: -0.011em;
+  line-height: 1.5;
+}
+
+.signup-profile-circle {
+  position: absolute;
+  z-index: 2;
+  left: 33.33333333333333%;
+  top: 17.734553775743707%;
+  width: 34.32835820895522%;
+  aspect-ratio: 1;
+  border: 1px solid #0e0e0e;
+  border-radius: 50%;
+  background: #e3f4a6;
+}
+
+.signup-wallet-section {
+  position: absolute;
+  z-index: 2;
+  left: 8.208955223880597%;
+  top: 38.55835240274599%;
+  width: 83.83084577114427%;
+}
+
+.signup-wallet-label {
+  margin: 0 0 15px;
+  color: #0e0e0e;
+  font-size: clamp(16px, calc(18 / 402 * min(100vw, 402px, calc(100vh * 402 / 874))), 18px);
+  font-weight: 400;
+  letter-spacing: -0.011em;
+  line-height: 1.5;
+}
+
+.signup-wallet-label span {
+  color: #ff3d16;
+}
+
+.signup-wallet-options {
+  display: grid;
+  gap: 6px;
+}
+
+.signup-wallet-button {
+  display: flex;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  height: min(47px, calc(47 / 402 * min(100vw, 402px, calc(100vh * 402 / 874))));
+  align-items: center;
+  overflow: hidden;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 10px;
+  background: #e3f4a6;
+  color: #000;
+  cursor: pointer;
+  font-size: clamp(14px, calc(15 / 402 * min(100vw, 402px, calc(100vh * 402 / 874))), 15px);
+  font-weight: 400;
+  letter-spacing: -0.011em;
+  line-height: 1.5;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.signup-wallet-button > span {
+  min-width: 0;
+}
+
+.signup-wallet-button:nth-child(3) .wallet-icon {
+  margin-right: 8px;
+}
+
+.signup-wallet-button:focus-visible {
+  outline: 3px solid #0e0e0e;
+  outline-offset: 3px;
+}
+
+.wallet-icon {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  margin-right: 10px;
+  display: block;
+  object-fit: contain;
+}
+
+.metamask-logo {
+  width: 23px;
+  height: 23px;
+}
+
+.okx-logo {
+  width: 24px;
+  height: 24px;
+}
+
+.walletconnect-logo {
+  width: 27px;
+  height: 20px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .onboarding-track,
+  .onboarding-fixed-content-track {
+    transition: none;
+  }
+}
+
+@media (max-width: 500px) {
+  .signup-feed {
+    justify-content: flex-start;
+  }
+}

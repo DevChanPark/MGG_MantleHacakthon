@@ -1,3 +1,3 @@
-# Expo HAS CHANGED
+# Frontend B
 
-Read the exact versioned docs at https://docs.expo.dev/versions/v56.0.0/ before writing any code.
+This is now a React web app. Use Vite scripts and React DOM patterns for new UI work.
