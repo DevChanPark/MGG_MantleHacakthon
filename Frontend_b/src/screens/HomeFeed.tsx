@@ -22,6 +22,9 @@ interface HomeFeedProps {
   participatedBattleIds: string[];
   onOptionSelect: (battleId: string, option: string) => void;
   onParticipationRequest: (battle: FeedBattle) => void;
+  onCloseBattle: (battleId: string) => void;
+  onCompleteEvaluation: (battleId: string) => void;
+  onOpenWinnerModal: (battle: FeedBattle) => void;
 }
 
 export function HomeFeed({
@@ -30,6 +33,9 @@ export function HomeFeed({
   participatedBattleIds,
   onOptionSelect,
   onParticipationRequest,
+  onCloseBattle,
+  onCompleteEvaluation,
+  onOpenWinnerModal,
 }: HomeFeedProps) {
   const [activeFilter, setActiveFilter] = useState<BattleType>(() => getSavedBattleType());
   const [selectedSort, setSelectedSort] = useState<SortType>('recommended');
@@ -130,6 +136,9 @@ export function HomeFeed({
             isParticipated={participatedBattleIds.includes(battle.id)}
             onOptionSelect={(option) => onOptionSelect(battle.id, option)}
             onParticipationRequest={() => onParticipationRequest(battle)}
+            onCloseBattle={() => onCloseBattle(battle.id)}
+            onCompleteEvaluation={() => onCompleteEvaluation(battle.id)}
+            onOpenWinnerModal={() => onOpenWinnerModal(battle)}
           />
         ))}
       </section>

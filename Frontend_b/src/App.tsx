@@ -12,7 +12,14 @@ import {
   ParticipationModal,
   SelectionRequiredModal,
 } from './components/ParticipationModal';
-import { createMockBattle, initialMockBattles, type CreateBattleDraft, type FeedBattle } from './mocks/battles';
+import { RewardCompleteModal, WinnerModal } from './components/RewardModal';
+import {
+  createMockBattle,
+  getMockBattleResult,
+  initialMockBattles,
+  type CreateBattleDraft,
+  type FeedBattle,
+} from './mocks/battles';
 
 export default function App() {
   const [route, setRoute] = useState(() => getRoute());
@@ -22,6 +29,9 @@ export default function App() {
   const [selectedOptionByBattleId, setSelectedOptionByBattleId] = useState<Record<string, string>>({});
   const [participationBattle, setParticipationBattle] = useState<FeedBattle | null>(null);
   const [isSelectionWarningOpen, setIsSelectionWarningOpen] = useState(false);
+  const [winnerBattle, setWinnerBattle] = useState<FeedBattle | null>(null);
+  const [rewardedBattleIds, setRewardedBattleIds] = useState<string[]>([]);
+  const [isRewardCompleteOpen, setIsRewardCompleteOpen] = useState(false);
 
   useEffect(() => {
     const handleHashChange = () => setRoute(getRoute());
@@ -49,6 +59,10 @@ export default function App() {
   };
 
   const handleParticipationRequest = (battle: FeedBattle) => {
+    if (battle.status !== 'OPEN') {
+      return;
+    }
+
     if (battle.type === 'OPTION' && !selectedOptionByBattleId[battle.id]) {
       setIsSelectionWarningOpen(true);
       return;
@@ -73,6 +87,45 @@ export default function App() {
     setCredits((currentCredits) => currentCredits + 30);
   };
 
+  const handleCloseBattle = (battleId: string) => {
+    setBattles((currentBattles) =>
+      currentBattles.map((battle) =>
+        battle.id === battleId && battle.status === 'OPEN' ? { ...battle, status: 'EVALUATING' } : battle,
+      ),
+    );
+  };
+
+  const handleCompleteEvaluation = (battleId: string) => {
+    const targetBattle = battles.find((battle) => battle.id === battleId);
+    const completedBattle: FeedBattle | null = targetBattle ? { ...targetBattle, status: 'COMPLETED' } : null;
+
+    setBattles((currentBattles) =>
+      currentBattles.map((battle) => (battle.id === battleId ? { ...battle, status: 'COMPLETED' } : battle)),
+    );
+
+    if (completedBattle && !rewardedBattleIds.includes(completedBattle.id)) {
+      setWinnerBattle(completedBattle);
+    }
+  };
+
+  const handleOpenWinnerModal = (battle: FeedBattle) => {
+    if (battle.status === 'COMPLETED') {
+      setWinnerBattle(battle);
+    }
+  };
+
+  const handleClaimReward = () => {
+    if (!winnerBattle || rewardedBattleIds.includes(winnerBattle.id)) {
+      return;
+    }
+
+    const result = getMockBattleResult(winnerBattle);
+    setCredits((currentCredits) => currentCredits + result.rewardCredits);
+    setRewardedBattleIds((currentIds) => [...currentIds, winnerBattle.id]);
+    setWinnerBattle(null);
+    setIsRewardCompleteOpen(true);
+  };
+
   const renderWithAppShell = (children: ReactNode) => (
     <AppShell
       overlay={
@@ -86,6 +139,14 @@ export default function App() {
             onAddCredits={handleAddCredits}
           />
           <SelectionRequiredModal isOpen={isSelectionWarningOpen} onClose={() => setIsSelectionWarningOpen(false)} />
+          <WinnerModal
+            battle={winnerBattle}
+            result={winnerBattle ? getMockBattleResult(winnerBattle) : null}
+            isRewarded={winnerBattle ? rewardedBattleIds.includes(winnerBattle.id) : false}
+            onClose={() => setWinnerBattle(null)}
+            onClaimReward={handleClaimReward}
+          />
+          <RewardCompleteModal isOpen={isRewardCompleteOpen} onClose={() => setIsRewardCompleteOpen(false)} />
         </>
       }
     >
@@ -111,6 +172,9 @@ export default function App() {
         participatedBattleIds={participatedBattleIds}
         onOptionSelect={handleOptionSelect}
         onParticipationRequest={handleParticipationRequest}
+        onCloseBattle={handleCloseBattle}
+        onCompleteEvaluation={handleCompleteEvaluation}
+        onOpenWinnerModal={handleOpenWinnerModal}
       />,
     );
   }

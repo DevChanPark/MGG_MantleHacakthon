@@ -1,5 +1,5 @@
 export type BattleType = 'OPTION' | 'TEXT_OPEN' | 'IMAGE_CAPTION';
-export type BattleStatus = 'OPEN' | 'CLOSED' | 'JUDGING' | 'SETTLED' | 'FAILED';
+export type BattleStatus = 'OPEN' | 'EVALUATING' | 'COMPLETED';
 
 export interface PreviewComment {
   id: string;
@@ -34,6 +34,19 @@ export interface CreateBattleDraft {
   imageUrl?: string;
   imageFileName?: string;
 }
+
+export interface MockBattleResult {
+  winnerName: string;
+  winnerDetail: string;
+  rewardCredits: number;
+  verdictLines: string[];
+  optionResults?: Array<{
+    label: string;
+    percentage: number;
+  }>;
+}
+
+export const REWARD_CREDITS = 30;
 
 export const initialMockBattles: FeedBattle[] = [
   {
@@ -214,5 +227,56 @@ export function createMockBattle(draft: CreateBattleDraft): FeedBattle {
         ? (draft.options ?? []).map((option) => option.trim()).filter(Boolean).slice(0, 4)
         : undefined,
     comments: [],
+  };
+}
+
+export function getMockBattleResult(battle: FeedBattle): MockBattleResult {
+  if (battle.type === 'OPTION') {
+    const optionLabels = battle.options && battle.options.length >= 2 ? battle.options : ['집주인', '세입자'];
+    const winnerName = optionLabels[0];
+
+    return {
+      winnerName,
+      winnerDetail: `${winnerName} 진영`,
+      rewardCredits: REWARD_CREDITS,
+      optionResults: [
+        { label: optionLabels[0], percentage: 72 },
+        { label: optionLabels[1], percentage: 28 },
+        ...optionLabels.slice(2).map((label) => ({ label, percentage: 0 })),
+      ],
+      verdictLines: [
+        'AI 판결문: 댓글의 논리적 뻔뻔함과 밈 확산성을 기준으로 판단했습니다.',
+        `${winnerName} 쪽 주장이 더 단호하고 공유하기 좋은 결론을 만들었습니다.`,
+        '최종 판단: 웃기는 설득력에서 우세했습니다.',
+      ],
+    };
+  }
+
+  if (battle.type === 'IMAGE_CAPTION') {
+    const winningComment = battle.comments[0];
+
+    return {
+      winnerName: winningComment?.author ?? '월세냥이',
+      winnerDetail: winningComment?.text ?? '오늘의 업무: 고양이 결재 대기',
+      rewardCredits: REWARD_CREDITS,
+      verdictLines: [
+        'AI 판결문: 이미지 맥락과 한 줄 임팩트가 가장 잘 맞았습니다.',
+        '캡션이 상황을 바로 이해시키면서도 공유하기 쉬운 형태였습니다.',
+        '최종 판단: 밈 잠재력이 가장 높았습니다.',
+      ],
+    };
+  }
+
+  const winningComment = battle.comments[0];
+
+  return {
+    winnerName: winningComment?.author ?? '우김장인',
+    winnerDetail: winningComment?.text ?? '반박 불가한 한 줄 우기기',
+    rewardCredits: REWARD_CREDITS,
+    verdictLines: [
+      'AI 판결문: 황당함, 설득력, 댓글 반응 가능성을 기준으로 평가했습니다.',
+      '가장 짧은 문장 안에 제일 강한 억지를 담은 답변이 우세했습니다.',
+      '최종 판단: 밈으로 퍼질 가능성이 가장 큽니다.',
+    ],
   };
 }

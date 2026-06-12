@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import type { FeedBattle, PreviewComment } from '../mocks/battles';
+import { getMockBattleResult, type FeedBattle, type PreviewComment } from '../mocks/battles';
 
 interface BattleCardProps {
   battle: FeedBattle;
@@ -7,6 +7,9 @@ interface BattleCardProps {
   isParticipated: boolean;
   onOptionSelect: (option: string) => void;
   onParticipationRequest: () => void;
+  onCloseBattle: () => void;
+  onCompleteEvaluation: () => void;
+  onOpenWinnerModal: () => void;
 }
 
 export function BattleCard({
@@ -15,6 +18,9 @@ export function BattleCard({
   isParticipated,
   onOptionSelect,
   onParticipationRequest,
+  onCloseBattle,
+  onCompleteEvaluation,
+  onOpenWinnerModal,
 }: BattleCardProps) {
   const [isLiked, setIsLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(battle.likeCount);
@@ -23,7 +29,11 @@ export function BattleCard({
   const [isCommentComposerOpen, setIsCommentComposerOpen] = useState(false);
   const [commentInput, setCommentInput] = useState('');
 
+  const result = useMemo(() => getMockBattleResult(battle), [battle]);
   const commentCount = comments.length;
+  const isOpen = battle.status === 'OPEN';
+  const isEvaluating = battle.status === 'EVALUATING';
+  const isCompleted = battle.status === 'COMPLETED';
   const cardClassName = `battle-card battle-card-${battle.type.toLowerCase().replace('_', '-')}`;
   const hasManyComments = comments.length > 2;
 
@@ -80,6 +90,30 @@ export function BattleCard({
 
   return (
     <article className={cardClassName}>
+      <div className="battle-status-row">
+        {isOpen && (
+          <button className="battle-close-button" type="button" onClick={onCloseBattle}>
+            마감
+          </button>
+        )}
+        {isEvaluating && (
+          <>
+            <span className="battle-status-chip">AI 평가 중</span>
+            <button className="battle-complete-button" type="button" onClick={onCompleteEvaluation}>
+              AI 평가 완료
+            </button>
+          </>
+        )}
+        {isCompleted && (
+          <>
+            <span className="battle-status-chip is-complete">AI 평가 완료</span>
+            <button className="battle-winner-button" type="button" onClick={onOpenWinnerModal}>
+              우승자 확인
+            </button>
+          </>
+        )}
+      </div>
+
       <div className="battle-card-main">
         <div className="battle-card-avatar" aria-hidden="true" />
         <div className="battle-card-body">
@@ -87,7 +121,7 @@ export function BattleCard({
           <h2 className="battle-card-title">{battle.title}</h2>
           <p className="battle-card-description">{battle.description}</p>
 
-          {safeOptions.length > 0 && (
+          {battle.type === 'OPTION' && !isCompleted && safeOptions.length > 0 && (
             <div className="battle-option-list" aria-label="선택지">
               {safeOptions.map((option) => (
                 <button
@@ -95,10 +129,25 @@ export function BattleCard({
                   type="button"
                   key={`${battle.id}-${option}`}
                   aria-pressed={selectedOption === option}
+                  disabled={!isOpen}
                   onClick={() => onOptionSelect(option)}
                 >
                   {option}
                 </button>
+              ))}
+            </div>
+          )}
+
+          {battle.type === 'OPTION' && isCompleted && result.optionResults && (
+            <div className="battle-result-options" aria-label="선택지별 결과">
+              {result.optionResults.map((option) => (
+                <div
+                  className={`battle-result-option${option.label === result.winnerName ? ' is-winner' : ''}`}
+                  key={`${battle.id}-${option.label}`}
+                >
+                  <span>{option.label}</span>
+                  <strong>{option.percentage}%</strong>
+                </div>
               ))}
             </div>
           )}
@@ -120,7 +169,7 @@ export function BattleCard({
           className="battle-card-action"
           type="button"
           aria-expanded={isCommentComposerOpen}
-          onClick={() => setIsCommentComposerOpen((isOpen) => !isOpen)}
+          onClick={() => setIsCommentComposerOpen((isOpenValue) => !isOpenValue)}
         >
           <span className="comment-icon" aria-hidden="true" />
           댓글 {commentCount}
@@ -143,10 +192,10 @@ export function BattleCard({
       <button
         className={`battle-participate-button${isParticipated ? ' is-complete' : ''}`}
         type="button"
-        disabled={isParticipated}
+        disabled={!isOpen || isParticipated}
         onClick={onParticipationRequest}
       >
-        {isParticipated ? '참여 완료' : '참여하기'}
+        {isParticipated ? '참여 완료' : isOpen ? '참여하기' : '참여 마감'}
       </button>
 
       <div className="comment-preview">
@@ -194,6 +243,27 @@ export function BattleCard({
           </form>
         )}
       </div>
+
+      {isEvaluating && (
+        <div className="ai-evaluating-box" role="status">
+          <strong>AI 평가 중</strong>
+          <p>AI가 댓글의 밈력, 설득력, 억지력을 mock 기준으로 채점하고 있습니다.</p>
+        </div>
+      )}
+
+      {isCompleted && (
+        <div className="ai-result-box">
+          <strong>AI 판결문</strong>
+          {battle.type !== 'OPTION' && (
+            <p className="ai-winner-line">
+              우승자: {result.winnerName} · {result.winnerDetail}
+            </p>
+          )}
+          {result.verdictLines.map((line) => (
+            <p key={line}>{line}</p>
+          ))}
+        </div>
+      )}
     </article>
   );
 }
