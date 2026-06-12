@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import type { CreateBattleType } from '../components/BoardSelectSheet';
+import type { CreateBattleDraft } from '../mocks/battles';
 
 const BATTLE_TYPE_LABELS: Record<CreateBattleType, string> = {
   TEXT_OPEN: '오픈 답변형',
@@ -7,70 +8,51 @@ const BATTLE_TYPE_LABELS: Record<CreateBattleType, string> = {
   IMAGE_CAPTION: '이미지형',
 };
 
-interface CreateBattleDraft {
-  battleType: CreateBattleType;
-  title: string;
-  content: string;
-  deadline: string;
-  isAnonymous: boolean;
-  options?: string[];
-  imageFileName?: string;
-}
-
-interface MockCreateBattleResponse {
-  battleId: string;
-  draft: CreateBattleDraft;
-}
-
 interface MockUploadImageResponse {
   imageUrl: string;
   fileName: string;
 }
 
-function getSelectedBattleType(): CreateBattleType {
-  const savedType = window.sessionStorage.getItem('mgg:selectedBattleType');
-
-  if (savedType === 'OPTION' || savedType === 'IMAGE_CAPTION' || savedType === 'TEXT_OPEN') {
-    return savedType;
-  }
-
-  return 'TEXT_OPEN';
-}
-
-async function mockCreateBattle(draft: CreateBattleDraft): Promise<MockCreateBattleResponse> {
-  return {
-    battleId: `mock-${draft.battleType.toLowerCase()}-${Date.now()}`,
-    draft,
-  };
-}
-
 async function mockUploadImage(file: File): Promise<MockUploadImageResponse> {
   return {
-    imageUrl: URL.createObjectURL(file),
+    imageUrl: await readFileAsDataUrl(file),
     fileName: file.name,
   };
 }
 
-export function CreateBattleScreen() {
-  const [battleType] = useState<CreateBattleType>(() => getSelectedBattleType());
+interface CreateBattleScreenProps {
+  battleType: CreateBattleType;
+  onCreateBattle: (draft: CreateBattleDraft) => void;
+}
+
+type SubmitState = 'idle' | 'saved' | 'uploaded' | 'deadlineError' | 'optionError' | 'imageError';
+
+export function CreateBattleScreen({ battleType, onCreateBattle }: CreateBattleScreenProps) {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const [deadline, setDeadline] = useState('2026-06-14 23:59');
+  const [deadline, setDeadline] = useState('2026-');
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [options, setOptions] = useState(['', '']);
   const [isImageMenuOpen, setIsImageMenuOpen] = useState(false);
   const [imagePreviewUrl, setImagePreviewUrl] = useState('');
   const [imageFileName, setImageFileName] = useState('');
-  const [submitState, setSubmitState] = useState<'idle' | 'saved' | 'uploaded'>('idle');
+  const [submitState, setSubmitState] = useState<SubmitState>('idle');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    return () => {
-      if (imagePreviewUrl) {
-        URL.revokeObjectURL(imagePreviewUrl);
-      }
-    };
-  }, [imagePreviewUrl]);
+    setTitle('');
+    setContent('');
+    setDeadline('2026-');
+    setOptions(['', '']);
+    setIsImageMenuOpen(false);
+    setImagePreviewUrl('');
+    setImageFileName('');
+    setSubmitState('idle');
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  }, [battleType]);
 
   const handleAddOption = () => {
     setOptions((currentOptions) => {
@@ -88,6 +70,11 @@ export function CreateBattleScreen() {
     );
   };
 
+  const handleDeadlineChange = (value: string) => {
+    setDeadline(formatDeadlineInput(value));
+    setSubmitState('idle');
+  };
+
   const handlePhotoSelect = () => {
     setIsImageMenuOpen(false);
     fileInputRef.current?.click();
@@ -100,20 +87,13 @@ export function CreateBattleScreen() {
       return;
     }
 
-    if (imagePreviewUrl) {
-      URL.revokeObjectURL(imagePreviewUrl);
-    }
-
     const uploadResult = await mockUploadImage(file);
     setImagePreviewUrl(uploadResult.imageUrl);
     setImageFileName(uploadResult.fileName);
+    setSubmitState('idle');
   };
 
   const handleRemoveImage = () => {
-    if (imagePreviewUrl) {
-      URL.revokeObjectURL(imagePreviewUrl);
-    }
-
     setImagePreviewUrl('');
     setImageFileName('');
 
@@ -129,6 +109,7 @@ export function CreateBattleScreen() {
     deadline,
     isAnonymous,
     options: battleType === 'OPTION' ? options : undefined,
+    imageUrl: battleType === 'IMAGE_CAPTION' ? imagePreviewUrl : undefined,
     imageFileName: battleType === 'IMAGE_CAPTION' ? imageFileName : undefined,
   });
 
@@ -137,9 +118,24 @@ export function CreateBattleScreen() {
     setSubmitState('saved');
   };
 
-  const handleMockSubmit = async () => {
-    await mockCreateBattle(buildDraft());
+  const handleMockSubmit = () => {
+    if (!deadline || deadline === '2026-') {
+      setSubmitState('deadlineError');
+      return;
+    }
+
+    if (battleType === 'OPTION' && options.map((option) => option.trim()).filter(Boolean).length < 2) {
+      setSubmitState('optionError');
+      return;
+    }
+
+    if (battleType === 'IMAGE_CAPTION' && !imagePreviewUrl) {
+      setSubmitState('imageError');
+      return;
+    }
+
     setSubmitState('uploaded');
+    onCreateBattle(buildDraft());
   };
 
   const handleClose = () => {
@@ -172,8 +168,10 @@ export function CreateBattleScreen() {
             <span>마감 기한 설정</span>
             <input
               value={deadline}
-              onChange={(event) => setDeadline(event.target.value)}
+              inputMode="numeric"
+              onChange={(event) => handleDeadlineChange(event.target.value)}
               aria-label="마감 기한"
+              placeholder="2026-"
             />
           </label>
 
@@ -255,10 +253,10 @@ export function CreateBattleScreen() {
                   {isImageMenuOpen && (
                     <div className="image-upload-menu" role="menu" aria-label="이미지 선택 메뉴">
                       <button type="button" role="menuitem" onClick={() => setIsImageMenuOpen(false)}>
-                        ◎ 카메라로 촬영
+                        카메라로 촬영
                       </button>
                       <button type="button" role="menuitem" onClick={handlePhotoSelect}>
-                        ◎ 사진 선택
+                        사진 선택
                       </button>
                     </div>
                   )}
@@ -270,11 +268,51 @@ export function CreateBattleScreen() {
 
         <p className="create-status-message" aria-live="polite">
           {submitState === 'saved' && '임시 저장되었습니다.'}
-          {submitState === 'uploaded' && 'mock 업로드가 준비되었습니다.'}
+          {submitState === 'uploaded' && 'mock 업로드가 완료되었습니다.'}
+          {submitState === 'deadlineError' && '마감 기한을 입력해주세요.'}
+          {submitState === 'optionError' && '선택지를 2개 이상 입력해주세요.'}
+          {submitState === 'imageError' && '이미지를 선택해주세요.'}
         </p>
       </section>
     </main>
   );
+}
+
+function formatDeadlineInput(value: string) {
+  const digits = value.replace(/\D/g, '').slice(0, 12);
+
+  if (!digits) {
+    return '';
+  }
+
+  let nextValue = digits.slice(0, 4);
+
+  if (digits.length > 4) {
+    nextValue += `-${digits.slice(4, 6)}`;
+  }
+
+  if (digits.length > 6) {
+    nextValue += `-${digits.slice(6, 8)}`;
+  }
+
+  if (digits.length > 8) {
+    nextValue += ` ${digits.slice(8, 10)}`;
+  }
+
+  if (digits.length > 10) {
+    nextValue += `:${digits.slice(10, 12)}`;
+  }
+
+  return nextValue;
+}
+
+function readFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
 }
 
 export default CreateBattleScreen;

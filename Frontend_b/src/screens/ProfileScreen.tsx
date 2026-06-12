@@ -81,7 +81,7 @@ export function ProfileScreen() {
 
       <button className="profile-edit-button" type="button">프로필 수정</button>
 
-      <button className="profile-credit-row" type="button" onClick={() => setIsCreditPanelOpen(true)}>
+      <button className="profile-credit-row" type="button" onClick={() => setIsCreditPanelOpen((isOpen) => !isOpen)}>
         <span>내 크레딧 <strong>{currentCredits}개</strong></span>
         <span>충전하기</span>
       </button>

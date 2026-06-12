@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 
 export type CreateBattleType = 'TEXT_OPEN' | 'OPTION' | 'IMAGE_CAPTION';
 
