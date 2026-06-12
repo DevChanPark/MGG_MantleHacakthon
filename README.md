@@ -72,11 +72,13 @@ npm run prisma:status
 
 On Windows PowerShell, use `Copy-Item .env.example .env` instead of `cp .env.example .env`.
 
-If `prisma:status` reports pending migrations, review the output before applying them:
+If `prisma:status` reports pending committed migrations, review the output before applying them:
 
 ```bash
-npm run prisma:migrate
+npm run prisma:deploy
 ```
+
+Use `npm run prisma:migrate` only when intentionally creating a new migration from schema changes.
 
 Run the API in mock AI / mock Mantle mode:
 
