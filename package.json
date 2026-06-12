@@ -10,7 +10,13 @@
   "scripts": {
     "dev:api": "node apps/api/src/server.js",
     "test": "node --test",
+    "db:up": "docker compose up -d postgres",
+    "db:down": "docker compose down",
+    "db:status": "docker compose ps",
+    "db:logs": "docker compose logs postgres",
     "prisma:generate": "prisma generate",
+    "prisma:validate": "prisma validate --schema prisma/schema.prisma",
+    "prisma:status": "prisma migrate status --schema prisma/schema.prisma",
     "prisma:migrate": "prisma migrate dev"
   },
   "dependencies": {

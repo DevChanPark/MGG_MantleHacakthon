@@ -63,9 +63,43 @@ frontend-b /
 
 ```bash
 npm install
+cp .env.example .env
+npm run db:up
 npm run prisma:generate
+npm run prisma:validate
+npm run prisma:status
+```
+
+On Windows PowerShell, use `Copy-Item .env.example .env` instead of `cp .env.example .env`.
+
+If `prisma:status` reports pending migrations, review the output before applying them:
+
+```bash
 npm run prisma:migrate
+```
+
+Run the API in mock AI / mock Mantle mode:
+
+```bash
 npm run dev:api
+```
+
+The default development database matches `.env.example`:
+
+```text
+postgresql://mgg:mgg@localhost:5432/mgg?schema=public
+```
+
+If local port `5432` is already in use, start Postgres with another host port and update `DATABASE_URL` to match:
+
+```bash
+POSTGRES_PORT=5433 npm run db:up
+```
+
+On Windows PowerShell:
+
+```powershell
+$env:POSTGRES_PORT=5433; npm run db:up
 ```
 
 ## Tests
