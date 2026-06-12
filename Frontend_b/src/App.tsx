@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { OnboardingFeed } from './screens/OnboardingFeed';
+import { HomeFeed } from './screens/HomeFeed';
 import { ProfileScreen } from './screens/ProfileScreen';
 import { SignupProfileScreen } from './screens/SignupProfileScreen';
 import { SignupWalletScreen } from './screens/SignupWalletScreen';
+import { AppShell } from './components/AppShell';
 
 export default function App() {
   const [route, setRoute] = useState(() => getRoute());
@@ -14,6 +16,7 @@ export default function App() {
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
+  // Onboarding routes (no layout wrapper)
   if (route === 'signup') {
     return <SignupWalletScreen />;
   }
@@ -22,8 +25,21 @@ export default function App() {
     return <SignupProfileScreen />;
   }
 
+  // App routes (with layout wrapper)
+  if (route === 'home') {
+    return (
+      <AppShell>
+        <HomeFeed />
+      </AppShell>
+    );
+  }
+
   if (route === 'profile') {
-    return <ProfileScreen />;
+    return (
+      <AppShell>
+        <ProfileScreen />
+      </AppShell>
+    );
   }
 
   return <OnboardingFeed />;
