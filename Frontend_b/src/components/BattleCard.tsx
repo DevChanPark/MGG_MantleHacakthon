@@ -3,88 +3,81 @@ import React from 'react';
 type BattleType = 'OPTION' | 'TEXT_OPEN' | 'IMAGE_CAPTION';
 type BattleStatus = 'OPEN' | 'CLOSED' | 'JUDGING' | 'SETTLED' | 'FAILED';
 
-interface BattleCardProps {
-  id: string;
-  type: BattleType;
-  title: string;
-  entryCount: number;
-  status: BattleStatus;
-  imageUrl?: string;
+interface PreviewComment {
+  author: string;
+  text: string;
+  likeCount: number;
 }
 
-export function BattleCard({
-  id,
-  type,
-  title,
-  entryCount,
-  status,
-  imageUrl,
-}: BattleCardProps) {
-  const getCta = (): string => {
-    switch (status) {
-      case 'OPEN':
-        return 'Join';
-      case 'JUDGING':
-        return 'Judging';
-      case 'SETTLED':
-        return 'View Result';
-      case 'CLOSED':
-        return 'Closed';
-      case 'FAILED':
-        return 'Failed';
-    }
-  };
+export interface FeedBattle {
+  id: string;
+  type: BattleType;
+  author: string;
+  title: string;
+  description: string;
+  entryCount: number;
+  likeCount: number;
+  status: BattleStatus;
+  imageUrl?: string;
+  comments: PreviewComment[];
+}
 
-  const getTypeLabel = (): string => {
-    switch (type) {
-      case 'OPTION':
-        return 'OPTION';
-      case 'TEXT_OPEN':
-        return 'ABSURD';
-      case 'IMAGE_CAPTION':
-        return 'IMAGE';
-    }
-  };
+interface BattleCardProps {
+  battle: FeedBattle;
+}
 
+export function BattleCard({ battle }: BattleCardProps) {
   const handleClick = () => {
-    if (status === 'SETTLED') {
-      window.location.hash = `battles/${id}/result`;
-    } else {
-      window.location.hash = `battles/${id}`;
-    }
+    window.location.hash =
+      battle.status === 'SETTLED' ? `battles/${battle.id}/result` : `battles/${battle.id}`;
   };
 
   return (
-    <div className="battle-card">
-      {imageUrl && (
-        <div className="battle-card-image">
-          <img src={imageUrl} alt={title} />
+    <article className="battle-card">
+      <button className="battle-card-main" type="button" onClick={handleClick}>
+        <div className="battle-card-avatar" aria-hidden="true" />
+        <div className="battle-card-body">
+          <p className="battle-card-author">{battle.author}</p>
+          <h2 className="battle-card-title">{battle.title}</h2>
+          <p className="battle-card-description">{battle.description}</p>
+          {battle.imageUrl && (
+            <img className="battle-card-thumbnail" src={battle.imageUrl} alt="" />
+          )}
         </div>
-      )}
+      </button>
 
-      {!imageUrl && (
-        <div className="battle-card-type-badge">
-          <span>{getTypeLabel()}</span>
-        </div>
-      )}
-
-      <div className="battle-card-content">
-        <h3 className="battle-card-title">{title}</h3>
-
-        <div className="battle-card-meta">
-          <span className="battle-card-entries">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-            </svg>
-            {entryCount}
-          </span>
-        </div>
+      <div className="battle-card-actions" aria-label="배틀 활동">
+        <span className="battle-card-action">
+          <span className="comment-icon" aria-hidden="true" />
+          댓글 {battle.entryCount}
+        </span>
+        <span className="battle-card-action">
+          <span className="heart-icon" aria-hidden="true" />
+          좋아요 {battle.likeCount}
+        </span>
+        <button className="battle-card-share" type="button">
+          <span className="share-icon" aria-hidden="true" />
+          공유하기
+        </button>
       </div>
 
-      <button className="battle-card-cta" onClick={handleClick}>
-        {getCta()}
-      </button>
-    </div>
+      <div className="comment-preview">
+        <p className="comment-preview-title">댓글 {battle.entryCount}</p>
+        {battle.comments.map((comment) => (
+          <div className="comment-preview-item" key={`${battle.id}-${comment.author}`}>
+            <div className="comment-avatar" aria-hidden="true" />
+            <div className="comment-copy">
+              <strong>{comment.author}</strong>
+              <p>{comment.text}</p>
+            </div>
+            <span className="comment-like" aria-label={`좋아요 ${comment.likeCount}개`}>
+              ♡
+              <small>{comment.likeCount}</small>
+            </span>
+          </div>
+        ))}
+      </div>
+    </article>
   );
 }
 

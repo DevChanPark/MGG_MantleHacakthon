@@ -46,5 +46,5 @@ export default function App() {
 }
 
 function getRoute() {
-  return window.location.hash.replace('#', '');
+  return window.location.hash.replace('#', '') || 'home';
 }

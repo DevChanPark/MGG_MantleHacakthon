@@ -4,20 +4,22 @@ export function Header() {
   return (
     <header className="app-header">
       <div className="header-left">
-        <h1 className="header-logo">MGG</h1>
+        <h1 className="header-logo" aria-label="MGG">
+          MGG
+        </h1>
       </div>
 
-      <div className="header-right">
-        <button className="header-icon-btn" aria-label="Search">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <circle cx="11" cy="11" r="8"></circle>
-            <path d="m21 21-4.35-4.35"></path>
+      <div className="header-actions">
+        <button className="header-icon-btn" type="button" aria-label="검색">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="10.5" cy="10.5" r="6.5" />
+            <path d="m16 16 5 5" />
           </svg>
         </button>
-        <button className="header-icon-btn" aria-label="Notifications">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+        <button className="header-icon-btn" type="button" aria-label="알림">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M18 9a6 6 0 0 0-12 0c0 4.3-1.6 6.4-2.6 7.5-.5.5-.1 1.5.7 1.5h15.8c.8 0 1.2-1 .7-1.5C19.6 15.4 18 13.3 18 9Z" />
+            <path d="M14.5 20a2.8 2.8 0 0 1-5 0" />
           </svg>
         </button>
       </div>
