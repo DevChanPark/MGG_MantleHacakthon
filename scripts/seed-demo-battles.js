@@ -1,5 +1,6 @@
 const API_BASE_URL = process.env.API_BASE_URL || "http://127.0.0.1:4000";
 const DEMO_USER_ID = process.env.DEMO_USER_ID || "demo-seed-user";
+const DEMO_NICKNAME = process.env.DEMO_NICKNAME || "우기기 장인";
 const DEMO_IMAGE_BASE64 =
   "R0lGODlhAQABAPAAAP///wAAACH5BAAAAAAALAAAAAABAAEAAAICRAEAOw==";
 
@@ -83,7 +84,8 @@ async function main() {
   await request("GET", "/api/users/me");
   const existing = await listBattlesByPrompt();
   const imageUrl = await uploadDemoImage();
-  const summary = [];
+  const profileSummary = await seedDemoProfile(imageUrl);
+  const summary = [profileSummary];
 
   for (const seed of seeds) {
     const existingBattle = existing.get(seed.battle.prompt);
@@ -165,6 +167,28 @@ async function uploadDemoImage() {
   return response.upload.imageUrl;
 }
 
+async function seedDemoProfile(avatarUrl) {
+  try {
+    const profile = await updateDemoProfile(avatarUrl);
+    return { key: "DEMO_USER_PROFILE", action: "updated", id: profile.id, nickname: profile.nickname };
+  } catch (error) {
+    if (error.code === "NICKNAME_TAKEN") {
+      return { key: "DEMO_USER_PROFILE", action: "skipped", reason: "nickname taken", nickname: DEMO_NICKNAME };
+    }
+    throw error;
+  }
+}
+
+async function updateDemoProfile(avatarUrl) {
+  return request("PATCH", "/api/users/me", {
+    nickname: DEMO_NICKNAME,
+    intro: "말 안 되는 주장도 끝까지 밀어붙이는 중",
+    avatarUrl,
+    walletProvider: "MetaMask",
+    walletAddress: "0x1111111111111111111111111111111111111111"
+  });
+}
+
 function assertMode(health) {
   if (health.ai?.mode !== "mock") {
     throw new Error(`Refusing to seed unless AI mode is mock. Current mode: ${health.ai?.mode || "unknown"}`);
@@ -185,7 +209,9 @@ async function request(method, path, body) {
   const parsed = text ? JSON.parse(text) : null;
 
   if (!response.ok) {
-    throw new Error(`${method} ${path} failed with ${response.status}: ${text}`);
+    const error = new Error(`${method} ${path} failed with ${response.status}: ${text}`);
+    error.code = parsed?.error?.code;
+    throw error;
   }
 
   return parsed;

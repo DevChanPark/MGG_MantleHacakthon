@@ -14,6 +14,8 @@ export class MemoryRepository {
     };
     this.state.judgingRules ??= [];
     this.state.reports ??= [];
+    this.state.users ??= [];
+    this.state.users.forEach(normalizeUserProfileFields);
   }
 
   exportState() {
@@ -24,15 +26,46 @@ export class MemoryRepository {
     const id = userId || "demo-user";
     const existing = this.state.users.find((user) => user.id === id);
     if (existing) {
+      normalizeUserProfileFields(existing);
       return clone(existing);
     }
 
     const user = {
       id,
       displayName: id === "demo-user" ? "Demo User" : `User ${id.slice(0, 8)}`,
+      nickname: null,
+      intro: null,
+      avatarUrl: null,
+      walletAddress: null,
+      walletProvider: null,
       createdAt: now()
     };
     this.state.users.push(user);
+    await this.afterMutation();
+    return clone(user);
+  }
+
+  async getUserByNickname(nickname) {
+    return clone(this.state.users.find((user) => user.nickname === nickname) ?? null);
+  }
+
+  async updateUserProfile(userId, patch) {
+    const user = this.state.users.find((item) => item.id === userId);
+    if (!user) {
+      return null;
+    }
+
+    if (patch.nickname) {
+      const existing = this.state.users.find((item) => item.nickname === patch.nickname && item.id !== userId);
+      if (existing) {
+        const error = new Error("Nickname is already taken");
+        error.code = "NICKNAME_TAKEN";
+        throw error;
+      }
+      user.displayName = patch.nickname;
+    }
+
+    Object.assign(user, patch);
     await this.afterMutation();
     return clone(user);
   }
@@ -235,6 +268,14 @@ export class MemoryRepository {
 
 function now() {
   return new Date().toISOString();
+}
+
+function normalizeUserProfileFields(user) {
+  user.nickname ??= null;
+  user.intro ??= null;
+  user.avatarUrl ??= null;
+  user.walletAddress ??= null;
+  user.walletProvider ??= null;
 }
 
 function clone(value) {

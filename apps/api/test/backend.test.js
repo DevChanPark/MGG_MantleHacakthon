@@ -103,6 +103,65 @@ test("creates battles for all three battle types", async () => {
   assert.equal(image.body.battle.battleType, BattleType.IMAGE_CAPTION);
 });
 
+test("updates MVP user profile metadata and rejects duplicate nicknames", async () => {
+  const app = makeApp();
+
+  const initial = await app.inject({
+    method: "GET",
+    url: "/api/users/me",
+    headers: { "x-user-id": "profile-user" }
+  });
+  assert.equal(initial.statusCode, 200);
+  assert.equal(initial.body.nickname, null);
+
+  const updated = await app.inject({
+    method: "PATCH",
+    url: "/api/users/me",
+    headers: { "x-user-id": "profile-user" },
+    body: {
+      nickname: "demo-captain",
+      intro: "Turns unlikely arguments into demo data.",
+      avatarUrl: "/uploads/profile.gif",
+      walletProvider: "MetaMask",
+      walletAddress: "0x1111111111111111111111111111111111111111"
+    }
+  });
+  assert.equal(updated.statusCode, 200);
+  assert.equal(updated.body.nickname, "demo-captain");
+  assert.equal(updated.body.displayName, "demo-captain");
+  assert.equal(updated.body.intro, "Turns unlikely arguments into demo data.");
+  assert.equal(updated.body.avatarUrl, "/uploads/profile.gif");
+  assert.equal(updated.body.walletProvider, "MetaMask");
+  assert.equal(updated.body.walletAddress, "0x1111111111111111111111111111111111111111");
+
+  const duplicate = await app.inject({
+    method: "PATCH",
+    url: "/api/users/me",
+    headers: { "x-user-id": "other-profile-user" },
+    body: { nickname: "demo-captain" }
+  });
+  assert.equal(duplicate.statusCode, 409);
+  assert.equal(duplicate.body.error.code, "NICKNAME_TAKEN");
+
+  const invalid = await app.inject({
+    method: "PATCH",
+    url: "/api/users/me",
+    headers: { "x-user-id": "profile-user" },
+    body: { walletAddress: "not-a-wallet" }
+  });
+  assert.equal(invalid.statusCode, 400);
+  assert.equal(invalid.body.error.code, "VALIDATION_ERROR");
+
+  const reservedNickname = await app.inject({
+    method: "PATCH",
+    url: "/api/users/me",
+    headers: { "x-user-id": "profile-user" },
+    body: { nickname: "MGG" }
+  });
+  assert.equal(reservedNickname.statusCode, 400);
+  assert.equal(reservedNickname.body.error.code, "VALIDATION_ERROR");
+});
+
 test("stores judging rules snapshot and uses it for verdict hashing", async () => {
   const repository = new MemoryRepository();
   const app = createApiApp({

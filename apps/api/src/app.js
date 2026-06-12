@@ -39,6 +39,10 @@ export function createApiApp({ repository, config, aiJudgeService, settlementSer
         return ok(await battleService.getOrCreateUser(userId));
       }
 
+      if (method === "PATCH" && path === "/api/users/me") {
+        return ok(await battleService.updateUserProfile(request.body, userId));
+      }
+
       if (method === "GET" && path === "/api/battles") {
         return ok({ battles: await battleService.listBattles() });
       }
@@ -113,7 +117,7 @@ export function createApiApp({ repository, config, aiJudgeService, settlementSer
     res.setHeader("content-type", "application/json; charset=utf-8");
     res.setHeader("access-control-allow-origin", config.corsOrigin);
     res.setHeader("access-control-allow-headers", "content-type, x-user-id");
-    res.setHeader("access-control-allow-methods", "GET,POST,OPTIONS");
+    res.setHeader("access-control-allow-methods", "GET,POST,PATCH,OPTIONS");
     res.end(JSON.stringify(result.body));
   }
 

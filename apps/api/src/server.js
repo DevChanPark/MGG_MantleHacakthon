@@ -16,7 +16,7 @@ export async function createHttpServer({ config = loadConfig(), repository } = {
       res.statusCode = 204;
       res.setHeader("access-control-allow-origin", config.corsOrigin);
       res.setHeader("access-control-allow-headers", "content-type, x-user-id");
-      res.setHeader("access-control-allow-methods", "GET,POST,OPTIONS");
+      res.setHeader("access-control-allow-methods", "GET,POST,PATCH,OPTIONS");
       res.end();
       return;
     }

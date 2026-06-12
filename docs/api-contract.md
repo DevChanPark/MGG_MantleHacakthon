@@ -46,6 +46,40 @@ Returns service health and backend-owned dependency readiness. This response mus
 
 Returns or creates the current MVP demo user.
 
+User response:
+
+```json
+{
+  "id": "demo-user",
+  "displayName": "Demo User",
+  "nickname": null,
+  "intro": null,
+  "avatarUrl": null,
+  "walletAddress": null,
+  "walletProvider": null,
+  "createdAt": "2026-06-09T00:00:00.000Z"
+}
+```
+
+## `PATCH /api/users/me`
+
+Updates MVP profile metadata for the current demo user. Wallet fields are
+profile metadata only; the backend still owns real AI execution and Mantle
+settlement transactions.
+
+```json
+{
+  "nickname": "demo-captain",
+  "intro": "Turns unlikely arguments into demo data.",
+  "avatarUrl": "/uploads/profile.gif",
+  "walletProvider": "MetaMask",
+  "walletAddress": "0x1111111111111111111111111111111111111111"
+}
+```
+
+`nickname` must be unique and not reserved when provided. `walletAddress` must
+be an EVM address when provided.
+
 ## `GET /api/battles`
 
 Returns all battles.

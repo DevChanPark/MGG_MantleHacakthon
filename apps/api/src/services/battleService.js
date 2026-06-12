@@ -12,6 +12,7 @@ import {
   validateCreateBattleRequest,
   validateCreateEntryRequest,
   validateJudgeInput,
+  validateUpdateUserProfileRequest,
   toResultResponse
 } from "../../../../packages/shared/src/index.js";
 import { ApiError, sanitizeFailureMessage } from "../errors.js";
@@ -31,7 +32,8 @@ export function createBattleService({ repository, aiJudgeService, settlementServ
     judgeBattle: (battleId) => judgeBattle(repository, aiJudgeService, settlementService, config, battleId),
     getResult: (battleId) => getResult(repository, battleId),
     listArchive: () => repository.listArchive(),
-    getOrCreateUser: (userId) => repository.getOrCreateUser(userId)
+    getOrCreateUser: (userId) => repository.getOrCreateUser(userId),
+    updateUserProfile: (input, userId) => updateUserProfile(repository, input, userId)
   };
 }
 
@@ -101,6 +103,31 @@ async function createReport(repository, battleId, input, userId) {
     targetEntryId: normalized.targetEntryId,
     reason: normalized.reason
   });
+}
+
+async function updateUserProfile(repository, input, userId) {
+  const normalized = validateUpdateUserProfileRequest(input);
+  const user = await repository.getOrCreateUser(userId);
+
+  if (normalized.nickname && repository.getUserByNickname) {
+    const existing = await repository.getUserByNickname(normalized.nickname);
+    if (existing && existing.id !== user.id) {
+      throw new ApiError(409, "NICKNAME_TAKEN", "Nickname is already taken");
+    }
+  }
+
+  try {
+    const updated = await repository.updateUserProfile(user.id, normalized);
+    if (!updated) {
+      throw new ApiError(404, "USER_NOT_FOUND", "User not found");
+    }
+    return updated;
+  } catch (error) {
+    if (error.code === "NICKNAME_TAKEN") {
+      throw new ApiError(409, "NICKNAME_TAKEN", "Nickname is already taken");
+    }
+    throw error;
+  }
 }
 
 async function closeBattle(repository, battleId) {

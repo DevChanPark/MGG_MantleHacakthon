@@ -35,8 +35,7 @@ These can be provided with the current backend models and APIs:
 
 ## MVP Candidate Schema Additions
 
-These are small enough to consider for MVP if the frontend profile/signup flow
-is connected to the backend:
+These are included in the MVP profile schema/API extension:
 
 - `User.nickname`
 - `User.intro`
@@ -44,10 +43,10 @@ is connected to the backend:
 - `User.walletAddress`
 - `User.walletProvider`
 
-Potential API additions:
+API addition:
 
 - `PATCH /api/users/me` for nickname, intro, avatar, and wallet metadata
-- nickname availability check, or validation inside `PATCH /api/users/me`
+- nickname uniqueness and reserved-name validation inside `PATCH /api/users/me`
 
 Notes:
 
@@ -116,30 +115,25 @@ npm run seed:demo
 The script expects the API server to be running with `MOCK_AI=true`,
 `MOCK_MANTLE=true`, and `REPOSITORY_PROVIDER=prisma`. It refuses to run unless
 the API reports mock AI and mock Mantle modes. It also checks existing battle
-prompts and skips already-created demo battles to avoid duplicates.
+prompts and skips already-created demo battles to avoid duplicates. It updates
+the demo user profile through `PATCH /api/users/me`. Use `DEMO_NICKNAME` to
+override the default demo nickname. If that nickname is already taken by
+another user, only the profile update is skipped and battle seeding continues.
 
 Current demo seed set:
 
+- demo profile user with nickname, intro, avatar URL, wallet provider, and
+  wallet address metadata
 - `OPEN` `OPTION` battle
 - `OPEN` `IMAGE_CAPTION` battle
 - `SETTLED` `OPTION` battle
 - `SETTLED` `IMAGE_CAPTION` battle
 - `SETTLED` `TEXT_OPEN` battle
 
-Profile user data should still wait until the minimal user schema extension is
-approved.
+## Remaining Decisions
 
-## Suggested Next Decision
+The MVP user profile schema/API extension is now defined by `GET /api/users/me`
+and `PATCH /api/users/me`.
 
-Decide whether MVP profile integration requires extending `User`.
-
-Conservative option:
-
-- Reuse `displayName` for nickname.
-- Keep intro/avatar/wallet/credits mocked in the frontend.
-
-Richer MVP option:
-
-- Add the five user profile fields listed above.
-- Add a small profile update endpoint.
-- Keep credits, likes, and social comments mocked or deferred.
+Keep credits, likes, share counts, and social comments mocked or deferred until
+their product scope and data ownership are explicitly approved.

@@ -13,6 +13,11 @@ export class JsonFileRepository extends MemoryRepository {
     try {
       const raw = await readFile(filePath, "utf8");
       repository.state = JSON.parse(raw);
+      repository.state.users ??= [];
+      repository.state.battles ??= [];
+      repository.state.entries ??= [];
+      repository.state.verdicts ??= [];
+      repository.state.settlements ??= [];
       repository.state.judgingRules ??= [];
       repository.state.reports ??= [];
     } catch (error) {

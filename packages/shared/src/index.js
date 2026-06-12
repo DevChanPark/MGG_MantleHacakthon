@@ -46,6 +46,11 @@ export const MAX_PROMPT_LENGTH = 300;
 export const MAX_OPTION_LENGTH = 80;
 export const MIN_OPTION_COUNT = 2;
 export const MAX_OPTION_COUNT = 4;
+export const MAX_NICKNAME_LENGTH = 32;
+export const MAX_INTRO_LENGTH = 160;
+export const MAX_PROFILE_IMAGE_URL_LENGTH = 2048;
+export const MAX_WALLET_PROVIDER_LENGTH = 32;
+export const RESERVED_NICKNAMES = Object.freeze(["무기기", "mgg", "관리자", "admin"]);
 
 export class ContractValidationError extends Error {
   constructor(message, details = []) {
@@ -167,6 +172,66 @@ export function validateCreateEntryRequest(input, battle) {
     optionId: optionId || null,
     submittedByUserId: normalizeOptionalString(body.submittedByUserId)
   };
+}
+
+export function validateUpdateUserProfileRequest(input) {
+  const body = ensureObject(input, "request body");
+  const details = [];
+  const normalized = {};
+
+  if (Object.hasOwn(body, "nickname")) {
+    const nickname = normalizeOptionalString(body.nickname);
+    if (!nickname) {
+      details.push("nickname must be a non-empty string");
+    } else if (nickname.length > MAX_NICKNAME_LENGTH) {
+      details.push(`nickname must be ${MAX_NICKNAME_LENGTH} characters or fewer`);
+    } else if (isReservedNickname(nickname)) {
+      details.push("nickname is reserved");
+    }
+    normalized.nickname = nickname;
+  }
+
+  if (Object.hasOwn(body, "intro")) {
+    const intro = normalizeNullableString(body.intro);
+    if (intro && intro.length > MAX_INTRO_LENGTH) {
+      details.push(`intro must be ${MAX_INTRO_LENGTH} characters or fewer`);
+    }
+    normalized.intro = intro;
+  }
+
+  if (Object.hasOwn(body, "avatarUrl")) {
+    const avatarUrl = normalizeNullableString(body.avatarUrl);
+    if (avatarUrl && avatarUrl.length > MAX_PROFILE_IMAGE_URL_LENGTH) {
+      details.push(`avatarUrl must be ${MAX_PROFILE_IMAGE_URL_LENGTH} characters or fewer`);
+    }
+    normalized.avatarUrl = avatarUrl;
+  }
+
+  if (Object.hasOwn(body, "walletProvider")) {
+    const walletProvider = normalizeNullableString(body.walletProvider);
+    if (walletProvider && walletProvider.length > MAX_WALLET_PROVIDER_LENGTH) {
+      details.push(`walletProvider must be ${MAX_WALLET_PROVIDER_LENGTH} characters or fewer`);
+    }
+    normalized.walletProvider = walletProvider;
+  }
+
+  if (Object.hasOwn(body, "walletAddress")) {
+    const walletAddress = normalizeNullableString(body.walletAddress);
+    if (walletAddress && !/^0x[a-fA-F0-9]{40}$/.test(walletAddress)) {
+      details.push("walletAddress must be an EVM address when provided");
+    }
+    normalized.walletAddress = walletAddress;
+  }
+
+  if (Object.keys(normalized).length === 0) {
+    details.push("At least one profile field is required");
+  }
+
+  if (details.length > 0) {
+    throw new ContractValidationError("Invalid user profile update request", details);
+  }
+
+  return normalized;
 }
 
 export function validateJudgeInput(input) {
@@ -405,6 +470,19 @@ function ensureNestedObject(value, label, details) {
 
 function normalizeOptionalString(value) {
   return typeof value === "string" ? value.trim() : "";
+}
+
+function normalizeNullableString(value) {
+  if (value === null) {
+    return null;
+  }
+  const normalized = normalizeOptionalString(value);
+  return normalized || null;
+}
+
+function isReservedNickname(value) {
+  const normalized = value.toLowerCase();
+  return RESERVED_NICKNAMES.some((nickname) => nickname.toLowerCase() === normalized);
 }
 
 function normalizeScore(value) {

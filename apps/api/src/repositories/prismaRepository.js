@@ -18,6 +18,38 @@ export class PrismaRepository {
     return formatUser(user);
   }
 
+  async getUserByNickname(nickname) {
+    const user = await this.prisma.user.findUnique({
+      where: { nickname }
+    });
+    return user ? formatUser(user) : null;
+  }
+
+  async updateUserProfile(userId, patch) {
+    try {
+      const data = { ...patch };
+      if (patch.nickname) {
+        data.displayName = patch.nickname;
+      }
+
+      const user = await this.prisma.user.update({
+        where: { id: userId },
+        data
+      });
+      return formatUser(user);
+    } catch (error) {
+      if (error.code === "P2025") {
+        return null;
+      }
+      if (error.code === "P2002" && error.meta?.target?.includes("nickname")) {
+        const duplicate = new Error("Nickname is already taken");
+        duplicate.code = "NICKNAME_TAKEN";
+        throw duplicate;
+      }
+      throw error;
+    }
+  }
+
   async createBattle(input) {
     const battle = await this.prisma.battle.create({
       data: {
@@ -331,6 +363,11 @@ function formatUser(user) {
   return {
     id: user.id,
     displayName: user.displayName,
+    nickname: user.nickname ?? null,
+    intro: user.intro ?? null,
+    avatarUrl: user.avatarUrl ?? null,
+    walletAddress: user.walletAddress ?? null,
+    walletProvider: user.walletProvider ?? null,
     createdAt: toIso(user.createdAt)
   };
 }
