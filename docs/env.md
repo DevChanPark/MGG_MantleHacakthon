@@ -23,6 +23,10 @@ Required backend env examples:
 | `STORAGE_SECRET_KEY` | future | Reserved for object storage. |
 | `LOCAL_STORAGE_DIR` | local only | Defaults to `.data/uploads`. |
 
+The npm Prisma helper scripts use the local development database URL from
+`.env.example` when `DATABASE_URL` is missing. An explicitly provided
+`DATABASE_URL` always takes precedence.
+
 Local development should use:
 
 ```bash
