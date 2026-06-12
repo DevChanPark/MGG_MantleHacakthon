@@ -3,14 +3,23 @@ import type { FeedBattle, PreviewComment } from '../mocks/battles';
 
 interface BattleCardProps {
   battle: FeedBattle;
+  selectedOption: string | null;
+  isParticipated: boolean;
+  onOptionSelect: (option: string) => void;
+  onParticipationRequest: () => void;
 }
 
-export function BattleCard({ battle }: BattleCardProps) {
+export function BattleCard({
+  battle,
+  selectedOption,
+  isParticipated,
+  onOptionSelect,
+  onParticipationRequest,
+}: BattleCardProps) {
   const [isLiked, setIsLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(battle.likeCount);
   const [comments, setComments] = useState<PreviewComment[]>(battle.comments);
   const [likedCommentIds, setLikedCommentIds] = useState<Record<string, boolean>>({});
-  const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [isCommentComposerOpen, setIsCommentComposerOpen] = useState(false);
   const [commentInput, setCommentInput] = useState('');
 
@@ -86,7 +95,7 @@ export function BattleCard({ battle }: BattleCardProps) {
                   type="button"
                   key={`${battle.id}-${option}`}
                   aria-pressed={selectedOption === option}
-                  onClick={() => setSelectedOption(option)}
+                  onClick={() => onOptionSelect(option)}
                 >
                   {option}
                 </button>
@@ -130,6 +139,15 @@ export function BattleCard({ battle }: BattleCardProps) {
           공유하기
         </button>
       </div>
+
+      <button
+        className={`battle-participate-button${isParticipated ? ' is-complete' : ''}`}
+        type="button"
+        disabled={isParticipated}
+        onClick={onParticipationRequest}
+      >
+        {isParticipated ? '참여 완료' : '참여하기'}
+      </button>
 
       <div className="comment-preview">
         <p className="comment-preview-title">댓글 {commentCount}</p>

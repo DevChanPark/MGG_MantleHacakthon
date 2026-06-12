@@ -6,9 +6,10 @@ import { NotificationPanel } from './NotificationPanel';
 
 interface AppShellProps {
   children: React.ReactNode;
+  overlay?: React.ReactNode;
 }
 
-export function AppShell({ children }: AppShellProps) {
+export function AppShell({ children, overlay }: AppShellProps) {
   const [isBoardSheetOpen, setIsBoardSheetOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
 
@@ -34,6 +35,7 @@ export function AppShell({ children }: AppShellProps) {
       </div>
 
       <BottomNav onCreateClick={() => setIsBoardSheetOpen(true)} />
+      {overlay}
       <BoardSelectSheet
         isOpen={isBoardSheetOpen}
         onClose={() => setIsBoardSheetOpen(false)}

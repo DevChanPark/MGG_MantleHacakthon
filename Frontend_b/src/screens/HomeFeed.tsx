@@ -18,9 +18,19 @@ const SORT_OPTIONS: Array<{ label: string; value: SortType }> = [
 
 interface HomeFeedProps {
   battles: FeedBattle[];
+  selectedOptionByBattleId: Record<string, string>;
+  participatedBattleIds: string[];
+  onOptionSelect: (battleId: string, option: string) => void;
+  onParticipationRequest: (battle: FeedBattle) => void;
 }
 
-export function HomeFeed({ battles }: HomeFeedProps) {
+export function HomeFeed({
+  battles,
+  selectedOptionByBattleId,
+  participatedBattleIds,
+  onOptionSelect,
+  onParticipationRequest,
+}: HomeFeedProps) {
   const [activeFilter, setActiveFilter] = useState<BattleType>(() => getSavedBattleType());
   const [selectedSort, setSelectedSort] = useState<SortType>('recommended');
   const [isSortOpen, setIsSortOpen] = useState(false);
@@ -113,7 +123,14 @@ export function HomeFeed({ battles }: HomeFeedProps) {
 
       <section className="home-battles" aria-label="배틀 피드">
         {filteredBattles.map((battle) => (
-          <BattleCard key={battle.id} battle={battle} />
+          <BattleCard
+            key={battle.id}
+            battle={battle}
+            selectedOption={selectedOptionByBattleId[battle.id] ?? null}
+            isParticipated={participatedBattleIds.includes(battle.id)}
+            onOptionSelect={(option) => onOptionSelect(battle.id, option)}
+            onParticipationRequest={() => onParticipationRequest(battle)}
+          />
         ))}
       </section>
     </main>
