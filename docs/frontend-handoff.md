@@ -7,13 +7,38 @@ The frontend renders state and calls APIs. It must not run AI judging, execute M
 ## Core Mobile Flow
 
 1. Call `GET /api/users/me` when the app starts.
-2. Create a battle with `POST /api/battles`.
-3. Render the battle detail from `GET /api/battles/:battleId`.
-4. Submit entries with `POST /api/battles/:battleId/entries` while `battle.status` is `OPEN`.
-5. Close a battle with `POST /api/battles/:battleId/close`.
-6. Start backend judging with `POST /api/battles/:battleId/judge`.
-7. Read settled result with `GET /api/battles/:battleId/result`.
-8. Render archive from `GET /api/archive`.
+2. During signup/profile editing, save profile metadata with `PATCH /api/users/me`.
+3. Create a battle with `POST /api/battles`.
+4. Render the battle detail from `GET /api/battles/:battleId`.
+5. Submit entries with `POST /api/battles/:battleId/entries` while `battle.status` is `OPEN`.
+6. Close a battle with `POST /api/battles/:battleId/close`.
+7. Start backend judging with `POST /api/battles/:battleId/judge`.
+8. Read settled result with `GET /api/battles/:battleId/result`.
+9. Render archive from `GET /api/archive`.
+
+## Profile Flow
+
+The frontend should call `GET /api/users/me` to hydrate profile state and
+`PATCH /api/users/me` when the signup profile form or profile edit form is
+submitted.
+
+```json
+{
+  "nickname": "demo-captain",
+  "intro": "Turns unlikely arguments into demo data.",
+  "avatarUrl": "/uploads/profile.gif",
+  "walletProvider": "MetaMask",
+  "walletAddress": "0x1111111111111111111111111111111111111111"
+}
+```
+
+- `nickname` is required for signup UX, but the API accepts partial profile
+  updates for edit forms.
+- `nickname` must be unique and not reserved.
+- `walletAddress` must be an EVM address when provided.
+- Wallet fields are profile metadata only. The frontend must not receive server
+  wallet keys, sign backend settlement transactions, or execute Mantle
+  settlement.
 
 ## Battle Status UI Contract
 
@@ -119,6 +144,7 @@ The frontend should use `GET /api/battles/:battleId/result` as the source of tru
 | `BATTLE_CANNOT_CLOSE` | Refresh battle detail. The battle was already closed or moved forward. |
 | `BATTLE_CANNOT_JUDGE` | Refresh battle detail. Judging may already be running or settled. |
 | `RESULT_NOT_READY` | Keep loading or return to battle detail state. |
+| `NICKNAME_TAKEN` | Keep user on the profile form and ask for another nickname. |
 | `INVALID_JSON` / `INVALID_PATH` | Treat as client request bug and log locally. |
 
 ## Safety Reports
