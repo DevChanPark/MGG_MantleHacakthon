@@ -107,13 +107,27 @@ When needed, prefer creating seed data through public API calls instead of raw
 SQL inserts so validation, status transitions, judging snapshots, and mock
 settlement paths are exercised.
 
-Recommended future demo seed set:
+Current API-driven demo seed script:
+
+```bash
+npm run seed:demo
+```
+
+The script expects the API server to be running with `MOCK_AI=true`,
+`MOCK_MANTLE=true`, and `REPOSITORY_PROVIDER=prisma`. It refuses to run unless
+the API reports mock AI and mock Mantle modes. It also checks existing battle
+prompts and skips already-created demo battles to avoid duplicates.
+
+Current demo seed set:
 
 - `OPEN` `OPTION` battle
 - `OPEN` `IMAGE_CAPTION` battle
 - `SETTLED` `OPTION` battle
 - `SETTLED` `IMAGE_CAPTION` battle
-- Profile user data only after the minimal user schema extension is approved
+- `SETTLED` `TEXT_OPEN` battle
+
+Profile user data should still wait until the minimal user schema extension is
+approved.
 
 ## Suggested Next Decision
 
