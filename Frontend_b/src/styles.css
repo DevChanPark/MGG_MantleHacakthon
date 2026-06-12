@@ -2035,6 +2035,128 @@ select {
 }
 
 /* ===============================================
+   Board Select Bottom Sheet
+   =============================================== */
+
+.board-sheet-layer {
+  position: absolute;
+  z-index: 300;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.board-sheet-backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  cursor: default;
+  pointer-events: auto;
+}
+
+.board-select-sheet {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  padding-top: 14px;
+  border: 1px solid #0e0e0e;
+  border-bottom: 0;
+  border-radius: 14px 14px 0 0;
+  background: #fdfdfd;
+  box-shadow: 0 -10px 22px rgba(0, 0, 0, 0.12);
+  pointer-events: auto;
+}
+
+.board-sheet-handle {
+  width: 46px;
+  height: 2px;
+  margin: 0 auto 16px;
+  border-radius: 999px;
+  background: #777;
+}
+
+.board-sheet-title {
+  margin: 0;
+  padding: 0 20px 16px;
+  border-bottom: 1px solid rgba(14, 14, 14, 0.18);
+  color: #0e0e0e;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.board-sheet-options {
+  display: flex;
+  flex-direction: column;
+}
+
+.board-sheet-option {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 50px;
+  padding: 0 20px;
+  border: 0;
+  border-bottom: 1px solid rgba(14, 14, 14, 0.14);
+  background: #fdfdfd;
+  color: #0e0e0e;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-align: left;
+  cursor: pointer;
+}
+
+.board-sheet-option:active {
+  background: #e3f4a6;
+}
+
+.board-sheet-option:last-child {
+  border-bottom: 0;
+}
+
+/* ===============================================
+   Create Screen Placeholder
+   =============================================== */
+
+.create-screen {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  min-height: 100%;
+  padding: 34px 22px 140px;
+  background: #fdfdfd;
+  color: #0e0e0e;
+}
+
+.create-screen-eyebrow {
+  margin: 0;
+  color: rgba(14, 14, 14, 0.62);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.create-screen h2 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 1.25;
+}
+
+.create-screen p {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+/* ===============================================
    HomeFeed Styles
    =============================================== */
 

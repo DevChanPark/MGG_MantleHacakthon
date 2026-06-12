@@ -1,6 +1,10 @@
 import React from 'react';
 
-export function BottomNav() {
+interface BottomNavProps {
+  onCreateClick?: () => void;
+}
+
+export function BottomNav({ onCreateClick }: BottomNavProps) {
   const handleNavClick = (route: string) => {
     window.location.hash = route;
   };
@@ -21,7 +25,7 @@ export function BottomNav() {
 
       <button
         className="bottom-nav-center"
-        onClick={() => handleNavClick('create')}
+        onClick={onCreateClick}
         type="button"
         aria-label="만들기"
       >

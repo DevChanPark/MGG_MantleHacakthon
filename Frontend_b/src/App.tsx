@@ -4,6 +4,7 @@ import { HomeFeed } from './screens/HomeFeed';
 import { ProfileScreen } from './screens/ProfileScreen';
 import { SignupProfileScreen } from './screens/SignupProfileScreen';
 import { SignupWalletScreen } from './screens/SignupWalletScreen';
+import { CreateBattleScreen } from './screens/CreateBattleScreen';
 import { AppShell } from './components/AppShell';
 
 export default function App() {
@@ -38,6 +39,14 @@ export default function App() {
     return (
       <AppShell>
         <ProfileScreen />
+      </AppShell>
+    );
+  }
+
+  if (route === 'create') {
+    return (
+      <AppShell>
+        <CreateBattleScreen />
       </AppShell>
     );
   }
