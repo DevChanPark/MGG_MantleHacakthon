@@ -40,7 +40,7 @@ export function WinnerModal({
             <div className="winner-summary-box">
               <div>
                 <span>참여자</span>
-                <strong>{currentUserNickname || result.winnerName}</strong>
+                <strong>{result.winnerName || currentUserNickname}</strong>
               </div>
               <div>
                 <span>지급 받을 크레딧</span>
@@ -59,6 +59,7 @@ export function WinnerModal({
         ) : (
           <>
             <div className="winner-verdict-box">
+              <p className="winner-detail">{result.aiSummary}</p>
               <p className="winner-detail">{result.winnerDetail}</p>
               <ul>
                 {result.verdictLines.map((line) => (

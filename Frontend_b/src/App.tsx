@@ -285,16 +285,9 @@ export default function App() {
   };
 
   const handleCompleteEvaluation = (battleId: string) => {
-    const targetBattle = battles.find((battle) => battle.id === battleId);
-    const completedBattle: FeedBattle | null = targetBattle ? { ...targetBattle, status: 'COMPLETED' } : null;
-
     setBattles((currentBattles) =>
       currentBattles.map((battle) => (battle.id === battleId ? { ...battle, status: 'COMPLETED' } : battle)),
     );
-
-    if (completedBattle && !rewardedBattleIds.includes(completedBattle.id)) {
-      setWinnerBattle(completedBattle);
-    }
   };
 
   const handleOpenWinnerModal = (battle: FeedBattle) => {

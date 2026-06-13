@@ -2802,7 +2802,6 @@ select {
 
 .battle-status-chip,
 .battle-status-chip.is-complete,
-.battle-complete-button,
 .battle-winner-button {
   background: #e3f4a6;
 }
@@ -2811,9 +2810,23 @@ select {
   cursor: default;
 }
 
+.battle-status-chip.is-deadline {
+  background: #fdfdfd;
+  color: #ff3d16;
+}
+
 .battle-status-chip.is-closed {
   background: #eeeeee;
   color: rgba(14, 14, 14, 0.66);
+}
+
+.battle-complete-button.is-dev-action {
+  min-height: 24px;
+  padding: 0 9px;
+  border-color: rgba(14, 14, 14, 0.36);
+  background: #f6f6f6;
+  color: rgba(14, 14, 14, 0.62);
+  font-size: 11px;
 }
 
 .battle-card-main {
@@ -3325,8 +3338,8 @@ select {
 .ai-evaluating-box,
 .ai-result-box {
   margin-top: 14px;
-  padding: 14px;
-  border-radius: 8px;
+  padding: 16px 14px;
+  border-radius: 10px;
   background: #eeeeee;
   color: #0e0e0e;
 }
@@ -3344,6 +3357,37 @@ select {
   margin: 0 0 6px;
   font-size: 12px;
   line-height: 1.55;
+}
+
+.ai-result-summary {
+  display: grid;
+  gap: 6px;
+  margin: 0 0 10px;
+  padding: 10px 11px;
+  border: 0.5px solid rgba(14, 14, 14, 0.22);
+  border-radius: 7px;
+  background: #fdfdfd;
+}
+
+.ai-result-summary span {
+  color: #0e0e0e;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.ai-summary-lines {
+  display: grid;
+  gap: 4px;
+  margin: 0 0 8px;
+}
+
+.winner-crown {
+  display: inline-flex;
+  margin-right: 4px;
+  font-size: 14px;
+  line-height: 1;
+  vertical-align: -1px;
 }
 
 .ai-result-box p:last-child {
@@ -3727,6 +3771,21 @@ select {
   line-height: 1.2;
   text-align: right;
   white-space: nowrap;
+}
+
+.detail-state-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 7px;
+  white-space: nowrap;
+}
+
+.detail-state-actions .battle-status-chip {
+  min-height: 32px;
+  padding: 0 14px;
+  font-size: 14px;
+  font-weight: 700;
 }
 
 .detail-participate-button {

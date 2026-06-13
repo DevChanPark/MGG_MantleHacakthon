@@ -36,8 +36,6 @@ export function ParticipationModal({
 
   const hasEnoughCredits = credits >= PARTICIPATION_COST;
   const needsOption = battle.type === 'OPTION' && Boolean(battle.options?.length);
-  const canConfirm = hasEnoughCredits && (!needsOption || Boolean(selectedOption));
-
   const handleAddCredits = (amount: number) => {
     onAddCredits(amount);
     setIsChargeOpen(false);
@@ -111,7 +109,6 @@ export function ParticipationModal({
               <button
                 className="participation-confirm-button"
                 type="button"
-                disabled={!canConfirm}
                 onClick={onParticipate}
               >
                 참여하기

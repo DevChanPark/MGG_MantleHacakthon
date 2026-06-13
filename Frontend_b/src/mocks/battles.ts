@@ -40,9 +40,18 @@ export interface CreateBattleDraft {
 
 export interface MockBattleResult {
   winnerUserId: string;
+  winnerCommentId?: string;
   winnerName: string;
   winnerDetail: string;
+  participantCount: number;
   rewardCredits: number;
+  aiSummary: string;
+  winningOptionId?: string;
+  optionStats?: Array<{
+    optionId: string;
+    label: string;
+    percentage: number;
+  }>;
   verdictLines: string[];
   optionResults?: Array<{
     label: string;
@@ -309,24 +318,37 @@ export function isBattleExpired(battle: FeedBattle, now = new Date()) {
 
 export function getMockBattleResult(battle: FeedBattle): MockBattleResult {
   const winnerUserId = getMockWinnerUserId(battle);
+  const participantCount = battle.type === 'OPTION' ? 67 : Math.max(12, battle.comments.length * 9 + 11);
 
   if (battle.type === 'OPTION') {
     const optionLabels = battle.options && battle.options.length >= 2 ? battle.options : ['집주인', '세입자'];
-    const winnerName = optionLabels[0];
+    const winningComment = battle.comments[0];
+    const winningOptionLabel = optionLabels[0];
+    const winnerName = winningComment?.author ?? '월세냥이';
+    const optionStats = [
+      { optionId: `${battle.id}-option-0`, label: optionLabels[0], percentage: 72 },
+      { optionId: `${battle.id}-option-1`, label: optionLabels[1], percentage: 28 },
+      ...optionLabels.slice(2).map((label, index) => ({
+        optionId: `${battle.id}-option-${index + 2}`,
+        label,
+        percentage: 0,
+      })),
+    ];
 
     return {
       winnerUserId,
+      winnerCommentId: winningComment?.id,
       winnerName,
-      winnerDetail: `${winnerName} 진영`,
+      winnerDetail: winningComment?.text ?? `${winningOptionLabel} 진영의 주장이 가장 강했습니다.`,
+      participantCount,
       rewardCredits: REWARD_CREDITS,
-      optionResults: [
-        { label: optionLabels[0], percentage: 72 },
-        { label: optionLabels[1], percentage: 28 },
-        ...optionLabels.slice(2).map((label) => ({ label, percentage: 0 })),
-      ],
+      aiSummary: `${winningOptionLabel} 쪽 주장이 더 선명하고 공유하기 좋은 결론을 만들었습니다.`,
+      winningOptionId: optionStats[0]?.optionId,
+      optionStats,
+      optionResults: optionStats.map(({ label, percentage }) => ({ label, percentage })),
       verdictLines: [
         'AI 판결문: 댓글의 논리적 기세와 밈 확산성을 기준으로 판단했습니다.',
-        `${winnerName} 쪽 주장이 더 선명하고 공유하기 좋은 결론을 만들었습니다.`,
+        `${winningOptionLabel} 쪽 주장이 더 선명하고 공유하기 좋은 결론을 만들었습니다.`,
         '최종 판단: 우기기의 밀도가 가장 높았습니다.',
       ],
     };
@@ -337,9 +359,12 @@ export function getMockBattleResult(battle: FeedBattle): MockBattleResult {
 
     return {
       winnerUserId,
+      winnerCommentId: winningComment?.id,
       winnerName: winningComment?.author ?? '무기기 캡션러',
       winnerDetail: winningComment?.text ?? '이미지 맥락을 가장 잘 찌른 캡션입니다.',
+      participantCount,
       rewardCredits: REWARD_CREDITS,
+      aiSummary: '이미지 맥락과 한 줄 임팩트가 가장 잘 맞았습니다.',
       verdictLines: [
         'AI 판결문: 이미지 맥락과 한 줄 임팩트가 가장 잘 맞았습니다.',
         '캡션이 상황을 바로 이해시키면서 공유하기 쉬운 형태였습니다.',
@@ -352,9 +377,12 @@ export function getMockBattleResult(battle: FeedBattle): MockBattleResult {
 
   return {
     winnerUserId,
+    winnerCommentId: winningComment?.id,
     winnerName: winningComment?.author ?? '우김장인',
     winnerDetail: winningComment?.text ?? '반박 불가능한 한 줄 우기기입니다.',
+    participantCount,
     rewardCredits: REWARD_CREDITS,
+    aiSummary: '가장 짧은 문장 안에 제일 강한 억지력을 담은 답변이 앞섰습니다.',
     verdictLines: [
       'AI 판결문: 황당함, 우기기 강도, 댓글 반응 가능성을 기준으로 평가했습니다.',
       '가장 짧은 문장 안에 제일 강한 억지력을 담은 답변이 앞섰습니다.',

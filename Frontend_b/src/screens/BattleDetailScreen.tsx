@@ -52,13 +52,16 @@ export function BattleDetailScreen({
   const isEvaluating = battle.status === 'EVALUATING';
   const isCompleted = battle.status === 'COMPLETED';
   const isClosed = !isOpen && !isEvaluating && !isCompleted;
+  const canWriteComments = isOpen && isParticipated;
+  const canViewComments = isParticipated || !isOpen;
   const safeOptions = battle.options ?? [];
-  const shouldShowOptionRatio = battle.type === 'OPTION' && Boolean(selectedOption || isCompleted) && result.optionResults;
+  const optionStats = result.optionStats ?? result.optionResults;
+  const shouldShowOptionRatio = battle.type === 'OPTION' && Boolean(selectedOption || isCompleted) && optionStats;
 
   const handleCommentSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!isParticipated) {
+    if (!canWriteComments) {
       onRequireParticipation();
       return;
     }
@@ -76,7 +79,7 @@ export function BattleDetailScreen({
   };
 
   const handleReplyClick = (commentId: string) => {
-    if (!isParticipated) {
+    if (!canWriteComments) {
       onRequireParticipation();
       return;
     }
@@ -85,19 +88,60 @@ export function BattleDetailScreen({
     setReplyingCommentId((currentId) => (currentId === commentId ? null : commentId));
   };
 
+  const renderTopbarAction = () => {
+    if (isOpen) {
+      return (
+        <button
+          className={`detail-participate-button${isParticipated ? ' is-complete' : ''}`}
+          type="button"
+          disabled={isParticipated}
+          onClick={onParticipationRequest}
+        >
+          {isParticipated ? '참여 완료' : '참여하기'}
+        </button>
+      );
+    }
+
+    if (isEvaluating) {
+      return (
+        <div className="detail-state-actions">
+          <span className="battle-status-chip">AI 평가 중</span>
+          <span className="battle-status-chip is-deadline">마감</span>
+        </div>
+      );
+    }
+
+    if (isCompleted) {
+      return (
+        <div className="detail-state-actions">
+          <span className="battle-status-chip is-complete">AI 평가 완료</span>
+          <span className="battle-status-chip is-deadline">마감</span>
+        </div>
+      );
+    }
+
+    return <span className="battle-status-chip is-closed">마감</span>;
+  };
+
   const renderComment = (comment: PreviewComment) => {
     const isCommentLiked = likedCommentIds.includes(comment.id);
+    const isWinningComment = isCompleted && result.winnerCommentId === comment.id;
 
     return (
       <article className="detail-comment-thread" key={comment.id}>
         <div className="detail-comment-item">
           <div className="detail-comment-avatar" aria-hidden="true" />
           <div className="detail-comment-copy">
-            <strong>{comment.author}</strong>
+            <strong>
+              {isWinningComment && <span className="winner-crown" aria-label="우승자">👑</span>}
+              {comment.author}
+            </strong>
             <p>{comment.text}</p>
-            <button type="button" onClick={() => handleReplyClick(comment.id)}>
-              답글달기
-            </button>
+            {canWriteComments && (
+              <button type="button" onClick={() => handleReplyClick(comment.id)}>
+                답글달기
+              </button>
+            )}
           </div>
           <button
             className={`comment-like-button${isCommentLiked ? ' is-liked' : ''}`}
@@ -139,7 +183,7 @@ export function BattleDetailScreen({
           </div>
         )}
 
-        {replyingCommentId === comment.id && (
+        {canWriteComments && replyingCommentId === comment.id && (
           <form className="reply-composer detail-reply-composer" onSubmit={(event) => handleReplySubmit(event, comment.id)}>
             <input
               value={replyInput}
@@ -161,14 +205,7 @@ export function BattleDetailScreen({
           ‹
         </button>
         <span className="detail-deadline">마감 기한&nbsp;&nbsp;{battle.deadline}</span>
-        <button
-          className={`detail-participate-button${isParticipated ? ' is-complete' : ''}${!isOpen && !isParticipated ? ' is-closed' : ''}`}
-          type="button"
-          disabled={isParticipated}
-          onClick={onParticipationRequest}
-        >
-          {isParticipated ? '참여 완료' : isOpen ? '참여하기' : '마감된 게시글'}
-        </button>
+        {renderTopbarAction()}
       </section>
 
       <section className="battle-detail-hero">
@@ -186,7 +223,7 @@ export function BattleDetailScreen({
                   type="button"
                   key={`${battle.id}-detail-${option}`}
                   aria-pressed={selectedOption === option}
-                  disabled={!isOpen}
+                  disabled={!isOpen || !isParticipated}
                   onClick={() => onOptionSelect(option)}
                 >
                   {option}
@@ -195,11 +232,13 @@ export function BattleDetailScreen({
             </div>
           )}
 
-          {battle.type === 'OPTION' && shouldShowOptionRatio && result.optionResults && (
+          {battle.type === 'OPTION' && shouldShowOptionRatio && optionStats && (
             <div className="battle-result-options detail-result-options" aria-label="상세 선택지 결과">
-              {result.optionResults.map((option) => (
+              {optionStats.map((option) => (
                 <div
-                  className={`battle-result-option${option.label === (selectedOption ?? result.winnerName) ? ' is-winner' : ''}`}
+                  className={`battle-result-option${
+                    option.label === selectedOption || ('optionId' in option && option.optionId === result.winningOptionId) ? ' is-winner' : ''
+                  }`}
                   key={`${battle.id}-detail-result-${option.label}`}
                 >
                   <span>{option.label}</span>
@@ -225,26 +264,20 @@ export function BattleDetailScreen({
 
       <section className="battle-detail-controls" aria-label="게시글 상태">
         {isEvaluating && (
-          <>
-            <span className="battle-status-chip">AI 평가 중</span>
-            <button className="battle-complete-button" type="button" onClick={onCompleteEvaluation}>
-              AI 평가 완료 처리
-            </button>
-          </>
+          <button className="battle-complete-button is-dev-action" type="button" onClick={onCompleteEvaluation}>
+            AI 평가 완료 처리
+          </button>
         )}
         {isCompleted && (
-          <>
-            <span className="battle-status-chip is-complete">AI 평가 완료</span>
-            <button className="battle-winner-button" type="button" onClick={onOpenWinnerModal}>
-              우승자 확인
-            </button>
-          </>
+          <button className="battle-winner-button" type="button" onClick={onOpenWinnerModal}>
+            우승자 확인
+          </button>
         )}
         {isClosed && <span className="battle-status-chip is-closed">마감</span>}
       </section>
 
       <section className="battle-card-actions detail-actions" aria-label="상세 반응">
-        <button className="battle-card-action" type="button" onClick={onRequireParticipation}>
+        <button className="battle-card-action" type="button" onClick={isOpen ? onRequireParticipation : onParticipationRequest}>
           <img className="action-icon-img comment-icon-img" src={commentIcon} alt="" aria-hidden="true" />
           댓글 {battle.comments.length}
         </button>
@@ -273,32 +306,42 @@ export function BattleDetailScreen({
       {isCompleted && (
         <section className="ai-result-box detail-ai-box">
           <strong>AI 판결문</strong>
+          <div className="ai-result-summary">
+            <span>참여자 {result.participantCount}명</span>
+            <span>우승자: {result.winnerName}</span>
+            <span>지급 받을 크레딧: {result.rewardCredits}개</span>
+          </div>
           {battle.type !== 'OPTION' && (
             <p className="ai-winner-line">
               우승자 {result.winnerName} · {result.winnerDetail}
             </p>
           )}
-          {result.verdictLines.map((line) => (
+          <div className="ai-summary-lines">
+            <p>{result.aiSummary}</p>
+          </div>
+          {result.verdictLines.slice(0, 3).map((line) => (
             <p key={line}>{line}</p>
           ))}
         </section>
       )}
 
-      {isParticipated ? (
+      {canViewComments ? (
         <>
           <section className="battle-detail-comments" aria-label="댓글 목록">
             {battle.comments.map(renderComment)}
           </section>
 
-          <form className="detail-comment-form" onSubmit={handleCommentSubmit}>
-            <input
-              value={commentInput}
-              onChange={(event) => setCommentInput(event.target.value)}
-              placeholder="댓글을 입력하세요"
-              aria-label="상세 댓글 입력"
-            />
-            <button type="submit">등록</button>
-          </form>
+          {canWriteComments && (
+            <form className="detail-comment-form" onSubmit={handleCommentSubmit}>
+              <input
+                value={commentInput}
+                onChange={(event) => setCommentInput(event.target.value)}
+                placeholder="댓글을 입력하세요"
+                aria-label="상세 댓글 입력"
+              />
+              <button type="submit">등록</button>
+            </form>
+          )}
         </>
       ) : (
         <section className="detail-comment-locked" aria-label="댓글 잠김">
