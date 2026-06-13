@@ -34,6 +34,10 @@ Optional environment variables:
 - `DEMO_USER_ID`: demo identity header, default `demo-seed-user`
 - `DEMO_NICKNAME`: profile nickname, default `demo-captain`
 
+For the MVP frontend, keep the demo identity fixed to
+`x-user-id: demo-seed-user`. The environment override is only for local
+backend experiments outside the demo path.
+
 The script is idempotent for battles by prompt. Existing demo battles are
 reported as `skipped` instead of duplicated.
 

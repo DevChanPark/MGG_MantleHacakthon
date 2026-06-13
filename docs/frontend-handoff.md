@@ -4,6 +4,12 @@ This document is the backend handoff contract for the mobile-first MGG frontend.
 
 The frontend renders state and calls APIs. It must not run AI judging, execute Mantle transactions, handle server wallet keys, or put raw user content on-chain.
 
+For the MVP demo, use a fixed demo identity header:
+
+```http
+x-user-id: demo-seed-user
+```
+
 ## Core Mobile Flow
 
 1. Call `GET /api/users/me` when the app starts.
@@ -45,8 +51,8 @@ submitted.
 | Status | Mobile UI behavior |
 | --- | --- |
 | `OPEN` | Show entry form. OPTION battles must show option picker before the comment field. |
-| `CLOSED` | Disable entry form. Show a judging action or waiting state. |
-| `JUDGING` | Show progress/loading state. Do not retry aggressively. |
+| `CLOSED` | Disable entry form. Show a demo-only judging action or waiting state. |
+| `JUDGING` | Show progress/loading state during the judge request. Do not retry aggressively. |
 | `SETTLED` | Fetch and render result page, score table, Top 3, winner, AI verdict, and Mantle verification box. |
 | `FAILED` | Show a safe failure message and retry/recreate affordance. |
 
@@ -126,12 +132,20 @@ Entry:
 
 The mobile result page should render:
 
-- AI verdict title and text
 - Winner
+- AI verdict title and text
 - Top 3 entries
 - Score table
 - Mantle verification box with `chainId`, `contractAddress`, `txHash`, and `explorerUrl`
 - Share summary
+
+Recommended order:
+
+1. Winner and verdict title
+2. Verdict text
+3. Top 3 entries and score table
+4. Mantle verification box
+5. Share summary
 
 The frontend should use `GET /api/battles/:battleId/result` as the source of truth for result screens.
 

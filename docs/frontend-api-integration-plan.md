@@ -18,6 +18,20 @@ the frontend branch was read but not modified.
 8. Result screen: `GET /api/battles/:battleId/result`
 9. Archive/profile settled list: `GET /api/archive`
 
+## MVP Decisions
+
+- Demo identity is fixed to `x-user-id: demo-seed-user` for frontend API calls.
+- Keep credits, purchase/payment flows, likes, share counts, social comments,
+  and profile comment/like tabs mocked or disabled for MVP.
+- Use the backend demo dataset for list/detail/result screens before adding a
+  full battle creation UX.
+- If close/judge controls are needed for the demo, expose them as demo-only
+  actions that call `POST /api/battles/:battleId/close` and
+  `POST /api/battles/:battleId/judge`. The frontend must not run AI judging or
+  Mantle settlement itself.
+- Treat `JUDGING` primarily as a loading state during the judge request. The
+  backend transitions `CLOSED -> JUDGING -> SETTLED` inside one judge call.
+
 ## Screen Data Map
 
 ### Onboarding
@@ -165,8 +179,8 @@ Fields:
 
 Render:
 
-- AI verdict title/text
 - winner
+- AI verdict title/text
 - top entries
 - score table
 - `settlement.chainId`
@@ -174,6 +188,14 @@ Render:
 - `settlement.txHash`
 - `settlement.explorerUrl`
 - `verdict.shareSummary`
+
+Recommended result order:
+
+1. Winner and verdict title
+2. Verdict text
+3. Top entries and score table
+4. Mantle verification box with settlement metadata
+5. Share summary
 
 Mode boundary:
 
