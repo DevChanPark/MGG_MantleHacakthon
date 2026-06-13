@@ -47,9 +47,11 @@ const creditPackages: CreditPackage[] = [
 
 interface ProfileScreenProps {
   credits?: number;
+  walletAddress?: string;
+  onAddCredits?: (amount: number) => void;
 }
 
-export function ProfileScreen({ credits = 30 }: ProfileScreenProps) {
+export function ProfileScreen({ credits = 30, walletAddress = '0x12ab...89ef', onAddCredits }: ProfileScreenProps) {
   const [activeContentTab, setActiveContentTab] = useState<ProfileContentTab>('posts');
   const [activeBattleFilter, setActiveBattleFilter] = useState<ProfileBattleFilter>('open');
   const [currentCredits, setCurrentCredits] = useState(credits);
@@ -71,6 +73,7 @@ export function ProfileScreen({ credits = 30 }: ProfileScreenProps) {
   const approveCreditPurchase = (creditPackage: CreditPackage) => {
     const nextCreditTotal = currentCredits + creditPackage.credits;
     setCurrentCredits(nextCreditTotal);
+    onAddCredits?.(creditPackage.credits);
     closeCreditPanel();
     setCompletedCreditTotal(nextCreditTotal);
   };
@@ -222,6 +225,7 @@ export function ProfileScreen({ credits = 30 }: ProfileScreenProps) {
           isOpen={isCreditPanelOpen}
           isInfoOpen={isCreditInfoOpen}
           currentCredits={currentCredits}
+          walletAddress={walletAddress}
           packages={creditPackages}
           selectedPackage={selectedCreditPackage}
           onClose={closeCreditPanel}
@@ -262,6 +266,7 @@ type CreditChargePanelProps = {
   isOpen: boolean;
   isInfoOpen: boolean;
   currentCredits: number;
+  walletAddress: string;
   packages: CreditPackage[];
   selectedPackage: CreditPackage | null;
   onClose: () => void;
@@ -276,6 +281,7 @@ function CreditChargePanel({
   isOpen,
   isInfoOpen,
   currentCredits,
+  walletAddress,
   packages,
   selectedPackage,
   onClose,
@@ -339,7 +345,7 @@ function CreditChargePanel({
               </div>
               <div>
                 <span>지갑주소</span>
-                <span>0x~~~~~~~~~~~~~~~~</span>
+                <span>{walletAddress}</span>
               </div>
             </div>
             <button className="credit-approve-button" type="button" onClick={() => onApprovePayment(selectedPackage)}>

@@ -14,6 +14,8 @@ interface BattleCardProps {
   onBattleLike: () => void;
   onCommentLike: (commentId: string) => void;
   onCommentAdd: (text: string) => void;
+  onShare: () => void;
+  onRequireParticipation: () => void;
   onParticipationRequest: () => void;
   onCloseBattle: () => void;
   onCompleteEvaluation: () => void;
@@ -31,6 +33,8 @@ export function BattleCard({
   onBattleLike,
   onCommentLike,
   onCommentAdd,
+  onShare,
+  onRequireParticipation,
   onParticipationRequest,
   onCloseBattle,
   onCompleteEvaluation,
@@ -77,7 +81,7 @@ export function BattleCard({
       }}
     >
       <div className="battle-status-row">
-        {isOpen && (
+        {false && isOpen && (
           <button className="battle-close-button" type="button" onClick={(event) => stopAndRun(event, onCloseBattle)}>
             마감
           </button>
@@ -166,7 +170,14 @@ export function BattleCard({
           type="button"
           aria-expanded={isCommentComposerOpen}
           onClick={(event) =>
-            stopAndRun(event, () => setIsCommentComposerOpen((isOpenValue) => !isOpenValue))
+            stopAndRun(event, () => {
+              if (!isParticipated) {
+                onRequireParticipation();
+                return;
+              }
+
+              setIsCommentComposerOpen((isOpenValue) => !isOpenValue);
+            })
           }
         >
           <img className="action-icon-img comment-icon-img" src={commentIcon} alt="" aria-hidden="true" />
@@ -181,7 +192,7 @@ export function BattleCard({
           <img className="action-icon-img heart-icon-img" src={heartIcon} alt="" aria-hidden="true" />
           좋아요 {battle.likeCount}
         </button>
-        <button className="battle-card-share" type="button" onClick={(event) => event.stopPropagation()}>
+        <button className="battle-card-share" type="button" onClick={(event) => stopAndRun(event, onShare)}>
           <img className="action-icon-img share-icon-img" src={shareIcon} alt="" aria-hidden="true" />
           공유하기
         </button>
@@ -229,7 +240,7 @@ export function BattleCard({
           )}
         </div>
 
-        {isCommentComposerOpen && (
+        {isParticipated && isCommentComposerOpen && (
           <form className="comment-composer" onSubmit={handleCommentSubmit}>
             <input
               value={commentInput}

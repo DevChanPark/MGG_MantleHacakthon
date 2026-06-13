@@ -22,6 +22,7 @@ import {
   initialMockBattles,
   isCurrentUserWinner,
   MOCK_CURRENT_USER,
+  MOCK_WALLET_ADDRESS,
   type CreateBattleDraft,
   type BattleType,
   type FeedBattle,
@@ -201,8 +202,16 @@ export default function App() {
     setParticipationBattle(null);
   };
 
-  const handleAddCredits = () => {
-    setCredits((currentCredits) => currentCredits + 30);
+  const handleAddCredits = (amount: number) => {
+    setCredits((currentCredits) => currentCredits + amount);
+  };
+
+  const handleRequireParticipation = () => {
+    showNotice('참여하기를 눌러야 댓글을 등록할 수 있습니다.');
+  };
+
+  const handleShareBattle = () => {
+    showNotice('공유 링크가 준비되었습니다.');
   };
 
   const showNotice = (message: string) => {
@@ -263,6 +272,7 @@ export default function App() {
           <ParticipationModal
             battle={participationBattle}
             credits={credits}
+            walletAddress={MOCK_WALLET_ADDRESS}
             isParticipated={participationBattle ? participatedBattleIds.includes(participationBattle.id) : false}
             selectedOption={pendingParticipationOption}
             onClose={() => {
@@ -319,6 +329,8 @@ export default function App() {
         onBattleLike={handleBattleLike}
         onCommentLike={handleCommentLike}
         onCommentAdd={handleCommentAdd}
+        onShareBattle={handleShareBattle}
+        onRequireParticipation={handleRequireParticipation}
         onParticipationRequest={handleParticipationRequest}
         onCloseBattle={handleCloseBattle}
         onCompleteEvaluation={handleCompleteEvaluation}
@@ -353,6 +365,8 @@ export default function App() {
         onBattleLike={() => handleBattleLike(selectedBattle.id)}
         onCommentLike={(commentId) => handleCommentLike(selectedBattle.id, commentId)}
         onCommentAdd={(text) => handleCommentAdd(selectedBattle.id, text)}
+        onShareBattle={handleShareBattle}
+        onRequireParticipation={handleRequireParticipation}
         onParticipationRequest={() => handleParticipationRequest(selectedBattle)}
         onCloseBattle={() => handleCloseBattle(selectedBattle.id)}
         onCompleteEvaluation={() => handleCompleteEvaluation(selectedBattle.id)}
@@ -362,7 +376,10 @@ export default function App() {
   }
 
   if (route === 'profile') {
-    return renderWithAppShell(<ProfileScreen credits={credits} />, { hideHeader: true });
+    return renderWithAppShell(
+      <ProfileScreen credits={credits} walletAddress={MOCK_WALLET_ADDRESS} onAddCredits={handleAddCredits} />,
+      { hideHeader: true },
+    );
   }
 
   if (route.startsWith('create')) {

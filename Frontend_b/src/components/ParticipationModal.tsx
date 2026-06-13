@@ -1,21 +1,26 @@
+import { useState } from 'react';
 import type { FeedBattle } from '../mocks/battles';
 
 export const PARTICIPATION_COST = 3;
 
+const CREDIT_OPTIONS = [30, 100, 300];
+
 interface ParticipationModalProps {
   battle: FeedBattle | null;
   credits: number;
+  walletAddress: string;
   isParticipated: boolean;
   selectedOption?: string;
   onClose: () => void;
   onOptionSelect?: (option: string) => void;
   onParticipate: () => void;
-  onAddCredits: () => void;
+  onAddCredits: (amount: number) => void;
 }
 
 export function ParticipationModal({
   battle,
   credits,
+  walletAddress,
   isParticipated,
   selectedOption,
   onClose,
@@ -23,6 +28,8 @@ export function ParticipationModal({
   onParticipate,
   onAddCredits,
 }: ParticipationModalProps) {
+  const [isChargeOpen, setIsChargeOpen] = useState(false);
+
   if (!battle) {
     return null;
   }
@@ -31,18 +38,28 @@ export function ParticipationModal({
   const needsOption = battle.type === 'OPTION' && Boolean(battle.options?.length);
   const canConfirm = hasEnoughCredits && (!needsOption || Boolean(selectedOption));
 
+  const handleAddCredits = (amount: number) => {
+    onAddCredits(amount);
+    setIsChargeOpen(false);
+  };
+
   return (
     <div className="modal-overlay participation-overlay" role="presentation">
       <section className="participation-modal" role="dialog" aria-modal="true" aria-labelledby="participation-title">
         <button className="modal-close-button" type="button" aria-label="참여 모달 닫기" onClick={onClose}>
-          x
+          ×
         </button>
 
         <h2 id="participation-title">참여하기</h2>
         <p className="participation-credit-line">사용 가능 크레딧: {credits}개</p>
 
+        <div className="participation-wallet-box">
+          <span>연동 지갑</span>
+          <strong>{walletAddress}</strong>
+        </div>
+
         <div className="participation-cost-box">
-          <span>참여하기</span>
+          <span>참여 비용</span>
           <strong>크레딧 {PARTICIPATION_COST}개</strong>
         </div>
 
@@ -62,13 +79,23 @@ export function ParticipationModal({
           </div>
         )}
 
-        {!hasEnoughCredits && <p className="participation-error">크레딧이 부족합니다!</p>}
+        {!hasEnoughCredits && <p className="participation-error">크레딧이 부족합니다.</p>}
         {hasEnoughCredits && needsOption && !selectedOption && (
           <p className="participation-error">진영을 먼저 선택해주세요.</p>
         )}
 
+        {!hasEnoughCredits && isChargeOpen && (
+          <div className="participation-charge-options" aria-label="크레딧 충전 옵션">
+            {CREDIT_OPTIONS.map((amount) => (
+              <button type="button" key={amount} onClick={() => handleAddCredits(amount)}>
+                {amount} C 충전
+              </button>
+            ))}
+          </div>
+        )}
+
         <p className="participation-helper">
-          참가비 크레딧 {PARTICIPATION_COST}개가 차감되며, 참가비는 우승 시 상금으로 분배됩니다.
+          참여 시 크레딧 {PARTICIPATION_COST}개가 차감됩니다. 보상 지급은 mock 결과 흐름에서만 처리됩니다.
         </p>
 
         {isParticipated ? (
@@ -90,7 +117,11 @@ export function ParticipationModal({
                 참여하기
               </button>
             ) : (
-              <button className="participation-confirm-button" type="button" onClick={onAddCredits}>
+              <button
+                className="participation-confirm-button"
+                type="button"
+                onClick={() => setIsChargeOpen((isOpen) => !isOpen)}
+              >
                 충전하기
               </button>
             )}
@@ -120,7 +151,7 @@ export function SelectionRequiredModal({
     <div className="modal-overlay participation-overlay" role="presentation">
       <section className="selection-warning-modal" role="alertdialog" aria-modal="true" aria-labelledby="selection-warning-title">
         <button className="modal-close-button" type="button" aria-label="안내 닫기" onClick={onClose}>
-          x
+          ×
         </button>
         <h2 id="selection-warning-title">{message}</h2>
         <button className="selection-warning-confirm" type="button" onClick={onClose}>

@@ -3358,6 +3358,27 @@ select {
   line-height: 1.4;
 }
 
+.participation-wallet-box {
+  display: grid;
+  gap: 4px;
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(14, 14, 14, 0.28);
+  border-radius: 7px;
+  background: #f6f6f6;
+  color: #0e0e0e;
+}
+
+.participation-wallet-box span {
+  font-size: 11px;
+  color: rgba(14, 14, 14, 0.62);
+}
+
+.participation-wallet-box strong {
+  font-size: 13px;
+  font-weight: 700;
+}
+
 .participation-cost-box {
   display: flex;
   min-height: 40px;
@@ -3410,6 +3431,26 @@ select {
   color: #ff3d16;
   font-size: 10px;
   font-weight: 700;
+}
+
+.participation-charge-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+  margin: 10px 0 0;
+}
+
+.participation-charge-options button {
+  min-height: 36px;
+  padding: 0 6px;
+  border: 1px solid #0e0e0e;
+  border-radius: 7px;
+  background: #e3f4a6;
+  color: #0e0e0e;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .participation-actions {
@@ -3793,6 +3834,13 @@ select {
   color: #0e0e0e;
   cursor: pointer;
   font-weight: 700;
+}
+
+.detail-comment-form input:disabled,
+.detail-comment-form button:disabled {
+  background: #eeeeee;
+  color: rgba(14, 14, 14, 0.48);
+  cursor: default;
 }
 
 @media (max-width: 374px) {

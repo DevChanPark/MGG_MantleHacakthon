@@ -6,6 +6,7 @@ export interface PreviewComment {
   author: string;
   text: string;
   likeCount: number;
+  replies?: PreviewComment[];
 }
 
 export interface FeedBattle {
@@ -54,6 +55,8 @@ export const MOCK_CURRENT_USER = {
   nickname: '나',
   credits: 30,
 };
+
+export const MOCK_WALLET_ADDRESS = '0x12ab...89ef';
 
 export const REWARD_CREDITS = 30;
 
@@ -287,10 +290,8 @@ export function isValidBattleDeadline(deadline: string) {
 }
 
 export function getBattleEffectiveStatus(battle: FeedBattle, now = new Date()): BattleStatus {
-  const deadlineDate = parseBattleDeadline(battle.deadline);
-
-  if (battle.status === 'OPEN' && deadlineDate && deadlineDate.getTime() <= now.getTime()) {
-    return 'EXPIRED';
+  if (battle.status === 'OPEN' && isBattleExpired(battle, now)) {
+    return 'EVALUATING';
   }
 
   return battle.status;
@@ -298,6 +299,12 @@ export function getBattleEffectiveStatus(battle: FeedBattle, now = new Date()): 
 
 export function canParticipateInBattle(battle: FeedBattle, now = new Date()) {
   return getBattleEffectiveStatus(battle, now) === 'OPEN';
+}
+
+export function isBattleExpired(battle: FeedBattle, now = new Date()) {
+  const deadlineDate = parseBattleDeadline(battle.deadline);
+
+  return Boolean(deadlineDate && deadlineDate.getTime() <= now.getTime());
 }
 
 export function getMockBattleResult(battle: FeedBattle): MockBattleResult {

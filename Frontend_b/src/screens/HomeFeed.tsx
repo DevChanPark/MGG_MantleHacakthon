@@ -28,6 +28,8 @@ interface HomeFeedProps {
   onBattleLike: (battleId: string) => void;
   onCommentLike: (battleId: string, commentId: string) => void;
   onCommentAdd: (battleId: string, text: string) => void;
+  onShareBattle: (battle: FeedBattle) => void;
+  onRequireParticipation: () => void;
   onParticipationRequest: (battle: FeedBattle) => void;
   onCloseBattle: (battleId: string) => void;
   onCompleteEvaluation: (battleId: string) => void;
@@ -47,6 +49,8 @@ export function HomeFeed({
   onBattleLike,
   onCommentLike,
   onCommentAdd,
+  onShareBattle,
+  onRequireParticipation,
   onParticipationRequest,
   onCloseBattle,
   onCompleteEvaluation,
@@ -155,6 +159,8 @@ export function HomeFeed({
             onBattleLike={() => onBattleLike(battle.id)}
             onCommentLike={(commentId) => onCommentLike(battle.id, commentId)}
             onCommentAdd={(text) => onCommentAdd(battle.id, text)}
+            onShare={() => onShareBattle(battle)}
+            onRequireParticipation={onRequireParticipation}
             onParticipationRequest={() => onParticipationRequest(battle)}
             onCloseBattle={() => onCloseBattle(battle.id)}
             onCompleteEvaluation={() => onCompleteEvaluation(battle.id)}

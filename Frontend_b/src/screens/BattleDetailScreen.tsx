@@ -15,6 +15,8 @@ interface BattleDetailScreenProps {
   onBattleLike: () => void;
   onCommentLike: (commentId: string) => void;
   onCommentAdd: (text: string) => void;
+  onShareBattle: () => void;
+  onRequireParticipation: () => void;
   onParticipationRequest: () => void;
   onCloseBattle: () => void;
   onCompleteEvaluation: () => void;
@@ -32,6 +34,8 @@ export function BattleDetailScreen({
   onBattleLike,
   onCommentLike,
   onCommentAdd,
+  onShareBattle,
+  onRequireParticipation,
   onParticipationRequest,
   onCloseBattle,
   onCompleteEvaluation,
@@ -47,6 +51,12 @@ export function BattleDetailScreen({
 
   const handleCommentSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    if (!isParticipated) {
+      onRequireParticipation();
+      return;
+    }
+
     onCommentAdd(commentInput);
     setCommentInput('');
   };
@@ -119,7 +129,7 @@ export function BattleDetailScreen({
       </section>
 
       <section className="battle-detail-controls" aria-label="게시글 상태">
-        {isOpen && (
+        {false && isOpen && (
           <button className="battle-close-button" type="button" onClick={onCloseBattle}>
             마감
           </button>
@@ -157,7 +167,7 @@ export function BattleDetailScreen({
           <img className="action-icon-img heart-icon-img" src={heartIcon} alt="" aria-hidden="true" />
           좋아요 {battle.likeCount}
         </button>
-        <button className="battle-card-share" type="button">
+        <button className="battle-card-share" type="button" onClick={onShareBattle}>
           <img className="action-icon-img share-icon-img" src={shareIcon} alt="" aria-hidden="true" />
           공유하기
         </button>
@@ -215,10 +225,13 @@ export function BattleDetailScreen({
         <input
           value={commentInput}
           onChange={(event) => setCommentInput(event.target.value)}
+          disabled={!isParticipated}
           placeholder="댓글을 입력하세요"
           aria-label="상세 댓글 입력"
         />
-        <button type="submit">등록</button>
+        <button type="submit" disabled={!isParticipated}>
+          등록
+        </button>
       </form>
     </main>
   );
