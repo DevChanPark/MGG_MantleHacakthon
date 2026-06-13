@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import type { CreateBattleType } from '../components/BoardSelectSheet';
-import type { CreateBattleDraft } from '../mocks/battles';
+import { isValidBattleDeadline, type CreateBattleDraft } from '../mocks/battles';
 
 const BATTLE_TYPE_LABELS: Record<CreateBattleType, string> = {
   TEXT_OPEN: '오픈 답변형',
@@ -119,7 +119,7 @@ export function CreateBattleScreen({ battleType, onCreateBattle }: CreateBattleS
   };
 
   const handleMockSubmit = () => {
-    if (!deadline || deadline === '2026-') {
+    if (!deadline || deadline === '2026-' || !isValidBattleDeadline(deadline)) {
       setSubmitState('deadlineError');
       return;
     }

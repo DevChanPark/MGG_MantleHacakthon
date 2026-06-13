@@ -1,4 +1,5 @@
 import React from 'react';
+import mggLogo from '../../assets/brand/mgg-logo.png';
 
 interface HeaderProps {
   isNotificationOpen?: boolean;
@@ -10,7 +11,7 @@ export function Header({ isNotificationOpen = false, onNotificationClick }: Head
     <header className="app-header">
       <div className="header-left">
         <h1 className="header-logo" aria-label="MGG">
-          MGG
+          <img className="header-logo-img" src={mggLogo} alt="" aria-hidden="true" />
         </h1>
       </div>
 

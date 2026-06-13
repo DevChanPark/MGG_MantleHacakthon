@@ -6,7 +6,9 @@ interface ParticipationModalProps {
   battle: FeedBattle | null;
   credits: number;
   isParticipated: boolean;
+  selectedOption?: string;
   onClose: () => void;
+  onOptionSelect?: (option: string) => void;
   onParticipate: () => void;
   onAddCredits: () => void;
 }
@@ -15,7 +17,9 @@ export function ParticipationModal({
   battle,
   credits,
   isParticipated,
+  selectedOption,
   onClose,
+  onOptionSelect,
   onParticipate,
   onAddCredits,
 }: ParticipationModalProps) {
@@ -24,12 +28,14 @@ export function ParticipationModal({
   }
 
   const hasEnoughCredits = credits >= PARTICIPATION_COST;
+  const needsOption = battle.type === 'OPTION' && Boolean(battle.options?.length);
+  const canConfirm = hasEnoughCredits && (!needsOption || Boolean(selectedOption));
 
   return (
     <div className="modal-overlay participation-overlay" role="presentation">
       <section className="participation-modal" role="dialog" aria-modal="true" aria-labelledby="participation-title">
         <button className="modal-close-button" type="button" aria-label="참여 모달 닫기" onClick={onClose}>
-          ×
+          x
         </button>
 
         <h2 id="participation-title">참여하기</h2>
@@ -40,10 +46,29 @@ export function ParticipationModal({
           <strong>크레딧 {PARTICIPATION_COST}개</strong>
         </div>
 
+        {needsOption && (
+          <div className="participation-option-list" aria-label="참여 진영 선택">
+            {(battle.options ?? []).map((option) => (
+              <button
+                className={`participation-option-button${selectedOption === option ? ' is-selected' : ''}`}
+                type="button"
+                key={`${battle.id}-participation-${option}`}
+                aria-pressed={selectedOption === option}
+                onClick={() => onOptionSelect?.(option)}
+              >
+                {option}
+              </button>
+            ))}
+          </div>
+        )}
+
         {!hasEnoughCredits && <p className="participation-error">크레딧이 부족합니다!</p>}
+        {hasEnoughCredits && needsOption && !selectedOption && (
+          <p className="participation-error">진영을 먼저 선택해주세요.</p>
+        )}
 
         <p className="participation-helper">
-          참가비 크레딧 {PARTICIPATION_COST}개가 요구되며, 참가비는 우승 시 상금에 분배됩니다.
+          참가비 크레딧 {PARTICIPATION_COST}개가 차감되며, 참가비는 우승 시 상금으로 분배됩니다.
         </p>
 
         {isParticipated ? (
@@ -56,7 +81,12 @@ export function ParticipationModal({
               취소
             </button>
             {hasEnoughCredits ? (
-              <button className="participation-confirm-button" type="button" onClick={onParticipate}>
+              <button
+                className="participation-confirm-button"
+                type="button"
+                disabled={!canConfirm}
+                onClick={onParticipate}
+              >
                 참여하기
               </button>
             ) : (
@@ -73,10 +103,15 @@ export function ParticipationModal({
 
 interface SelectionRequiredModalProps {
   isOpen: boolean;
+  message?: string;
   onClose: () => void;
 }
 
-export function SelectionRequiredModal({ isOpen, onClose }: SelectionRequiredModalProps) {
+export function SelectionRequiredModal({
+  isOpen,
+  message = '진영을 먼저 선택해주세요.',
+  onClose,
+}: SelectionRequiredModalProps) {
   if (!isOpen) {
     return null;
   }
@@ -84,10 +119,10 @@ export function SelectionRequiredModal({ isOpen, onClose }: SelectionRequiredMod
   return (
     <div className="modal-overlay participation-overlay" role="presentation">
       <section className="selection-warning-modal" role="alertdialog" aria-modal="true" aria-labelledby="selection-warning-title">
-        <button className="modal-close-button" type="button" aria-label="경고 닫기" onClick={onClose}>
-          ×
+        <button className="modal-close-button" type="button" aria-label="안내 닫기" onClick={onClose}>
+          x
         </button>
-        <h2 id="selection-warning-title">진영을 먼저 선택해주세요.</h2>
+        <h2 id="selection-warning-title">{message}</h2>
         <button className="selection-warning-confirm" type="button" onClick={onClose}>
           확인
         </button>

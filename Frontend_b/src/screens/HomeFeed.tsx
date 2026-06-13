@@ -18,26 +18,41 @@ const SORT_OPTIONS: Array<{ label: string; value: SortType }> = [
 
 interface HomeFeedProps {
   battles: FeedBattle[];
+  activeFilter: BattleType;
   selectedOptionByBattleId: Record<string, string>;
   participatedBattleIds: string[];
+  likedBattleIds: string[];
+  likedCommentIds: string[];
+  onFilterChange: (battleType: BattleType) => void;
   onOptionSelect: (battleId: string, option: string) => void;
+  onBattleLike: (battleId: string) => void;
+  onCommentLike: (battleId: string, commentId: string) => void;
+  onCommentAdd: (battleId: string, text: string) => void;
   onParticipationRequest: (battle: FeedBattle) => void;
   onCloseBattle: (battleId: string) => void;
   onCompleteEvaluation: (battleId: string) => void;
   onOpenWinnerModal: (battle: FeedBattle) => void;
+  onOpenDetail: (battleId: string) => void;
 }
 
 export function HomeFeed({
   battles,
+  activeFilter,
   selectedOptionByBattleId,
   participatedBattleIds,
+  likedBattleIds,
+  likedCommentIds,
+  onFilterChange,
   onOptionSelect,
+  onBattleLike,
+  onCommentLike,
+  onCommentAdd,
   onParticipationRequest,
   onCloseBattle,
   onCompleteEvaluation,
   onOpenWinnerModal,
+  onOpenDetail,
 }: HomeFeedProps) {
-  const [activeFilter, setActiveFilter] = useState<BattleType>(() => getSavedBattleType());
   const [selectedSort, setSelectedSort] = useState<SortType>('recommended');
   const [isSortOpen, setIsSortOpen] = useState(false);
   const sortControlRef = useRef<HTMLDivElement>(null);
@@ -76,7 +91,7 @@ export function HomeFeed({
   const selectedSortLabel = SORT_OPTIONS.find((option) => option.value === selectedSort)?.label ?? '정렬 기준';
 
   const handleFilterClick = (battleType: BattleType) => {
-    setActiveFilter(battleType);
+    onFilterChange(battleType);
     window.sessionStorage.setItem('mgg:homeFilter', battleType);
   };
 
@@ -134,26 +149,22 @@ export function HomeFeed({
             battle={battle}
             selectedOption={selectedOptionByBattleId[battle.id] ?? null}
             isParticipated={participatedBattleIds.includes(battle.id)}
+            isBattleLiked={likedBattleIds.includes(battle.id)}
+            likedCommentIds={likedCommentIds}
             onOptionSelect={(option) => onOptionSelect(battle.id, option)}
+            onBattleLike={() => onBattleLike(battle.id)}
+            onCommentLike={(commentId) => onCommentLike(battle.id, commentId)}
+            onCommentAdd={(text) => onCommentAdd(battle.id, text)}
             onParticipationRequest={() => onParticipationRequest(battle)}
             onCloseBattle={() => onCloseBattle(battle.id)}
             onCompleteEvaluation={() => onCompleteEvaluation(battle.id)}
             onOpenWinnerModal={() => onOpenWinnerModal(battle)}
+            onOpenDetail={() => onOpenDetail(battle.id)}
           />
         ))}
       </section>
     </main>
   );
-}
-
-function getSavedBattleType(): BattleType {
-  const savedType = window.sessionStorage.getItem('mgg:homeFilter');
-
-  if (savedType === 'OPTION' || savedType === 'IMAGE_CAPTION' || savedType === 'TEXT_OPEN') {
-    return savedType;
-  }
-
-  return 'TEXT_OPEN';
 }
 
 export default HomeFeed;

@@ -1,5 +1,5 @@
 export type BattleType = 'OPTION' | 'TEXT_OPEN' | 'IMAGE_CAPTION';
-export type BattleStatus = 'OPEN' | 'EVALUATING' | 'COMPLETED';
+export type BattleStatus = 'OPEN' | 'CLOSED' | 'EVALUATING' | 'COMPLETED' | 'EXPIRED';
 
 export interface PreviewComment {
   id: string;
@@ -18,7 +18,9 @@ export interface FeedBattle {
   status: BattleStatus;
   recommendedScore: number;
   createdAt: string;
+  deadline: string;
   isLocalDraft?: boolean;
+  createdByMe?: boolean;
   imageUrl?: string;
   options?: string[];
   comments: PreviewComment[];
@@ -36,6 +38,7 @@ export interface CreateBattleDraft {
 }
 
 export interface MockBattleResult {
+  winnerUserId: string;
   winnerName: string;
   winnerDetail: string;
   rewardCredits: number;
@@ -46,6 +49,12 @@ export interface MockBattleResult {
   }>;
 }
 
+export const MOCK_CURRENT_USER = {
+  id: 'user-current',
+  nickname: '나',
+  credits: 30,
+};
+
 export const REWARD_CREDITS = 30;
 
 export const initialMockBattles: FeedBattle[] = [
@@ -54,12 +63,12 @@ export const initialMockBattles: FeedBattle[] = [
     type: 'TEXT_OPEN',
     author: '우김장인',
     title: '지구가 평평한 이유',
-    description:
-      '반박은 받습니다. 근데 어차피 제가 이김. AI도 제편임. 한 줄이면 충분한데 길게 쓰는 이유는 길게 쓰면 더 맞는 말 같아서',
+    description: '반박은 받습니다. 근데 어차피 제가 이김. 한 줄이면 충분한데 길게 쓰는 이유는 길게 쓰면 더 맞는 말 같아서.',
     likeCount: 24,
     status: 'OPEN',
     recommendedScore: 96,
     createdAt: '2026-06-12T10:00:00+09:00',
+    deadline: '2026-06-14 23:59',
     comments: [
       {
         id: 'comment-flat-1',
@@ -80,11 +89,12 @@ export const initialMockBattles: FeedBattle[] = [
     type: 'TEXT_OPEN',
     author: '새벽감성러',
     title: '과제 마감이 새벽에만 존재하는 이유',
-    description: '해 뜨면 과제가 증발함. 과학적임. 새벽엔 글이 더 잘 써짐. 착각임.',
+    description: '해 뜨면 과제가 증발함. 과학적임. 새벽엔 글이 더 잘 써짐.',
     likeCount: 19,
     status: 'OPEN',
     recommendedScore: 83,
     createdAt: '2026-06-11T23:10:00+09:00',
+    deadline: '2026-06-14 23:59',
     comments: [
       {
         id: 'comment-dawn-1',
@@ -105,17 +115,18 @@ export const initialMockBattles: FeedBattle[] = [
     type: 'OPTION',
     author: '부먹수호자',
     title: '탕수육은 부먹인가 찍먹인가',
-    description: '먹파 분들 마음은 이해함. 근데 틀렸음. 소스는 부어야 소스고, 안 부으면 그냥 옆에 있는 액체임.',
+    description: '먹파 분들 마음은 이해함. 근데 튀김옷은 소스를 부어야 소스고, 안 부으면 그냥 옆에 있는 액체임.',
     likeCount: 27,
     status: 'OPEN',
     recommendedScore: 98,
     createdAt: '2026-06-12T09:10:00+09:00',
+    deadline: '2026-06-14 23:59',
     options: ['부먹', '찍먹'],
     comments: [
       {
         id: 'comment-sauce-1',
-        author: '소스폭포',
-        text: '안 부으면 그게 탕수육이냐 튀김이지',
+        author: '소스포',
+        text: '안부으면 그게 탕수육이냐 튀김이지',
         likeCount: 4,
       },
       {
@@ -136,6 +147,7 @@ export const initialMockBattles: FeedBattle[] = [
     status: 'OPEN',
     recommendedScore: 76,
     createdAt: '2026-06-10T18:00:00+09:00',
+    deadline: '2026-06-14 23:59',
     options: ['라면', '치킨', '떡볶이'],
     comments: [
       {
@@ -147,7 +159,7 @@ export const initialMockBattles: FeedBattle[] = [
       {
         id: 'comment-food-2',
         author: '닭다리파',
-        text: '치킨은 이미 완성형 단백질입니다',
+        text: '치킨은 이미 완성된 반복질입니다',
         likeCount: 3,
       },
     ],
@@ -162,6 +174,7 @@ export const initialMockBattles: FeedBattle[] = [
     status: 'OPEN',
     recommendedScore: 94,
     createdAt: '2026-06-12T08:30:00+09:00',
+    deadline: '2026-06-14 23:59',
     imageUrl: 'https://images.unsplash.com/photo-1517331156700-3c241d2b4d83?auto=format&fit=crop&w=720&q=80',
     comments: [
       {
@@ -181,19 +194,20 @@ export const initialMockBattles: FeedBattle[] = [
   {
     id: 'battle-image-dog',
     type: 'IMAGE_CAPTION',
-    author: '눈빛수집가',
+    author: '불신의집사',
     title: '강아지 이름 추천좀',
-    description: '강아지 너무 귀엽지 않아? 이름이 세상을 바꿀 수 있다고 믿는 편입니다.',
+    description: '강아지 너무 귀엽지 않아? 이름만 멋있게 붙이면 세계관이 생긴다고 믿는 편입니다.',
     likeCount: 16,
     status: 'OPEN',
     recommendedScore: 81,
     createdAt: '2026-06-09T12:20:00+09:00',
+    deadline: '2026-06-14 23:59',
     imageUrl: 'https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?auto=format&fit=crop&w=720&q=80',
     comments: [
       {
         id: 'comment-dog-1',
         author: '작명소장',
-        text: '이 눈빛이면 이름은 이미 왕자님입니다',
+        text: '저 눈빛이면 이름은 이미 왕자님입니다',
         likeCount: 3,
       },
       {
@@ -215,12 +229,14 @@ export function createMockBattle(draft: CreateBattleDraft): FeedBattle {
     type: draft.battleType,
     author: draft.isAnonymous ? '익명 우기미' : '나',
     title: draft.title.trim() || fallbackTitle,
-    description: draft.content.trim() || '내용을 입력하지 않았지만 일단 우겨봅니다.',
+    description: draft.content.trim() || '내용은 짧지만 우김은 깁니다.',
     likeCount: 0,
     status: 'OPEN',
     recommendedScore: 50,
     createdAt: new Date().toISOString(),
+    deadline: draft.deadline,
     isLocalDraft: true,
+    createdByMe: true,
     imageUrl: draft.battleType === 'IMAGE_CAPTION' ? draft.imageUrl : undefined,
     options:
       draft.battleType === 'OPTION'
@@ -230,12 +246,69 @@ export function createMockBattle(draft: CreateBattleDraft): FeedBattle {
   };
 }
 
+export function isCurrentUserWinner(result: MockBattleResult, currentUserId: string) {
+  return result.winnerUserId === currentUserId;
+}
+
+function getMockWinnerUserId(battle: FeedBattle) {
+  if (battle.createdByMe || battle.id === 'battle-option-sauce' || battle.id === 'battle-open-dawn') {
+    return MOCK_CURRENT_USER.id;
+  }
+
+  return 'user-2';
+}
+
+export function parseBattleDeadline(deadline: string): Date | null {
+  const trimmedDeadline = deadline.trim();
+  const match = trimmedDeadline.match(/^(\d{4})-(\d{2})-(\d{2})(?:\s+(\d{2}):(\d{2}))?$/);
+
+  if (!match) {
+    return null;
+  }
+
+  const [, year, month, day, hour = '23', minute = '59'] = match;
+  const parsedDate = new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute));
+
+  if (
+    parsedDate.getFullYear() !== Number(year) ||
+    parsedDate.getMonth() !== Number(month) - 1 ||
+    parsedDate.getDate() !== Number(day) ||
+    parsedDate.getHours() !== Number(hour) ||
+    parsedDate.getMinutes() !== Number(minute)
+  ) {
+    return null;
+  }
+
+  return parsedDate;
+}
+
+export function isValidBattleDeadline(deadline: string) {
+  return parseBattleDeadline(deadline) !== null;
+}
+
+export function getBattleEffectiveStatus(battle: FeedBattle, now = new Date()): BattleStatus {
+  const deadlineDate = parseBattleDeadline(battle.deadline);
+
+  if (battle.status === 'OPEN' && deadlineDate && deadlineDate.getTime() <= now.getTime()) {
+    return 'EXPIRED';
+  }
+
+  return battle.status;
+}
+
+export function canParticipateInBattle(battle: FeedBattle, now = new Date()) {
+  return getBattleEffectiveStatus(battle, now) === 'OPEN';
+}
+
 export function getMockBattleResult(battle: FeedBattle): MockBattleResult {
+  const winnerUserId = getMockWinnerUserId(battle);
+
   if (battle.type === 'OPTION') {
     const optionLabels = battle.options && battle.options.length >= 2 ? battle.options : ['집주인', '세입자'];
     const winnerName = optionLabels[0];
 
     return {
+      winnerUserId,
       winnerName,
       winnerDetail: `${winnerName} 진영`,
       rewardCredits: REWARD_CREDITS,
@@ -245,9 +318,9 @@ export function getMockBattleResult(battle: FeedBattle): MockBattleResult {
         ...optionLabels.slice(2).map((label) => ({ label, percentage: 0 })),
       ],
       verdictLines: [
-        'AI 판결문: 댓글의 논리적 뻔뻔함과 밈 확산성을 기준으로 판단했습니다.',
-        `${winnerName} 쪽 주장이 더 단호하고 공유하기 좋은 결론을 만들었습니다.`,
-        '최종 판단: 웃기는 설득력에서 우세했습니다.',
+        'AI 판결문: 댓글의 논리적 기세와 밈 확산성을 기준으로 판단했습니다.',
+        `${winnerName} 쪽 주장이 더 선명하고 공유하기 좋은 결론을 만들었습니다.`,
+        '최종 판단: 우기기의 밀도가 가장 높았습니다.',
       ],
     };
   }
@@ -256,12 +329,13 @@ export function getMockBattleResult(battle: FeedBattle): MockBattleResult {
     const winningComment = battle.comments[0];
 
     return {
-      winnerName: winningComment?.author ?? '월세냥이',
-      winnerDetail: winningComment?.text ?? '오늘의 업무: 고양이 결재 대기',
+      winnerUserId,
+      winnerName: winningComment?.author ?? '무기기 캡션러',
+      winnerDetail: winningComment?.text ?? '이미지 맥락을 가장 잘 찌른 캡션입니다.',
       rewardCredits: REWARD_CREDITS,
       verdictLines: [
         'AI 판결문: 이미지 맥락과 한 줄 임팩트가 가장 잘 맞았습니다.',
-        '캡션이 상황을 바로 이해시키면서도 공유하기 쉬운 형태였습니다.',
+        '캡션이 상황을 바로 이해시키면서 공유하기 쉬운 형태였습니다.',
         '최종 판단: 밈 잠재력이 가장 높았습니다.',
       ],
     };
@@ -270,13 +344,14 @@ export function getMockBattleResult(battle: FeedBattle): MockBattleResult {
   const winningComment = battle.comments[0];
 
   return {
+    winnerUserId,
     winnerName: winningComment?.author ?? '우김장인',
-    winnerDetail: winningComment?.text ?? '반박 불가한 한 줄 우기기',
+    winnerDetail: winningComment?.text ?? '반박 불가능한 한 줄 우기기입니다.',
     rewardCredits: REWARD_CREDITS,
     verdictLines: [
-      'AI 판결문: 황당함, 설득력, 댓글 반응 가능성을 기준으로 평가했습니다.',
-      '가장 짧은 문장 안에 제일 강한 억지를 담은 답변이 우세했습니다.',
-      '최종 판단: 밈으로 퍼질 가능성이 가장 큽니다.',
+      'AI 판결문: 황당함, 우기기 강도, 댓글 반응 가능성을 기준으로 평가했습니다.',
+      '가장 짧은 문장 안에 제일 강한 억지력을 담은 답변이 앞섰습니다.',
+      '최종 판단: 밈으로 밀어붙일 가능성이 가장 큽니다.',
     ],
   };
 }

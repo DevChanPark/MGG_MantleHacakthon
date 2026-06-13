@@ -7,9 +7,10 @@ import { NotificationPanel } from './NotificationPanel';
 interface AppShellProps {
   children: React.ReactNode;
   overlay?: React.ReactNode;
+  hideHeader?: boolean;
 }
 
-export function AppShell({ children, overlay }: AppShellProps) {
+export function AppShell({ children, overlay, hideHeader = false }: AppShellProps) {
   const [isBoardSheetOpen, setIsBoardSheetOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
 
@@ -20,15 +21,19 @@ export function AppShell({ children, overlay }: AppShellProps) {
   };
 
   return (
-    <div className="app-shell">
-      <Header
-        isNotificationOpen={isNotificationOpen}
-        onNotificationClick={() => setIsNotificationOpen((isOpen) => !isOpen)}
-      />
-      <NotificationPanel
-        isOpen={isNotificationOpen}
-        onClose={() => setIsNotificationOpen(false)}
-      />
+    <div className={`app-shell${hideHeader ? ' app-shell-no-header' : ''}`}>
+      {!hideHeader && (
+        <>
+          <Header
+            isNotificationOpen={isNotificationOpen}
+            onNotificationClick={() => setIsNotificationOpen((isOpen) => !isOpen)}
+          />
+          <NotificationPanel
+            isOpen={isNotificationOpen}
+            onClose={() => setIsNotificationOpen(false)}
+          />
+        </>
+      )}
 
       <div className="app-content">
         {children}

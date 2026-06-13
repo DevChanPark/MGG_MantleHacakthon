@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
+import mggLogo from '../../assets/brand/mgg-logo.png';
 import commentFilledIcon from '../../assets/profile-icons/comment-filled.png';
 import commentOutlineIcon from '../../assets/profile-icons/comment-outline.png';
 import heartFilledIcon from '../../assets/profile-icons/heart-filled.png';
 import heartOutlineIcon from '../../assets/profile-icons/heart-outline.png';
+import settingIcon from '../../assets/profile-icons/setting.png';
 import shareIcon from '../../assets/profile-icons/share.png';
 import stackIcon from '../../assets/profile-icons/stack.png';
 import profileAvatar from '../../assets/profile-avatar.png';
@@ -43,14 +45,22 @@ const creditPackages: CreditPackage[] = [
   { credits: 300, price: 300 },
 ];
 
-export function ProfileScreen() {
+interface ProfileScreenProps {
+  credits?: number;
+}
+
+export function ProfileScreen({ credits = 30 }: ProfileScreenProps) {
   const [activeContentTab, setActiveContentTab] = useState<ProfileContentTab>('posts');
   const [activeBattleFilter, setActiveBattleFilter] = useState<ProfileBattleFilter>('open');
-  const [currentCredits, setCurrentCredits] = useState(30);
+  const [currentCredits, setCurrentCredits] = useState(credits);
   const [isCreditPanelOpen, setIsCreditPanelOpen] = useState(false);
   const [isCreditInfoOpen, setIsCreditInfoOpen] = useState(false);
   const [selectedCreditPackage, setSelectedCreditPackage] = useState<CreditPackage | null>(null);
   const [completedCreditTotal, setCompletedCreditTotal] = useState<number | null>(null);
+
+  useEffect(() => {
+    setCurrentCredits(credits);
+  }, [credits]);
 
   const closeCreditPanel = () => {
     setIsCreditPanelOpen(false);
@@ -67,155 +77,183 @@ export function ProfileScreen() {
 
   return (
     <main className="profile-feed" aria-label="MGG profile page">
-      <section className="profile-summary" aria-label="프로필 요약">
-        <img className="profile-avatar" src={profileAvatar} alt="" />
-        <div className="profile-copy">
-          <h1>우기기 장인</h1>
-          <p>
-            말 안 되는 주장도 끝까지 밀어붙이는 중
-            <br />
-            ㅋㅋ 영크크영크크영크크
-          </p>
-        </div>
-      </section>
+      <section className="profile-frame">
+        <header className="profile-header">
+          <img className="app-logo-small" src={mggLogo} alt="MGG" />
+          <button className="profile-settings-button" type="button" aria-label="설정">
+            <img className="profile-settings-icon" src={settingIcon} alt="" aria-hidden="true" />
+          </button>
+        </header>
 
-      <button className="profile-edit-button" type="button">프로필 수정</button>
-
-      <button className="profile-credit-row" type="button" onClick={() => setIsCreditPanelOpen((isOpen) => !isOpen)}>
-        <span>내 크레딧 <strong>{currentCredits}개</strong></span>
-        <span>충전하기</span>
-      </button>
-
-      <nav className="profile-content-tabs" aria-label="프로필 콘텐츠 분류">
-        <button
-          className={activeContentTab === 'posts' ? 'is-active' : ''}
-          type="button"
-          aria-label="내가 만든 글"
-          aria-pressed={activeContentTab === 'posts'}
-          onClick={() => setActiveContentTab('posts')}
-        >
-          <img className="profile-tab-icon-img profile-tab-stack-img" src={stackIcon} alt="" aria-hidden="true" />
-        </button>
-        <button
-          className={activeContentTab === 'comments' ? 'is-active' : ''}
-          type="button"
-          aria-label="댓글"
-          aria-pressed={activeContentTab === 'comments'}
-          onClick={() => setActiveContentTab('comments')}
-        >
-          <img
-            className="profile-tab-icon-img profile-tab-comment-img"
-            src={activeContentTab === 'comments' ? commentFilledIcon : commentOutlineIcon}
-            alt=""
-            aria-hidden="true"
-          />
-        </button>
-        <button
-          className={activeContentTab === 'likes' ? 'is-active' : ''}
-          type="button"
-          aria-label="좋아요"
-          aria-pressed={activeContentTab === 'likes'}
-          onClick={() => setActiveContentTab('likes')}
-        >
-          <img
-            className="profile-tab-icon-img profile-tab-heart-img"
-            src={activeContentTab === 'likes' ? heartFilledIcon : heartOutlineIcon}
-            alt=""
-            aria-hidden="true"
-          />
-        </button>
-      </nav>
-
-      <div className="profile-type-filters" aria-label="배틀 유형 필터">
-        <button
-          className={activeBattleFilter === 'open' ? 'is-active' : ''}
-          type="button"
-          aria-pressed={activeBattleFilter === 'open'}
-          onClick={() => setActiveBattleFilter('open')}
-        >
-          오픈 답변형
-        </button>
-        <button
-          className={activeBattleFilter === 'option' ? 'is-active' : ''}
-          type="button"
-          aria-pressed={activeBattleFilter === 'option'}
-          onClick={() => setActiveBattleFilter('option')}
-        >
-          선택지형
-        </button>
-        <button
-          className={activeBattleFilter === 'image' ? 'is-active' : ''}
-          type="button"
-          aria-pressed={activeBattleFilter === 'image'}
-          onClick={() => setActiveBattleFilter('image')}
-        >
-          이미지형
-        </button>
-      </div>
-
-      <section className="profile-post-list" aria-label="내 게시글">
-        {profilePosts.map((post, index) => (
-          <article className="profile-post-card" key={post.title}>
-            <div className="profile-post-avatar" aria-hidden="true" />
-            <div className="profile-post-content">
-              <p className="profile-post-author">{post.author}</p>
-              <h2>{post.title}</h2>
-              {post.body.map((line) => (
-                <p className="profile-post-body" key={line}>{line}</p>
-              ))}
+        <div className="profile-scroll">
+          <section className="profile-summary" aria-label="프로필 요약">
+            <img className="profile-avatar" src={profileAvatar} alt="" />
+            <div className="profile-copy">
+              <h1>우기기 장인</h1>
+              <p>
+                말 안 되는 주장도 끝까지 밀어붙이는 중
+                <br />
+                ㅋㅋ 영크크영크크영크크
+              </p>
             </div>
+          </section>
 
-            <div className="profile-post-actions" aria-label="게시글 반응">
-              <span><img className="profile-action-icon profile-action-comment" src={commentFilledIcon} alt="" aria-hidden="true" /> 댓글 3</span>
-              <span><img className="profile-action-icon profile-action-heart" src={heartFilledIcon} alt="" aria-hidden="true" /> 좋아요 24</span>
-              <span><img className="profile-action-icon profile-action-share" src={shareIcon} alt="" aria-hidden="true" /> 공유하기</span>
-            </div>
+          <button className="profile-edit-button" type="button">프로필 수정</button>
 
-            {index === 0 ? (
-              <div className="profile-comments-box">
-                <p className="profile-comments-title">댓글 3</p>
-                {post.comments.map((comment) => (
-                  <div className="profile-comment-row" key={comment.author}>
-                    <div className="profile-comment-avatar" aria-hidden="true" />
-                    <div className="profile-comment-copy">
-                      <p>{comment.author}</p>
-                      <span>{comment.text}</span>
-                    </div>
-                    <div className="profile-comment-like">
-                      <img
-                        className="profile-comment-like-icon"
-                        src={comment.liked ? heartFilledIcon : heartOutlineIcon}
-                        alt=""
-                        aria-hidden="true"
-                      />
-                      <span>{comment.likes}</span>
-                    </div>
+          <button className="profile-credit-row" type="button" onClick={() => setIsCreditPanelOpen(true)}>
+            <span>내 크레딧 <strong>{currentCredits}개</strong></span>
+            <span>충전하기</span>
+          </button>
+
+          <nav className="profile-content-tabs" aria-label="프로필 콘텐츠 분류">
+            <button
+              className={activeContentTab === 'posts' ? 'is-active' : ''}
+              type="button"
+              aria-label="내가 만든 글"
+              aria-pressed={activeContentTab === 'posts'}
+              onClick={() => setActiveContentTab('posts')}
+            >
+              <img className="profile-tab-icon-img profile-tab-stack-img" src={stackIcon} alt="" aria-hidden="true" />
+            </button>
+            <button
+              className={activeContentTab === 'comments' ? 'is-active' : ''}
+              type="button"
+              aria-label="댓글"
+              aria-pressed={activeContentTab === 'comments'}
+              onClick={() => setActiveContentTab('comments')}
+            >
+              <img
+                className="profile-tab-icon-img profile-tab-comment-img"
+                src={activeContentTab === 'comments' ? commentFilledIcon : commentOutlineIcon}
+                alt=""
+                aria-hidden="true"
+              />
+            </button>
+            <button
+              className={activeContentTab === 'likes' ? 'is-active' : ''}
+              type="button"
+              aria-label="좋아요"
+              aria-pressed={activeContentTab === 'likes'}
+              onClick={() => setActiveContentTab('likes')}
+            >
+              <img
+                className="profile-tab-icon-img profile-tab-heart-img"
+                src={activeContentTab === 'likes' ? heartFilledIcon : heartOutlineIcon}
+                alt=""
+                aria-hidden="true"
+              />
+            </button>
+          </nav>
+
+          <div className="profile-type-filters" aria-label="배틀 유형 필터">
+            <button
+              className={activeBattleFilter === 'open' ? 'is-active' : ''}
+              type="button"
+              aria-pressed={activeBattleFilter === 'open'}
+              onClick={() => setActiveBattleFilter('open')}
+            >
+              오픈 답변형
+            </button>
+            <button
+              className={activeBattleFilter === 'option' ? 'is-active' : ''}
+              type="button"
+              aria-pressed={activeBattleFilter === 'option'}
+              onClick={() => setActiveBattleFilter('option')}
+            >
+              선택지형
+            </button>
+            <button
+              className={activeBattleFilter === 'image' ? 'is-active' : ''}
+              type="button"
+              aria-pressed={activeBattleFilter === 'image'}
+              onClick={() => setActiveBattleFilter('image')}
+            >
+              이미지형
+            </button>
+          </div>
+
+          <section className="profile-post-list" aria-label="내 게시글">
+            {profilePosts.map((post, index) => (
+              <article className="profile-post-card" key={post.title}>
+                <div className="profile-post-avatar" aria-hidden="true" />
+                <div className="profile-post-content">
+                  <p className="profile-post-author">{post.author}</p>
+                  <h2>{post.title}</h2>
+                  {post.body.map((line) => (
+                    <p className="profile-post-body" key={line}>{line}</p>
+                  ))}
+                </div>
+
+                <div className="profile-post-actions" aria-label="게시글 반응">
+                  <span><img className="profile-action-icon profile-action-comment" src={commentFilledIcon} alt="" aria-hidden="true" /> 댓글 3</span>
+                  <span><img className="profile-action-icon profile-action-heart" src={heartFilledIcon} alt="" aria-hidden="true" /> 좋아요 24</span>
+                  <span><img className="profile-action-icon profile-action-share" src={shareIcon} alt="" aria-hidden="true" /> 공유하기</span>
+                </div>
+
+                {index === 0 ? (
+                  <div className="profile-comments-box">
+                    <p className="profile-comments-title">댓글 3</p>
+                    {post.comments.map((comment) => (
+                      <div className="profile-comment-row" key={comment.author}>
+                        <div className="profile-comment-avatar" aria-hidden="true" />
+                        <div className="profile-comment-copy">
+                          <p>{comment.author}</p>
+                          <span>{comment.text}</span>
+                        </div>
+                        <div className="profile-comment-like">
+                          <img
+                            className="profile-comment-like-icon"
+                            src={comment.liked ? heartFilledIcon : heartOutlineIcon}
+                            alt=""
+                            aria-hidden="true"
+                          />
+                          <span>{comment.likes}</span>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            ) : null}
-          </article>
-        ))}
+                ) : null}
+              </article>
+            ))}
+          </section>
+        </div>
+
+        <CreditChargePanel
+          isOpen={isCreditPanelOpen}
+          isInfoOpen={isCreditInfoOpen}
+          currentCredits={currentCredits}
+          packages={creditPackages}
+          selectedPackage={selectedCreditPackage}
+          onClose={closeCreditPanel}
+          onToggleInfo={() => setIsCreditInfoOpen((value) => !value)}
+          onCloseInfo={() => setIsCreditInfoOpen(false)}
+          onSelectPackage={setSelectedCreditPackage}
+          onClosePayment={() => setSelectedCreditPackage(null)}
+          onApprovePayment={approveCreditPurchase}
+        />
+
+        <CreditPurchaseCompleteModal
+          creditTotal={completedCreditTotal}
+          onClose={() => setCompletedCreditTotal(null)}
+        />
+
+        <nav className="profile-bottom-nav" aria-label="하단 내비게이션">
+          <button type="button" aria-label="홈">
+            <svg aria-hidden="true" viewBox="0 0 24 24">
+              <path d="M3 10.5 12 3l9 7.5V21h-6v-6H9v6H3V10.5Z" />
+            </svg>
+            <span>홈</span>
+          </button>
+          <button className="profile-create-button" type="button" aria-label="새 배틀 만들기" />
+          <button type="button" aria-label="프로필">
+            <svg aria-hidden="true" viewBox="0 0 24 24">
+              <circle cx="12" cy="7" r="4" />
+              <path d="M4 21a8 8 0 0 1 16 0H4Z" />
+            </svg>
+            <span>프로필</span>
+          </button>
+        </nav>
       </section>
-
-      <CreditChargePanel
-        isOpen={isCreditPanelOpen}
-        isInfoOpen={isCreditInfoOpen}
-        currentCredits={currentCredits}
-        packages={creditPackages}
-        selectedPackage={selectedCreditPackage}
-        onClose={closeCreditPanel}
-        onToggleInfo={() => setIsCreditInfoOpen((value) => !value)}
-        onCloseInfo={() => setIsCreditInfoOpen(false)}
-        onSelectPackage={setSelectedCreditPackage}
-        onClosePayment={() => setSelectedCreditPackage(null)}
-        onApprovePayment={approveCreditPurchase}
-      />
-
-      <CreditPurchaseCompleteModal
-        creditTotal={completedCreditTotal}
-        onClose={() => setCompletedCreditTotal(null)}
-      />
     </main>
   );
 }
