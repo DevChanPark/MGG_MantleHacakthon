@@ -13,14 +13,27 @@ x-user-id: demo-seed-user
 ## Core Mobile Flow
 
 1. Call `GET /api/users/me` when the app starts.
-2. During signup/profile editing, save profile metadata with `PATCH /api/users/me`.
-3. Create a battle with `POST /api/battles`.
-4. Render the battle detail from `GET /api/battles/:battleId`.
-5. Submit entries with `POST /api/battles/:battleId/entries` while `battle.status` is `OPEN`.
-6. Close a battle with `POST /api/battles/:battleId/close`.
-7. Start backend judging with `POST /api/battles/:battleId/judge`.
-8. Read settled result with `GET /api/battles/:battleId/result`.
-9. Render archive from `GET /api/archive`.
+2. During wallet signup/login, call the wallet challenge/verify API.
+3. During signup/profile editing, save profile metadata with `PATCH /api/users/me`.
+4. Create a battle with `POST /api/battles`.
+5. Render the battle detail from `GET /api/battles/:battleId`.
+6. Submit entries with `POST /api/battles/:battleId/entries` while `battle.status` is `OPEN`.
+7. Close a battle with `POST /api/battles/:battleId/close`.
+8. Start backend judging with `POST /api/battles/:battleId/judge`.
+9. Read settled result with `GET /api/battles/:battleId/result`.
+10. Render archive from `GET /api/archive`.
+
+## Wallet Flow
+
+Use the backend challenge/verify flow for wallet connection:
+
+1. `POST /api/auth/wallet/challenge` with `walletAddress` and `walletProvider`.
+2. Ask the wallet to sign `challenge.message`.
+3. `POST /api/auth/wallet/verify` with `challengeId`, `walletAddress`, optional
+   `walletProvider`, and `signature`.
+
+This links the wallet to the current MVP user. Do not send private keys to the
+backend.
 
 ## Profile Flow
 
@@ -32,19 +45,72 @@ submitted.
 {
   "nickname": "demo-captain",
   "intro": "Turns unlikely arguments into demo data.",
-  "avatarUrl": "/uploads/profile.gif",
-  "walletProvider": "MetaMask",
-  "walletAddress": "0x1111111111111111111111111111111111111111"
+  "avatarUrl": "/uploads/profile.gif"
 }
 ```
 
 - `nickname` is required for signup UX, but the API accepts partial profile
   updates for edit forms.
 - `nickname` must be unique and not reserved.
-- `walletAddress` must be an EVM address when provided.
-- Wallet fields are profile metadata only. The frontend must not receive server
-  wallet keys, sign backend settlement transactions, or execute Mantle
-  settlement.
+- Wallet fields are rejected by `PATCH /api/users/me`; use the wallet
+  challenge/verify flow above. The frontend must not receive server wallet
+  keys, sign backend settlement transactions, or execute Mantle settlement.
+
+## Profile And Social Data
+
+The profile screen can now use backend-owned demo/social data:
+
+- `GET /api/users/me/battles` for the current user's created battles.
+- `GET /api/users/me/comments` for the current user's social comments and gAon
+  feed comments.
+- `GET /api/users/me/likes` for the current user's liked entries/feed comments
+  and liked battle cards.
+- `GET /api/users/me/credits` for demo credit balance/history.
+- `POST /api/users/me/credits/demo-charge` for demo-only credit charging.
+
+Battle list/detail responses include `battle.stats.entryCount`,
+`battle.stats.commentCount`, `battle.stats.likeCount`, and
+`battle.stats.shareCount`. Entry detail responses include
+`entry.stats.likeCount` and `entry.stats.likedByMe`.
+
+Social interactions:
+
+- `POST /api/battles/:battleId/comments`
+- `GET /api/battles/:battleId/comments`
+- `POST /api/entries/:entryId/like`
+- `DELETE /api/entries/:entryId/like`
+- `POST /api/battles/:battleId/shares`
+
+Social comments are separate from battle entries and must not be submitted to AI
+judging.
+
+## gAon Home Feed Flow
+
+The latest `feature/frontend-gAon` home/detail/create screens can use the
+feed-shaped API:
+
+1. `GET /api/feed/battles` for `HomeFeed`.
+2. `POST /api/feed/battles` for `CreateBattleScreen`.
+3. `GET /api/feed/battles/:battleId` for `BattleDetailScreen`.
+4. `POST /api/feed/battles/:battleId/participations` when the user taps
+   `참여하기`. This spends 3 demo credits and returns `selectedOption` for
+   OPTION battles.
+5. `POST /api/feed/battles/:battleId/comments` after participation. This creates
+   a judged backend entry.
+6. `POST /api/battles/:battleId/like` and `DELETE /api/battles/:battleId/like`
+   for battle card likes.
+7. `POST /api/feed/comments/:entryId/like` and
+   `DELETE /api/feed/comments/:entryId/like` for comment likes.
+8. `POST /api/feed/battles/:battleId/evaluate` for the demo evaluate action.
+   Use `feedResult` for the gAon winner modal.
+9. `POST /api/feed/battles/:battleId/rewards/claim` for winner credit claim.
+   TEXT/IMAGE rewards use the winning entry; OPTION rewards use the winning
+   option side.
+10. `GET /api/users/me/notifications` for the notification panel.
+
+Feed comments are entries in the backend because the gAon UI uses them as AI
+judging material. The older social comment endpoints remain available for
+non-judged comments.
 
 ## Battle Status UI Contract
 
@@ -178,3 +244,5 @@ The mobile frontend may call `POST /api/battles/:battleId/reports` to submit a s
 - Never ask the frontend to call `AIVerdictRegistry.recordVerdict()` for MVP.
 - Never put raw comments, images, captions, prompts, or personal data on-chain.
 - Do not add real-money entry fees, reward pools, gambling flows, or paid token distribution.
+- Demo credits are local ledger/demo data only and must not be presented as
+  real-money rewards or paid entry mechanics.

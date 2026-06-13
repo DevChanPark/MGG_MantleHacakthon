@@ -33,6 +33,8 @@ Optional environment variables:
 - `API_BASE_URL`: API base URL, default `http://127.0.0.1:4000`
 - `DEMO_USER_ID`: demo identity header, default `demo-seed-user`
 - `DEMO_NICKNAME`: profile nickname, default `demo-captain`
+- `DEMO_WALLET_PRIVATE_KEY`: local demo wallet private key used only to sign
+  the wallet challenge in mock/demo seeding
 
 For the MVP frontend, keep the demo identity fixed to
 `x-user-id: demo-seed-user`. The environment override is only for local
@@ -45,8 +47,10 @@ reported as `skipped` instead of duplicated.
 
 Profile data:
 
-- `demo-seed-user` profile with nickname, intro, avatar URL, wallet provider,
-  and wallet address metadata
+- `demo-seed-user` profile with nickname, intro, and avatar URL
+- demo wallet linked through `POST /api/auth/wallet/challenge` and
+  `POST /api/auth/wallet/verify`
+- demo credit balance and one demo charge transaction
 
 Battle list data:
 
@@ -57,6 +61,7 @@ Battle list data:
 - `OPTION_SETTLED`: settled option battle with result data
 - `IMAGE_CAPTION_SETTLED`: settled image caption battle with result data
 - `TEXT_OPEN_SETTLED`: settled answer battle with result data
+- social comments, entry likes, and share events for newly created demo battles
 
 The backend judge endpoint transitions `CLOSED -> JUDGING -> SETTLED`
 synchronously, so persistent `JUDGING` demo rows are not created by this seed.
@@ -68,10 +73,15 @@ live flow.
 Use these endpoints to load the dataset:
 
 1. `GET /api/users/me` with `x-user-id: demo-seed-user`
-2. `GET /api/battles` for home/profile lists and type/status filters
-3. `GET /api/battles/:battleId` for detail pages and entries
-4. `GET /api/battles/:battleId/result` for settled result pages
-5. `GET /api/archive` for settled/archive lists
+2. `GET /api/users/me/credits` for demo credit balance/history
+3. `GET /api/users/me/battles` for current-account profile battle lists
+4. `GET /api/users/me/comments` for the profile comments tab
+5. `GET /api/users/me/likes` for the profile likes tab
+6. `GET /api/battles` for home/profile lists and type/status filters
+7. `GET /api/battles/:battleId` for detail pages and entries
+8. `GET /api/battles/:battleId/comments` for social comments
+9. `GET /api/battles/:battleId/result` for settled result pages
+10. `GET /api/archive` for settled/archive lists
 
 ## Verification
 

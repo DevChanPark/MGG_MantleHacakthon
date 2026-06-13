@@ -20,6 +20,7 @@ export class JsonFileRepository extends MemoryRepository {
       repository.state.settlements ??= [];
       repository.state.judgingRules ??= [];
       repository.state.reports ??= [];
+      repository.normalizeState();
     } catch (error) {
       if (error.code !== "ENOENT") {
         throw error;

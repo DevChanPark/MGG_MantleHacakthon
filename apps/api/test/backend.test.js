@@ -121,9 +121,7 @@ test("updates MVP user profile metadata and rejects duplicate nicknames", async 
     body: {
       nickname: "demo-captain",
       intro: "Turns unlikely arguments into demo data.",
-      avatarUrl: "/uploads/profile.gif",
-      walletProvider: "MetaMask",
-      walletAddress: "0x1111111111111111111111111111111111111111"
+      avatarUrl: "/uploads/profile.gif"
     }
   });
   assert.equal(updated.statusCode, 200);
@@ -131,8 +129,8 @@ test("updates MVP user profile metadata and rejects duplicate nicknames", async 
   assert.equal(updated.body.displayName, "demo-captain");
   assert.equal(updated.body.intro, "Turns unlikely arguments into demo data.");
   assert.equal(updated.body.avatarUrl, "/uploads/profile.gif");
-  assert.equal(updated.body.walletProvider, "MetaMask");
-  assert.equal(updated.body.walletAddress, "0x1111111111111111111111111111111111111111");
+  assert.equal(updated.body.walletProvider, null);
+  assert.equal(updated.body.walletAddress, null);
 
   const duplicate = await app.inject({
     method: "PATCH",
@@ -143,14 +141,17 @@ test("updates MVP user profile metadata and rejects duplicate nicknames", async 
   assert.equal(duplicate.statusCode, 409);
   assert.equal(duplicate.body.error.code, "NICKNAME_TAKEN");
 
-  const invalid = await app.inject({
+  const walletPatch = await app.inject({
     method: "PATCH",
     url: "/api/users/me",
     headers: { "x-user-id": "profile-user" },
-    body: { walletAddress: "not-a-wallet" }
+    body: {
+      walletProvider: "MetaMask",
+      walletAddress: "0x1111111111111111111111111111111111111111"
+    }
   });
-  assert.equal(invalid.statusCode, 400);
-  assert.equal(invalid.body.error.code, "VALIDATION_ERROR");
+  assert.equal(walletPatch.statusCode, 400);
+  assert.equal(walletPatch.body.error.code, "VALIDATION_ERROR");
 
   const reservedNickname = await app.inject({
     method: "PATCH",
@@ -160,6 +161,443 @@ test("updates MVP user profile metadata and rejects duplicate nicknames", async 
   });
   assert.equal(reservedNickname.statusCode, 400);
   assert.equal(reservedNickname.body.error.code, "VALIDATION_ERROR");
+});
+
+test("wallet challenge verifies an EVM signature and links the wallet to the current user", async () => {
+  const { privateKeyToAccount } = await import("viem/accounts");
+  const account = privateKeyToAccount("0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+  const app = makeApp();
+
+  const challenge = await app.inject({
+    method: "POST",
+    url: "/api/auth/wallet/challenge",
+    headers: { "x-user-id": "wallet-user" },
+    body: {
+      walletAddress: account.address,
+      walletProvider: "MetaMask"
+    }
+  });
+  assert.equal(challenge.statusCode, 201);
+  assert.equal(challenge.body.challenge.walletAddress, account.address);
+  assert.ok(challenge.body.challenge.message.includes(challenge.body.challenge.nonce));
+
+  const signature = await account.signMessage({ message: challenge.body.challenge.message });
+  const verified = await app.inject({
+    method: "POST",
+    url: "/api/auth/wallet/verify",
+    headers: { "x-user-id": "wallet-user" },
+    body: {
+      challengeId: challenge.body.challenge.id,
+      walletAddress: account.address,
+      walletProvider: "MetaMask",
+      signature
+    }
+  });
+  assert.equal(verified.statusCode, 200);
+  assert.equal(verified.body.user.id, "wallet-user");
+  assert.equal(verified.body.user.walletAddress, account.address);
+  assert.equal(verified.body.user.walletProvider, "MetaMask");
+
+  const replay = await app.inject({
+    method: "POST",
+    url: "/api/auth/wallet/verify",
+    headers: { "x-user-id": "wallet-user" },
+    body: {
+      challengeId: challenge.body.challenge.id,
+      walletAddress: account.address,
+      signature
+    }
+  });
+  assert.equal(replay.statusCode, 409);
+  assert.equal(replay.body.error.code, "WALLET_CHALLENGE_USED");
+
+  const duplicateChallenge = await app.inject({
+    method: "POST",
+    url: "/api/auth/wallet/challenge",
+    headers: { "x-user-id": "other-wallet-user" },
+    body: { walletAddress: account.address }
+  });
+  const duplicateSignature = await account.signMessage({ message: duplicateChallenge.body.challenge.message });
+  const duplicate = await app.inject({
+    method: "POST",
+    url: "/api/auth/wallet/verify",
+    headers: { "x-user-id": "other-wallet-user" },
+    body: {
+      challengeId: duplicateChallenge.body.challenge.id,
+      walletAddress: account.address,
+      signature: duplicateSignature
+    }
+  });
+  assert.equal(duplicate.statusCode, 409);
+  assert.equal(duplicate.body.error.code, "WALLET_ALREADY_LINKED");
+});
+
+test("demo credits, social comments, likes, shares, and my profile lists use backend data", async () => {
+  const app = makeApp();
+  const headers = { "x-user-id": "profile-data-user" };
+
+  const charged = await app.inject({
+    method: "POST",
+    url: "/api/users/me/credits/demo-charge",
+    headers,
+    body: { credits: 30, priceMnt: 30 }
+  });
+  assert.equal(charged.statusCode, 201);
+  assert.equal(charged.body.balance, 30);
+  assert.equal(charged.body.transaction.reason, "DEMO_CHARGE");
+
+  const credits = await app.inject({ method: "GET", url: "/api/users/me/credits", headers });
+  assert.equal(credits.statusCode, 200);
+  assert.equal(credits.body.balance, 30);
+  assert.equal(credits.body.transactions.length, 1);
+
+  const created = await app.inject({
+    method: "POST",
+    url: "/api/battles",
+    headers,
+    body: {
+      battleType: BattleType.TEXT_OPEN,
+      prompt: "Profile API data battle"
+    }
+  });
+  const battle = created.body.battle;
+  const submitted = await app.inject({
+    method: "POST",
+    url: `/api/battles/${battle.id}/entries`,
+    headers,
+    body: { content: "This entry should collect social API data." }
+  });
+  const entry = submitted.body.entry;
+
+  const comment = await app.inject({
+    method: "POST",
+    url: `/api/battles/${battle.id}/comments`,
+    headers,
+    body: {
+      targetEntryId: entry.id,
+      content: "A separate social comment that is not judged."
+    }
+  });
+  assert.equal(comment.statusCode, 201);
+  assert.equal(comment.body.comment.targetEntryId, entry.id);
+
+  const like = await app.inject({
+    method: "POST",
+    url: `/api/entries/${entry.id}/like`,
+    headers
+  });
+  assert.equal(like.statusCode, 200);
+  assert.equal(like.body.liked, true);
+  assert.equal(like.body.likeCount, 1);
+
+  const battleLike = await app.inject({
+    method: "POST",
+    url: `/api/battles/${battle.id}/like`,
+    headers
+  });
+  assert.equal(battleLike.statusCode, 200);
+  assert.equal(battleLike.body.liked, true);
+  assert.equal(battleLike.body.likeCount, 1);
+
+  const share = await app.inject({
+    method: "POST",
+    url: `/api/battles/${battle.id}/shares`,
+    headers,
+    body: { channel: "copy-link" }
+  });
+  assert.equal(share.statusCode, 201);
+  assert.equal(share.body.shareCount, 1);
+
+  const detail = await app.inject({
+    method: "GET",
+    url: `/api/battles/${battle.id}`,
+    headers
+  });
+  assert.equal(detail.body.battle.stats.entryCount, 1);
+  assert.equal(detail.body.battle.stats.commentCount, 1);
+  assert.equal(detail.body.battle.stats.likeCount, 1);
+  assert.equal(detail.body.battle.stats.battleLikeCount, 1);
+  assert.equal(detail.body.battle.stats.shareCount, 1);
+  assert.equal(detail.body.entries[0].stats.likeCount, 1);
+  assert.equal(detail.body.entries[0].stats.likedByMe, true);
+
+  const myBattles = await app.inject({ method: "GET", url: "/api/users/me/battles", headers });
+  assert.equal(myBattles.statusCode, 200);
+  assert.equal(myBattles.body.battles.some((item) => item.id === battle.id), true);
+  assert.equal(myBattles.body.battles.find((item) => item.id === battle.id).stats.shareCount, 1);
+
+  const myComments = await app.inject({ method: "GET", url: "/api/users/me/comments", headers });
+  assert.equal(myComments.statusCode, 200);
+  assert.equal(myComments.body.comments.length, 1);
+  assert.equal(myComments.body.comments[0].content, "A separate social comment that is not judged.");
+
+  const myLikes = await app.inject({ method: "GET", url: "/api/users/me/likes", headers });
+  assert.equal(myLikes.statusCode, 200);
+  assert.equal(myLikes.body.likes.length, 2);
+  assert.equal(myLikes.body.likes.some((item) => item.kind === "ENTRY_LIKE" && item.entryId === entry.id), true);
+  assert.equal(myLikes.body.likes.some((item) => item.kind === "BATTLE_LIKE" && item.battleId === battle.id), true);
+
+  const unlike = await app.inject({
+    method: "DELETE",
+    url: `/api/entries/${entry.id}/like`,
+    headers
+  });
+  assert.equal(unlike.statusCode, 200);
+  assert.equal(unlike.body.liked, false);
+  assert.equal(unlike.body.likeCount, 0);
+});
+
+test("gAon feed flow supports create, participation spend, comments, evaluation, reward, likes, and notifications", async () => {
+  const app = makeApp();
+  const headers = { "x-user-id": "gaon-user" };
+
+  await app.inject({
+    method: "POST",
+    url: "/api/users/me/credits/demo-charge",
+    headers,
+    body: { credits: 30, priceMnt: 30 }
+  });
+
+  const created = await app.inject({
+    method: "POST",
+    url: "/api/feed/battles",
+    headers,
+    body: {
+      battleType: BattleType.TEXT_OPEN,
+      title: "gAon feed battle",
+      content: "This battle uses the new HomeFeed shape.",
+      deadline: "2026-12-31 23:59",
+      isAnonymous: false
+    }
+  });
+  assert.equal(created.statusCode, 201);
+  assert.equal(created.body.battle.title, "gAon feed battle");
+  assert.equal(created.body.battle.type, BattleType.TEXT_OPEN);
+  assert.equal(created.body.battle.status, "OPEN");
+  assert.equal(created.body.battle.likeCount, 0);
+
+  const liked = await app.inject({
+    method: "POST",
+    url: `/api/battles/${created.body.battle.id}/like`,
+    headers
+  });
+  assert.equal(liked.statusCode, 200);
+  assert.equal(liked.body.liked, true);
+  assert.equal(liked.body.likeCount, 1);
+
+  const participated = await app.inject({
+    method: "POST",
+    url: `/api/feed/battles/${created.body.battle.id}/participations`,
+    headers,
+    body: {}
+  });
+  assert.equal(participated.statusCode, 201);
+  assert.equal(participated.body.balance, 27);
+  assert.equal(participated.body.participation.costCredits, 3);
+  assert.equal(participated.body.alreadyParticipated, false);
+
+  const duplicateParticipation = await app.inject({
+    method: "POST",
+    url: `/api/feed/battles/${created.body.battle.id}/participations`,
+    headers,
+    body: {}
+  });
+  assert.equal(duplicateParticipation.statusCode, 201);
+  assert.equal(duplicateParticipation.body.balance, 27);
+  assert.equal(duplicateParticipation.body.alreadyParticipated, true);
+
+  const comment = await app.inject({
+    method: "POST",
+    url: `/api/feed/battles/${created.body.battle.id}/comments`,
+    headers,
+    body: { content: "My judged feed comment." }
+  });
+  assert.equal(comment.statusCode, 201);
+  assert.equal(comment.body.comment.text, "My judged feed comment.");
+
+  const commentLike = await app.inject({
+    method: "POST",
+    url: `/api/feed/comments/${comment.body.comment.id}/like`,
+    headers
+  });
+  assert.equal(commentLike.statusCode, 200);
+  assert.equal(commentLike.body.liked, true);
+  assert.equal(commentLike.body.likeCount, 1);
+
+  const detail = await app.inject({
+    method: "GET",
+    url: `/api/feed/battles/${created.body.battle.id}`,
+    headers
+  });
+  assert.equal(detail.statusCode, 200);
+  assert.equal(detail.body.battle.isParticipated, true);
+  assert.equal(detail.body.battle.isBattleLiked, true);
+  assert.equal(detail.body.battle.comments.length, 1);
+  assert.equal(detail.body.battle.comments[0].likedByMe, true);
+  assert.equal(detail.body.battle.stats.participationCount, 1);
+
+  const evaluated = await app.inject({
+    method: "POST",
+    url: `/api/feed/battles/${created.body.battle.id}/evaluate`,
+    headers
+  });
+  assert.equal(evaluated.statusCode, 200);
+  assert.equal(evaluated.body.battle.status, BattleStatus.SETTLED);
+  assert.equal(evaluated.body.feedResult.rewardCredits, 30);
+  assert.ok(evaluated.body.feedResult.verdictLines.length > 0);
+
+  const reward = await app.inject({
+    method: "POST",
+    url: `/api/feed/battles/${created.body.battle.id}/rewards/claim`,
+    headers
+  });
+  assert.equal(reward.statusCode, 201);
+  assert.equal(reward.body.rewardCredits, 30);
+  assert.equal(reward.body.balance, 57);
+
+  const duplicateReward = await app.inject({
+    method: "POST",
+    url: `/api/feed/battles/${created.body.battle.id}/rewards/claim`,
+    headers
+  });
+  assert.equal(duplicateReward.statusCode, 409);
+  assert.equal(duplicateReward.body.error.code, "REWARD_ALREADY_CLAIMED");
+
+  const notifications = await app.inject({
+    method: "GET",
+    url: "/api/users/me/notifications",
+    headers
+  });
+  assert.equal(notifications.statusCode, 200);
+  assert.ok(notifications.body.notifications.length >= 2);
+
+  const myComments = await app.inject({ method: "GET", url: "/api/users/me/comments", headers });
+  assert.equal(myComments.statusCode, 200);
+  assert.equal(myComments.body.comments.some((item) => item.kind === "FEED_COMMENT" && item.id === comment.body.comment.id), true);
+
+  const myLikes = await app.inject({ method: "GET", url: "/api/users/me/likes", headers });
+  assert.equal(myLikes.statusCode, 200);
+  assert.equal(myLikes.body.likes.some((item) => item.kind === "BATTLE_LIKE" && item.battleId === created.body.battle.id), true);
+  assert.equal(myLikes.body.likes.some((item) => item.kind === "ENTRY_LIKE" && item.entryId === comment.body.comment.id), true);
+});
+
+test("OPTION feed rewards can be claimed by participants on the winning option", async () => {
+  const app = makeApp();
+  const creatorHeaders = { "x-user-id": "option-creator" };
+  const winnerHeaders = { "x-user-id": "option-side-winner" };
+  const mvpHeaders = { "x-user-id": "option-mvp" };
+
+  await app.inject({
+    method: "POST",
+    url: "/api/users/me/credits/demo-charge",
+    headers: winnerHeaders,
+    body: { credits: 30, priceMnt: 30 }
+  });
+  await app.inject({
+    method: "POST",
+    url: "/api/users/me/credits/demo-charge",
+    headers: mvpHeaders,
+    body: { credits: 30, priceMnt: 30 }
+  });
+
+  const created = await app.inject({
+    method: "POST",
+    url: "/api/feed/battles",
+    headers: creatorHeaders,
+    body: {
+      battleType: BattleType.OPTION,
+      title: "Best sauce side",
+      content: "Pick the side with better arguments.",
+      deadline: "2026-12-31 23:59",
+      options: ["Pour", "Dip"]
+    }
+  });
+  assert.equal(created.statusCode, 201);
+
+  const winnerParticipation = await app.inject({
+    method: "POST",
+    url: `/api/feed/battles/${created.body.battle.id}/participations`,
+    headers: winnerHeaders,
+    body: { optionText: "Pour" }
+  });
+  assert.equal(winnerParticipation.statusCode, 201);
+  assert.equal(winnerParticipation.body.selectedOption, "Pour");
+
+  const mvpParticipation = await app.inject({
+    method: "POST",
+    url: `/api/feed/battles/${created.body.battle.id}/participations`,
+    headers: mvpHeaders,
+    body: { optionText: "Pour" }
+  });
+  assert.equal(mvpParticipation.statusCode, 201);
+
+  const comment = await app.inject({
+    method: "POST",
+    url: `/api/feed/battles/${created.body.battle.id}/comments`,
+    headers: mvpHeaders,
+    body: { content: "Pouring makes the sauce part of the dish." }
+  });
+  assert.equal(comment.statusCode, 201);
+
+  const evaluated = await app.inject({
+    method: "POST",
+    url: `/api/feed/battles/${created.body.battle.id}/evaluate`,
+    headers: creatorHeaders
+  });
+  assert.equal(evaluated.statusCode, 200);
+  assert.equal(evaluated.body.feedResult.winnerName, "Pour");
+
+  const reward = await app.inject({
+    method: "POST",
+    url: `/api/feed/battles/${created.body.battle.id}/rewards/claim`,
+    headers: winnerHeaders
+  });
+  assert.equal(reward.statusCode, 201);
+  assert.equal(reward.body.balance, 57);
+});
+
+test("request body cannot spoof creator or entry submitter identity", async () => {
+  const app = makeApp();
+  const created = await app.inject({
+    method: "POST",
+    url: "/api/battles",
+    headers: { "x-user-id": "header-user" },
+    body: {
+      battleType: BattleType.TEXT_OPEN,
+      prompt: "Identity should come from headers.",
+      createdByUserId: "body-user"
+    }
+  });
+  assert.equal(created.statusCode, 201);
+  assert.equal(created.body.battle.createdByUserId, "header-user");
+
+  const submitted = await app.inject({
+    method: "POST",
+    url: `/api/battles/${created.body.battle.id}/entries`,
+    headers: { "x-user-id": "header-user" },
+    body: {
+      content: "Submitted by header user.",
+      submittedByUserId: "body-submit-user"
+    }
+  });
+  assert.equal(submitted.statusCode, 201);
+  assert.equal(submitted.body.entry.submittedByUserId, "header-user");
+});
+
+test("empty battles cannot be closed into an unjudgeable state", async () => {
+  const app = makeApp();
+  const created = await request(app, "POST", "/api/battles", {
+    battleType: BattleType.TEXT_OPEN,
+    prompt: "Do not close before entries."
+  });
+  assert.equal(created.statusCode, 201);
+
+  const closed = await request(app, "POST", `/api/battles/${created.body.battle.id}/close`);
+  assert.equal(closed.statusCode, 409);
+  assert.equal(closed.body.error.code, "BATTLE_CANNOT_CLOSE");
+
+  const detail = await request(app, "GET", `/api/battles/${created.body.battle.id}`);
+  assert.equal(detail.body.battle.status, BattleStatus.OPEN);
 });
 
 test("stores judging rules snapshot and uses it for verdict hashing", async () => {
@@ -227,6 +665,14 @@ test("JSON file repository backfills judgingRules for legacy local data", async 
     assert.equal(created.statusCode, 201);
     assert.equal(repository.exportState().judgingRules.length, 1);
     assert.ok(Array.isArray(repository.exportState().reports));
+    assert.ok(Array.isArray(repository.exportState().walletChallenges));
+    assert.ok(Array.isArray(repository.exportState().creditTransactions));
+    assert.ok(Array.isArray(repository.exportState().socialComments));
+    assert.ok(Array.isArray(repository.exportState().entryLikes));
+    assert.ok(Array.isArray(repository.exportState().battleLikes));
+    assert.ok(Array.isArray(repository.exportState().participations));
+    assert.ok(Array.isArray(repository.exportState().battleShares));
+    assert.ok(Array.isArray(repository.exportState().notifications));
   } finally {
     await rm(tempDir, { recursive: true, force: true });
   }

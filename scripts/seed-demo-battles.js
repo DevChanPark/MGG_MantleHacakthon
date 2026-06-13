@@ -1,6 +1,8 @@
 const API_BASE_URL = process.env.API_BASE_URL || "http://127.0.0.1:4000";
 const DEMO_USER_ID = process.env.DEMO_USER_ID || "demo-seed-user";
 const DEMO_NICKNAME = process.env.DEMO_NICKNAME || "demo-captain";
+const DEMO_WALLET_PRIVATE_KEY =
+  process.env.DEMO_WALLET_PRIVATE_KEY || "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 const DEMO_IMAGE_BASE64 =
   "R0lGODlhAQABAPAAAP///wAAACH5BAAAAAAALAAAAAABAAEAAAICRAEAOw==";
 
@@ -109,7 +111,9 @@ async function main() {
   const existing = await listBattlesByPrompt();
   const imageUrl = await uploadDemoImage();
   const profileSummary = await seedDemoProfile(imageUrl);
-  const summary = [profileSummary];
+  const walletSummary = await seedDemoWallet();
+  const creditSummary = await seedDemoCredits();
+  const summary = [profileSummary, walletSummary, creditSummary];
 
   for (const seed of seeds) {
     const existingBattle = existing.get(seed.battle.prompt);
@@ -124,7 +128,8 @@ async function main() {
     }
 
     const battle = await createBattle(seed, imageUrl);
-    await submitEntries(battle, seed.entries);
+    const entries = await submitEntries(battle, seed.entries);
+    const socialSummary = await seedSocialData(seed, battle, entries);
 
     if (seed.desiredStatus === "CLOSED") {
       const closed = await request("POST", `/api/battles/${battle.id}/close`);
@@ -132,7 +137,8 @@ async function main() {
         key: seed.key,
         action: "created",
         id: battle.id,
-        status: closed.battle.status
+        status: closed.battle.status,
+        social: socialSummary
       });
       continue;
     }
@@ -145,7 +151,8 @@ async function main() {
         action: "created",
         id: battle.id,
         status: result.battle.status,
-        txHash: result.settlement?.txHash || null
+        txHash: result.settlement?.txHash || null,
+        social: socialSummary
       });
       continue;
     }
@@ -155,7 +162,8 @@ async function main() {
       key: seed.key,
       action: "created",
       id: battle.id,
-      status: detail.battle.status
+      status: detail.battle.status,
+      social: socialSummary
     });
   }
 
@@ -176,6 +184,7 @@ async function createBattle(seed, imageUrl) {
 
 async function submitEntries(battle, entries) {
   const optionsByText = new Map((battle.options || []).map((option) => [option.text, option.id]));
+  const submittedEntries = [];
 
   for (const entry of entries) {
     const body = { content: entry.content };
@@ -187,8 +196,10 @@ async function submitEntries(battle, entries) {
       body.optionId = optionId;
     }
 
-    await request("POST", `/api/battles/${battle.id}/entries`, body);
+    submittedEntries.push((await request("POST", `/api/battles/${battle.id}/entries`, body)).entry);
   }
+
+  return submittedEntries;
 }
 
 async function listBattlesByPrompt() {
@@ -210,21 +221,84 @@ async function seedDemoProfile(avatarUrl) {
     const profile = await updateDemoProfile(avatarUrl);
     return { key: "DEMO_USER_PROFILE", action: "updated", id: profile.id, nickname: profile.nickname };
   } catch (error) {
-    if (error.code === "NICKNAME_TAKEN") {
-      return { key: "DEMO_USER_PROFILE", action: "skipped", reason: "nickname taken", nickname: DEMO_NICKNAME };
+    if (error.code === "NICKNAME_TAKEN" || error.code === "WALLET_ALREADY_LINKED") {
+      return { key: "DEMO_USER_PROFILE", action: "skipped", reason: error.code, nickname: DEMO_NICKNAME };
     }
     throw error;
   }
+}
+
+async function seedDemoCredits() {
+  const credits = await request("GET", "/api/users/me/credits");
+  const hasDemoCharge = (credits.transactions || []).some((transaction) => transaction.reason === "DEMO_CHARGE");
+  if (hasDemoCharge) {
+    return { key: "DEMO_CREDITS", action: "skipped", balance: credits.balance };
+  }
+
+  const charged = await request("POST", "/api/users/me/credits/demo-charge", {
+    credits: 30,
+    priceMnt: 30
+  });
+  return { key: "DEMO_CREDITS", action: "created", balance: charged.balance };
+}
+
+async function seedSocialData(seed, battle, entries) {
+  if (entries.length === 0) {
+    return { action: "skipped", reason: "no entries" };
+  }
+
+  const targetEntry = entries[0];
+  await request("POST", `/api/battles/${battle.id}/comments`, {
+    targetEntryId: targetEntry.id,
+    content: `Demo social comment for ${seed.key}.`
+  });
+  await request("POST", `/api/entries/${targetEntry.id}/like`);
+  const share = await request("POST", `/api/battles/${battle.id}/shares`, {
+    channel: "demo-seed"
+  });
+
+  return {
+    action: "created",
+    targetEntryId: targetEntry.id,
+    shareCount: share.shareCount
+  };
 }
 
 async function updateDemoProfile(avatarUrl) {
   return request("PATCH", "/api/users/me", {
     nickname: DEMO_NICKNAME,
     intro: "Turns unlikely arguments into demo data.",
-    avatarUrl,
-    walletProvider: "MetaMask",
-    walletAddress: "0x1111111111111111111111111111111111111111"
+    avatarUrl
   });
+}
+
+async function seedDemoWallet() {
+  try {
+    const { privateKeyToAccount } = await import("viem/accounts");
+    const account = privateKeyToAccount(DEMO_WALLET_PRIVATE_KEY);
+    const challenge = await request("POST", "/api/auth/wallet/challenge", {
+      walletAddress: account.address,
+      walletProvider: "MetaMask"
+    });
+    const signature = await account.signMessage({ message: challenge.challenge.message });
+    const verified = await request("POST", "/api/auth/wallet/verify", {
+      challengeId: challenge.challenge.id,
+      walletAddress: account.address,
+      walletProvider: "MetaMask",
+      signature
+    });
+    return {
+      key: "DEMO_USER_WALLET",
+      action: "linked",
+      id: verified.user.id,
+      walletAddress: verified.user.walletAddress
+    };
+  } catch (error) {
+    if (error.code === "WALLET_ALREADY_LINKED") {
+      return { key: "DEMO_USER_WALLET", action: "skipped", reason: error.code };
+    }
+    throw error;
+  }
 }
 
 function assertMode(health) {

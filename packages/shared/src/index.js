@@ -43,6 +43,8 @@ export const ResultResponseFields = Object.freeze([
 
 export const MAX_ANSWER_LENGTH = 500;
 export const MAX_PROMPT_LENGTH = 300;
+export const MAX_TITLE_LENGTH = 120;
+export const MAX_DESCRIPTION_LENGTH = 1000;
 export const MAX_OPTION_LENGTH = 80;
 export const MIN_OPTION_COUNT = 2;
 export const MAX_OPTION_COUNT = 4;
@@ -50,6 +52,11 @@ export const MAX_NICKNAME_LENGTH = 32;
 export const MAX_INTRO_LENGTH = 160;
 export const MAX_PROFILE_IMAGE_URL_LENGTH = 2048;
 export const MAX_WALLET_PROVIDER_LENGTH = 32;
+export const MAX_SHARE_CHANNEL_LENGTH = 32;
+export const MAX_SOCIAL_COMMENT_LENGTH = 500;
+export const MAX_DEMO_CREDIT_CHARGE = 1000;
+export const DEFAULT_PARTICIPATION_COST = 3;
+export const DEFAULT_REWARD_CREDITS = 30;
 export const RESERVED_NICKNAMES = Object.freeze(["무기기", "mgg", "관리자", "admin"]);
 
 export class ContractValidationError extends Error {
@@ -76,6 +83,10 @@ export function assertValidBattleType(value) {
   }
 }
 
+export function isEvmAddress(value) {
+  return typeof value === "string" && /^0x[a-fA-F0-9]{40}$/.test(value);
+}
+
 export function validateCreateBattleRequest(input) {
   const body = ensureObject(input, "request body");
   const details = [];
@@ -85,19 +96,30 @@ export function validateCreateBattleRequest(input) {
     details.push(`battleType must be one of ${BattleTypeValues.join(", ")}`);
   }
 
-  const prompt = normalizeOptionalString(body.prompt);
+  const title = normalizeOptionalString(body.title);
+  const content = normalizeOptionalString(body.content);
+  const description = normalizeOptionalString(body.description) || content;
+  const prompt = normalizeOptionalString(body.prompt) || title || content;
   const imageUrl = normalizeOptionalString(body.imageUrl);
+  const deadlineAt = normalizeDeadline(body.deadlineAt ?? body.deadline);
+  const isAnonymous = Boolean(body.isAnonymous);
+  const recommendedScore = normalizeRecommendedScore(body.recommendedScore);
   const normalized = {
     battleType,
     prompt,
+    title: title || prompt,
+    description: description || null,
     imageUrl,
+    deadlineAt,
+    isAnonymous,
+    recommendedScore,
     options: [],
     createdByUserId: normalizeOptionalString(body.createdByUserId)
   };
 
   if (battleType === BattleType.OPTION || battleType === BattleType.TEXT_OPEN) {
     if (!prompt) {
-      details.push("prompt is required");
+      details.push("prompt or title is required");
     } else if (prompt.length > MAX_PROMPT_LENGTH) {
       details.push(`prompt must be ${MAX_PROMPT_LENGTH} characters or fewer`);
     }
@@ -110,6 +132,18 @@ export function validateCreateBattleRequest(input) {
     if (prompt && prompt.length > MAX_PROMPT_LENGTH) {
       details.push(`prompt must be ${MAX_PROMPT_LENGTH} characters or fewer`);
     }
+  }
+
+  if (title && title.length > MAX_TITLE_LENGTH) {
+    details.push(`title must be ${MAX_TITLE_LENGTH} characters or fewer`);
+  }
+
+  if (description && description.length > MAX_DESCRIPTION_LENGTH) {
+    details.push(`description/content must be ${MAX_DESCRIPTION_LENGTH} characters or fewer`);
+  }
+
+  if ((body.deadlineAt !== undefined || body.deadline !== undefined) && !deadlineAt) {
+    details.push("deadline must be a valid date or YYYY-MM-DD HH:mm string");
   }
 
   if (battleType === BattleType.OPTION) {
@@ -141,6 +175,152 @@ export function validateCreateBattleRequest(input) {
   }
 
   return normalized;
+}
+
+export function validateParticipationRequest(input, battle) {
+  const body = input === undefined ? {} : ensureObject(input, "request body");
+  const details = [];
+  const optionId = normalizeOptionalString(body.optionId);
+  const optionText = normalizeOptionalString(body.optionText);
+
+  if (battle.battleType === BattleType.OPTION && !optionId && !optionText) {
+    details.push("optionId or optionText is required for OPTION battle participation");
+  }
+
+  if (battle.battleType !== BattleType.OPTION && (optionId || optionText)) {
+    details.push("option selection is only allowed for OPTION battle participation");
+  }
+
+  if (details.length > 0) {
+    throw new ContractValidationError("Invalid participation request", details);
+  }
+
+  return {
+    optionId: optionId || null,
+    optionText: optionText || null
+  };
+}
+
+export function validateWalletChallengeRequest(input) {
+  const body = ensureObject(input, "request body");
+  const details = [];
+  const walletAddress = normalizeOptionalString(body.walletAddress);
+  const walletProvider = normalizeNullableString(body.walletProvider);
+
+  if (!isEvmAddress(walletAddress)) {
+    details.push("walletAddress must be an EVM address");
+  }
+
+  if (walletProvider && walletProvider.length > MAX_WALLET_PROVIDER_LENGTH) {
+    details.push(`walletProvider must be ${MAX_WALLET_PROVIDER_LENGTH} characters or fewer`);
+  }
+
+  if (details.length > 0) {
+    throw new ContractValidationError("Invalid wallet challenge request", details);
+  }
+
+  return {
+    walletAddress,
+    walletAddressNormalized: walletAddress.toLowerCase(),
+    walletProvider
+  };
+}
+
+export function validateWalletVerifyRequest(input) {
+  const body = ensureObject(input, "request body");
+  const details = [];
+  const challengeId = normalizeOptionalString(body.challengeId);
+  const walletAddress = normalizeOptionalString(body.walletAddress);
+  const walletProvider = normalizeNullableString(body.walletProvider);
+  const signature = normalizeOptionalString(body.signature);
+
+  if (!challengeId) {
+    details.push("challengeId is required");
+  }
+  if (!isEvmAddress(walletAddress)) {
+    details.push("walletAddress must be an EVM address");
+  }
+  if (!/^0x[a-fA-F0-9]+$/.test(signature)) {
+    details.push("signature must be a hex string");
+  }
+  if (walletProvider && walletProvider.length > MAX_WALLET_PROVIDER_LENGTH) {
+    details.push(`walletProvider must be ${MAX_WALLET_PROVIDER_LENGTH} characters or fewer`);
+  }
+
+  if (details.length > 0) {
+    throw new ContractValidationError("Invalid wallet verification request", details);
+  }
+
+  return {
+    challengeId,
+    walletAddress,
+    walletAddressNormalized: walletAddress.toLowerCase(),
+    walletProvider,
+    signature
+  };
+}
+
+export function validateDemoCreditChargeRequest(input) {
+  const body = ensureObject(input, "request body");
+  const details = [];
+  const credits = Number(body.credits);
+  const priceMnt = body.priceMnt === undefined || body.priceMnt === null ? null : Number(body.priceMnt);
+
+  if (!Number.isInteger(credits) || credits <= 0 || credits > MAX_DEMO_CREDIT_CHARGE) {
+    details.push(`credits must be an integer between 1 and ${MAX_DEMO_CREDIT_CHARGE}`);
+  }
+
+  if (priceMnt !== null && (!Number.isFinite(priceMnt) || priceMnt < 0)) {
+    details.push("priceMnt must be a non-negative number when provided");
+  }
+
+  if (details.length > 0) {
+    throw new ContractValidationError("Invalid demo credit charge request", details);
+  }
+
+  return {
+    credits,
+    priceMnt
+  };
+}
+
+export function validateSocialCommentRequest(input) {
+  const body = ensureObject(input, "request body");
+  const details = [];
+  const content = normalizeOptionalString(body.content);
+  const targetEntryId = normalizeOptionalString(body.targetEntryId);
+
+  if (!content) {
+    details.push("content is required");
+  } else if (content.length > MAX_SOCIAL_COMMENT_LENGTH) {
+    details.push(`content must be ${MAX_SOCIAL_COMMENT_LENGTH} characters or fewer`);
+  }
+
+  if (body.targetEntryId !== undefined && !targetEntryId) {
+    details.push("targetEntryId must be a non-empty string when provided");
+  }
+
+  if (details.length > 0) {
+    throw new ContractValidationError("Invalid social comment request", details);
+  }
+
+  return {
+    content,
+    targetEntryId: targetEntryId || null
+  };
+}
+
+export function validateBattleShareRequest(input) {
+  const body = input === undefined ? {} : ensureObject(input, "request body");
+  const channel = normalizeNullableString(body.channel);
+
+  if (channel && channel.length > MAX_SHARE_CHANNEL_LENGTH) {
+    throw new ContractValidationError("Invalid battle share request", [
+      `channel must be ${MAX_SHARE_CHANNEL_LENGTH} characters or fewer`
+    ]);
+  }
+
+  return { channel };
 }
 
 export function validateCreateEntryRequest(input, battle) {
@@ -207,20 +387,8 @@ export function validateUpdateUserProfileRequest(input) {
     normalized.avatarUrl = avatarUrl;
   }
 
-  if (Object.hasOwn(body, "walletProvider")) {
-    const walletProvider = normalizeNullableString(body.walletProvider);
-    if (walletProvider && walletProvider.length > MAX_WALLET_PROVIDER_LENGTH) {
-      details.push(`walletProvider must be ${MAX_WALLET_PROVIDER_LENGTH} characters or fewer`);
-    }
-    normalized.walletProvider = walletProvider;
-  }
-
-  if (Object.hasOwn(body, "walletAddress")) {
-    const walletAddress = normalizeNullableString(body.walletAddress);
-    if (walletAddress && !/^0x[a-fA-F0-9]{40}$/.test(walletAddress)) {
-      details.push("walletAddress must be an EVM address when provided");
-    }
-    normalized.walletAddress = walletAddress;
+  if (Object.hasOwn(body, "walletProvider") || Object.hasOwn(body, "walletAddress")) {
+    details.push("wallet fields must be linked through wallet challenge verification");
   }
 
   if (Object.keys(normalized).length === 0) {
@@ -487,6 +655,53 @@ function isReservedNickname(value) {
 
 function normalizeScore(value) {
   return Number(value);
+}
+
+function normalizeRecommendedScore(value) {
+  if (value === undefined || value === null || value === "") {
+    return 50;
+  }
+
+  const score = Number(value);
+  if (!Number.isFinite(score)) {
+    return 50;
+  }
+
+  return Math.max(0, Math.min(100, Math.round(score)));
+}
+
+function normalizeDeadline(value) {
+  if (value === undefined || value === null || value === "") {
+    return null;
+  }
+
+  if (value instanceof Date && Number.isFinite(value.getTime())) {
+    return value.toISOString();
+  }
+
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  const simple = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})(?:\s+(\d{2}):(\d{2}))?$/);
+  if (simple) {
+    const [, year, month, day, hour = "23", minute = "59"] = simple;
+    const date = new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute));
+    if (
+      date.getFullYear() === Number(year) &&
+      date.getMonth() === Number(month) - 1 &&
+      date.getDate() === Number(day) &&
+      date.getHours() === Number(hour) &&
+      date.getMinutes() === Number(minute)
+    ) {
+      return date.toISOString();
+    }
+    return null;
+  }
+
+  const parsed = new Date(trimmed);
+  return Number.isFinite(parsed.getTime()) ? parsed.toISOString() : null;
 }
 
 function isValidScore(value) {

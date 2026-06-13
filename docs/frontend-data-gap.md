@@ -32,6 +32,12 @@ These can be provided with the current backend models and APIs:
 - Safety reports
 - Local image upload URL for `IMAGE_CAPTION`
 - Archive of settled battles
+- Wallet challenge/signature verification for wallet connection
+- Demo credit balance and demo charge ledger
+- Social comments separate from battle entries
+- Entry likes
+- Battle share event counts
+- Current-account profile tabs for my battles, comments, and likes
 
 ## MVP Candidate Schema Additions
 
@@ -45,15 +51,17 @@ These are included in the MVP profile schema/API extension:
 
 API addition:
 
-- `PATCH /api/users/me` for nickname, intro, avatar, and wallet metadata
+- `PATCH /api/users/me` for nickname, intro, and avatar metadata
+- `POST /api/auth/wallet/challenge` and `POST /api/auth/wallet/verify` for
+  wallet metadata
 - nickname uniqueness and reserved-name validation inside `PATCH /api/users/me`
 
 Notes:
 
 - `displayName` exists today and could be reused as nickname for the first MVP
   pass, but that would not cover intro, avatar, or wallet metadata.
-- Wallet fields should be treated as profile metadata only unless a separate
-  real wallet/auth design is approved.
+- Wallet fields are linked through the backend wallet challenge/verify flow,
+  rejected by profile PATCH, and returned as profile metadata.
 - Profile image upload can reuse the existing local upload service, but the
   backend should decide whether profile images share `/uploads/:storageKey`
   with battle images.
@@ -68,28 +76,22 @@ Notes:
 - Do not create schema migrations from this document without separate approval.
 - Keep demo data creation API-driven whenever possible, not raw SQL-driven.
 
-## Keep Mocked Or Defer For MVP
+## Keep Deferred For MVP
 
-These frontend concepts are currently broader than the committed backend MVP
-scope:
+These frontend concepts are still broader than the committed backend MVP scope:
 
-- Credits/current balance
-- Credit packages
-- Credit purchase history
-- Payment approval flow
-- Likes
-- Share counts
-- Social comments separate from battle entries
-- Profile tabs for comments and likes
+- Real credit payment approval/settlement flow
+- Real-money credit purchase history
+- Public profile tabs for other users
+- Share destination integrations beyond demo event counting
 
 Reasons to defer:
 
-- Credits and payments may be confused with paid entry fees, reward pools, or
+- Real credit payments may be confused with paid entry fees, reward pools, or
   gambling-like flows, which are explicit MVP non-goals.
-- Likes/share counts require additional interaction models that are not needed
-  for the core battle lifecycle.
-- Social comments are different from battle entries and should not be mixed
-  into AI judging data without a separate model.
+- Current demo credits are a local ledger only.
+- Social comments are separate from battle entries and must not be mixed into
+  AI judging data.
 
 ## Seed Data Guidance
 
@@ -122,8 +124,9 @@ another user, only the profile update is skipped and battle seeding continues.
 
 Current demo seed set:
 
-- demo profile user with nickname, intro, avatar URL, wallet provider, and
-  wallet address metadata
+- demo profile user with nickname, intro, and avatar URL
+- demo wallet linked through challenge/signature verification
+- demo credit balance/history
 - `OPEN` `TEXT_OPEN` battle
 - `OPEN` `OPTION` battle
 - `OPEN` `IMAGE_CAPTION` battle
@@ -131,6 +134,7 @@ Current demo seed set:
 - `SETTLED` `OPTION` battle
 - `SETTLED` `IMAGE_CAPTION` battle
 - `SETTLED` `TEXT_OPEN` battle
+- social comments, entry likes, and share events on newly created demo battles
 
 Full dataset loading details live in `docs/frontend-demo-dataset.md`.
 
@@ -139,5 +143,6 @@ Full dataset loading details live in `docs/frontend-demo-dataset.md`.
 The MVP user profile schema/API extension is now defined by `GET /api/users/me`
 and `PATCH /api/users/me`.
 
-Keep credits, likes, share counts, and social comments mocked or deferred until
-their product scope and data ownership are explicitly approved.
+Real payment settlement, public profile data, and external share integrations
+remain deferred until their product scope and data ownership are explicitly
+approved.

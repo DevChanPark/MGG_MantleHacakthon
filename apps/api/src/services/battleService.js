@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import {
   assertCanCloseBattle,
   assertCanJudgeBattle,
@@ -9,10 +10,18 @@ import {
 } from "../../../../packages/core/src/index.js";
 import {
   BattleStatus,
+  DEFAULT_PARTICIPATION_COST,
+  DEFAULT_REWARD_CREDITS,
   validateCreateBattleRequest,
   validateCreateEntryRequest,
+  validateBattleShareRequest,
+  validateDemoCreditChargeRequest,
   validateJudgeInput,
+  validateParticipationRequest,
+  validateSocialCommentRequest,
   validateUpdateUserProfileRequest,
+  validateWalletChallengeRequest,
+  validateWalletVerifyRequest,
   toResultResponse
 } from "../../../../packages/shared/src/index.js";
 import { ApiError, sanitizeFailureMessage } from "../errors.js";
@@ -20,26 +29,47 @@ import { validateJudgeOutputReferences } from "./aiJudgeService.js";
 import { moderateEntryContent } from "./moderationService.js";
 
 const MAX_REPORT_REASON_LENGTH = 240;
+const WALLET_CHALLENGE_TTL_MS = 5 * 60 * 1000;
 
 export function createBattleService({ repository, aiJudgeService, settlementService, config }) {
   return {
     createBattle: (input, userId) => createBattle(repository, input, userId),
-    listBattles: () => repository.listBattles(),
+    listBattles: () => listBattles(repository),
+    listFeedBattles: (userId) => listFeedBattles(repository, userId),
+    getFeedBattle: (battleId, userId) => getFeedBattle(repository, battleId, userId),
     getBattle: (battleId) => getBattleOrThrow(repository, battleId),
+    getBattleDetail: (battleId, userId) => getBattleDetail(repository, battleId, userId),
     submitEntry: (battleId, input, userId) => submitEntry(repository, battleId, input, userId),
     createReport: (battleId, input, userId) => createReport(repository, battleId, input, userId),
+    createSocialComment: (battleId, input, userId) => createSocialComment(repository, battleId, input, userId),
+    listSocialComments: (battleId) => listSocialComments(repository, battleId),
+    setEntryLike: (entryId, userId, liked) => setEntryLike(repository, entryId, userId, liked),
+    setBattleLike: (battleId, userId, liked) => setBattleLike(repository, battleId, userId, liked),
+    shareBattle: (battleId, input, userId) => shareBattle(repository, battleId, input, userId),
+    participateInBattle: (battleId, input, userId) => participateInBattle(repository, battleId, input, userId),
+    createFeedComment: (battleId, input, userId) => createFeedComment(repository, battleId, input, userId),
+    evaluateFeedBattle: (battleId) => evaluateFeedBattle(repository, aiJudgeService, settlementService, config, battleId),
+    claimFeedReward: (battleId, userId) => claimFeedReward(repository, battleId, userId),
+    listNotifications: (userId) => listNotifications(repository, userId),
     closeBattle: (battleId) => closeBattle(repository, battleId),
     judgeBattle: (battleId) => judgeBattle(repository, aiJudgeService, settlementService, config, battleId),
     getResult: (battleId) => getResult(repository, battleId),
-    listArchive: () => repository.listArchive(),
+    listArchive: () => listArchive(repository),
     getOrCreateUser: (userId) => repository.getOrCreateUser(userId),
-    updateUserProfile: (input, userId) => updateUserProfile(repository, input, userId)
+    updateUserProfile: (input, userId) => updateUserProfile(repository, input, userId),
+    createWalletChallenge: (input, userId) => createWalletChallenge(repository, input, userId),
+    verifyWallet: (input, userId) => verifyWallet(repository, input, userId),
+    getCredits: (userId) => getCredits(repository, userId),
+    chargeDemoCredits: (input, userId) => chargeDemoCredits(repository, input, userId),
+    listMyBattles: (userId) => listMyBattles(repository, userId),
+    listMyComments: (userId) => listMyComments(repository, userId),
+    listMyLikes: (userId) => listMyLikes(repository, userId)
   };
 }
 
 async function createBattle(repository, input, userId) {
-  const normalized = validateCreateBattleRequest({ ...input, createdByUserId: input?.createdByUserId || userId });
-  const user = await repository.getOrCreateUser(normalized.createdByUserId || userId);
+  const normalized = validateCreateBattleRequest(input);
+  const user = await repository.getOrCreateUser(userId);
   const rulesJson = getJudgingRules(normalized.battleType);
   return repository.createBattle({
     ...normalized,
@@ -69,7 +99,7 @@ async function submitEntry(repository, battleId, input, userId) {
     throw new ApiError(400, "ENTRY_REJECTED", "Entry did not pass moderation checks");
   }
 
-  const user = await repository.getOrCreateUser(normalized.submittedByUserId || userId);
+  const user = await repository.getOrCreateUser(userId);
   const entry = await repository.addEntry({
     battleId,
     content: normalized.content,
@@ -83,6 +113,37 @@ async function submitEntry(repository, battleId, input, userId) {
   }
 
   return entry;
+}
+
+async function listBattles(repository) {
+  return addBattleStats(repository, await repository.listBattles());
+}
+
+async function listFeedBattles(repository, userId) {
+  const user = await repository.getOrCreateUser(userId);
+  const battles = await repository.listBattles();
+  return Promise.all(battles.map((battle) => toFeedBattle(repository, battle, user.id)));
+}
+
+async function getFeedBattle(repository, battleId, userId) {
+  const user = await repository.getOrCreateUser(userId);
+  return toFeedBattle(repository, await getBattleOrThrow(repository, battleId), user.id);
+}
+
+async function listArchive(repository) {
+  return addBattleStats(repository, await repository.listArchive());
+}
+
+async function getBattleDetail(repository, battleId, userId) {
+  const [battle, entries] = await Promise.all([
+    getBattleOrThrow(repository, battleId),
+    repository.listEntriesByBattle(battleId)
+  ]);
+
+  return {
+    battle: await addOneBattleStats(repository, battle),
+    entries: await addEntryStats(repository, entries, userId)
+  };
 }
 
 async function createReport(repository, battleId, input, userId) {
@@ -105,6 +166,250 @@ async function createReport(repository, battleId, input, userId) {
   });
 }
 
+async function createSocialComment(repository, battleId, input, userId) {
+  await getBattleOrThrow(repository, battleId);
+  const normalized = validateSocialCommentRequest(input);
+
+  if (normalized.targetEntryId) {
+    const entry = await repository.getEntry(normalized.targetEntryId);
+    if (!entry || entry.battleId !== battleId) {
+      throw new ApiError(400, "INVALID_COMMENT_TARGET", "targetEntryId does not belong to this battle");
+    }
+  }
+
+  const user = await repository.getOrCreateUser(userId);
+  return repository.createSocialComment({
+    battleId,
+    targetEntryId: normalized.targetEntryId,
+    authorUserId: user.id,
+    content: normalized.content
+  });
+}
+
+async function listSocialComments(repository, battleId) {
+  await getBattleOrThrow(repository, battleId);
+  return repository.listSocialCommentsByBattle(battleId);
+}
+
+async function setEntryLike(repository, entryId, userId, liked) {
+  const entry = await repository.getEntry(entryId);
+  if (!entry) {
+    throw new ApiError(404, "ENTRY_NOT_FOUND", "Entry not found");
+  }
+
+  const user = await repository.getOrCreateUser(userId);
+  return repository.setEntryLike(entryId, user.id, liked);
+}
+
+async function setBattleLike(repository, battleId, userId, liked) {
+  await getBattleOrThrow(repository, battleId);
+  const user = await repository.getOrCreateUser(userId);
+  return repository.setBattleLike(battleId, user.id, liked);
+}
+
+async function participateInBattle(repository, battleId, input, userId) {
+  const battle = await getBattleOrThrow(repository, battleId);
+  if (getFeedStatus(battle) !== "OPEN") {
+    throw new ApiError(409, "BATTLE_NOT_OPEN", "Only open battles can be participated in");
+  }
+
+  const normalized = validateParticipationRequest(input, battle);
+  const user = await repository.getOrCreateUser(userId);
+  const existing = await repository.getParticipation(battleId, user.id);
+  if (existing) {
+    return {
+      participation: existing,
+      balance: user.creditBalance ?? 0,
+      selectedOption: getOptionTextById(battle, existing.optionId),
+      alreadyParticipated: true
+    };
+  }
+
+  let optionId = normalized.optionId;
+  if (battle.battleType === "OPTION") {
+    const option = optionId
+      ? battle.options.find((item) => item.id === optionId)
+      : battle.options.find((item) => item.text === normalized.optionText);
+    if (!option) {
+      throw new ApiError(400, "INVALID_OPTION", "Selected option does not belong to this battle");
+    }
+    optionId = option.id;
+  }
+
+  let participationResult;
+  try {
+    participationResult = await repository.createParticipationWithCreditSpend({
+      battleId,
+      userId: user.id,
+      optionId,
+      costCredits: DEFAULT_PARTICIPATION_COST,
+      metadataJson: { battleId }
+    });
+  } catch (error) {
+    if (error.code === "INSUFFICIENT_CREDITS") {
+      throw new ApiError(402, "INSUFFICIENT_CREDITS", "Not enough demo credits to participate");
+    }
+    if (error.code === "PARTICIPATION_EXISTS") {
+      throw new ApiError(409, "ALREADY_PARTICIPATED", "User already participated in this battle");
+    }
+    throw error;
+  }
+  if (!participationResult) {
+    throw new ApiError(404, "USER_NOT_FOUND", "User not found");
+  }
+
+  await repository.createNotification?.({
+    userId: battle.createdByUserId,
+    battleId,
+    title: `${user.displayName || user.nickname || "Someone"}님이 참여했습니다.`,
+    body: "내 게시글에 새 참여자가 생겼습니다."
+  });
+
+  return {
+    participation: participationResult.participation,
+    balance: participationResult.transaction.balanceAfter,
+    selectedOption: getOptionTextById(battle, optionId),
+    alreadyParticipated: false
+  };
+}
+
+async function createFeedComment(repository, battleId, input, userId) {
+  const battle = await getBattleOrThrow(repository, battleId);
+  if (getFeedStatus(battle) !== "OPEN") {
+    throw new ApiError(409, "BATTLE_NOT_OPEN", "Only open battles accept comments");
+  }
+
+  const normalized = validateSocialCommentRequest(input);
+  const moderation = moderateEntryContent(normalized.content);
+  if (!moderation.allowed) {
+    throw new ApiError(400, "ENTRY_REJECTED", "Comment did not pass moderation checks");
+  }
+
+  const user = await repository.getOrCreateUser(userId);
+  const participation = await repository.getParticipation(battleId, user.id);
+  if (!participation) {
+    throw new ApiError(409, "PARTICIPATION_REQUIRED", "Participate before adding a comment");
+  }
+
+  const entry = await repository.addEntry({
+    battleId,
+    content: normalized.content,
+    optionId: battle.battleType === "OPTION" ? participation.optionId : null,
+    submittedByUserId: user.id,
+    expectedBattleStatus: BattleStatus.OPEN
+  });
+
+  if (!entry) {
+    throw new ApiError(409, "BATTLE_NOT_OPEN", "Only open battles accept comments");
+  }
+
+  await repository.attachEntryToParticipation(participation.id, entry.id);
+  return toFeedComment(repository, entry, user.id);
+}
+
+async function evaluateFeedBattle(repository, aiJudgeService, settlementService, config, battleId) {
+  const battle = await getBattleOrThrow(repository, battleId);
+  if (battle.status === BattleStatus.OPEN) {
+    await closeBattle(repository, battleId);
+  }
+
+  const current = await getBattleOrThrow(repository, battleId);
+  if (current.status === BattleStatus.SETTLED) {
+    const result = await getResult(repository, battleId);
+    return {
+      ...result,
+      feedResult: toFeedResult(result)
+    };
+  }
+
+  const result = await judgeBattle(repository, aiJudgeService, settlementService, config, battleId);
+  return {
+    ...result,
+    feedResult: toFeedResult(result)
+  };
+}
+
+async function claimFeedReward(repository, battleId, userId) {
+  const user = await repository.getOrCreateUser(userId);
+  const result = await getResult(repository, battleId);
+  const winnerEntryId = result.verdict?.winnerEntryId;
+  const winnerOptionId = result.verdict?.winnerOptionId;
+  if (!winnerEntryId && !winnerOptionId) {
+    throw new ApiError(409, "REWARD_NOT_AVAILABLE", "No reward winner is available");
+  }
+
+  const participation = await repository.getParticipation(battleId, user.id);
+  if (!participation) {
+    throw new ApiError(409, "PARTICIPATION_REQUIRED", "Participation is required to claim reward");
+  }
+  if (participation.rewardClaimedAt) {
+    throw new ApiError(409, "REWARD_ALREADY_CLAIMED", "Reward was already claimed");
+  }
+
+  if (result.verdict?.winnerType === "OPTION" && winnerOptionId) {
+    if (participation.optionId !== winnerOptionId) {
+      throw new ApiError(403, "NOT_REWARD_WINNER", "Only participants on the winning option can claim this reward");
+    }
+  } else if (winnerEntryId) {
+    const winningEntry = await repository.getEntry(winnerEntryId);
+    if (!winningEntry || winningEntry.submittedByUserId !== user.id) {
+      throw new ApiError(403, "NOT_REWARD_WINNER", "Only the winning participant can claim this reward");
+    }
+  }
+
+  let rewardResult;
+  try {
+    rewardResult = await repository.claimParticipationReward({
+      participationId: participation.id,
+      userId: user.id,
+      amount: DEFAULT_REWARD_CREDITS,
+      claimedAt: new Date().toISOString(),
+      metadataJson: { battleId, winnerEntryId, winnerOptionId }
+    });
+  } catch (error) {
+    if (error.code === "REWARD_ALREADY_CLAIMED") {
+      throw new ApiError(409, "REWARD_ALREADY_CLAIMED", "Reward was already claimed");
+    }
+    throw error;
+  }
+  if (!rewardResult) {
+    throw new ApiError(409, "REWARD_ALREADY_CLAIMED", "Reward was already claimed");
+  }
+
+  await repository.createNotification?.({
+    userId: user.id,
+    battleId,
+    title: "크레딧이 지급되었습니다!",
+    body: `우승 보상 ${DEFAULT_REWARD_CREDITS}크레딧이 지급되었습니다.`
+  });
+
+  return {
+    rewardCredits: DEFAULT_REWARD_CREDITS,
+    balance: rewardResult.transaction.balanceAfter,
+    transaction: rewardResult.transaction
+  };
+}
+
+async function listNotifications(repository, userId) {
+  const user = await repository.getOrCreateUser(userId);
+  return repository.listNotificationsByUser?.(user.id) ?? [];
+}
+
+async function shareBattle(repository, battleId, input, userId) {
+  await getBattleOrThrow(repository, battleId);
+  const normalized = validateBattleShareRequest(input);
+  const user = await repository.getOrCreateUser(userId);
+  const share = await repository.createBattleShare({
+    battleId,
+    userId: user.id,
+    channel: normalized.channel
+  });
+  return {
+    share,
+    shareCount: await repository.getBattleShareCount(battleId)
+  };
+}
+
 async function updateUserProfile(repository, input, userId) {
   const normalized = validateUpdateUserProfileRequest(input);
   const user = await repository.getOrCreateUser(userId);
@@ -113,6 +418,13 @@ async function updateUserProfile(repository, input, userId) {
     const existing = await repository.getUserByNickname(normalized.nickname);
     if (existing && existing.id !== user.id) {
       throw new ApiError(409, "NICKNAME_TAKEN", "Nickname is already taken");
+    }
+  }
+
+  if (normalized.walletAddress && repository.getUserByWalletAddressNormalized) {
+    const existing = await repository.getUserByWalletAddressNormalized(normalized.walletAddress.toLowerCase());
+    if (existing && existing.id !== user.id) {
+      throw new ApiError(409, "WALLET_ALREADY_LINKED", "Wallet is already linked to another user");
     }
   }
 
@@ -126,12 +438,183 @@ async function updateUserProfile(repository, input, userId) {
     if (error.code === "NICKNAME_TAKEN") {
       throw new ApiError(409, "NICKNAME_TAKEN", "Nickname is already taken");
     }
+    if (error.code === "WALLET_ALREADY_LINKED") {
+      throw new ApiError(409, "WALLET_ALREADY_LINKED", "Wallet is already linked to another user");
+    }
     throw error;
   }
 }
 
+async function createWalletChallenge(repository, input, userId) {
+  const normalized = validateWalletChallengeRequest(input);
+  const user = await repository.getOrCreateUser(userId);
+  const issuedAt = new Date();
+  const expiresAt = new Date(issuedAt.getTime() + WALLET_CHALLENGE_TTL_MS);
+  const nonce = randomBytes(16).toString("hex");
+  const message = buildWalletChallengeMessage({
+    walletAddress: normalized.walletAddress,
+    nonce,
+    issuedAt: issuedAt.toISOString(),
+    expiresAt: expiresAt.toISOString()
+  });
+
+  const challenge = await repository.createWalletChallenge({
+    userId: user.id,
+    walletAddress: normalized.walletAddress,
+    walletAddressNormalized: normalized.walletAddressNormalized,
+    walletProvider: normalized.walletProvider,
+    nonce,
+    message,
+    issuedAt: issuedAt.toISOString(),
+    expiresAt: expiresAt.toISOString()
+  });
+
+  return {
+    challenge: publicWalletChallenge(challenge)
+  };
+}
+
+async function verifyWallet(repository, input, userId) {
+  const normalized = validateWalletVerifyRequest(input);
+  const challenge = await repository.getWalletChallenge(normalized.challengeId);
+  if (!challenge) {
+    throw new ApiError(404, "WALLET_CHALLENGE_NOT_FOUND", "Wallet challenge not found");
+  }
+  if (challenge.usedAt) {
+    throw new ApiError(409, "WALLET_CHALLENGE_USED", "Wallet challenge was already used");
+  }
+  if (new Date(challenge.expiresAt).getTime() < Date.now()) {
+    throw new ApiError(409, "WALLET_CHALLENGE_EXPIRED", "Wallet challenge expired");
+  }
+  if (challenge.walletAddressNormalized !== normalized.walletAddressNormalized) {
+    throw new ApiError(400, "WALLET_CHALLENGE_MISMATCH", "walletAddress does not match the challenge");
+  }
+
+  if (!(await verifyWalletSignature(challenge.message, normalized.walletAddress, normalized.signature))) {
+    throw new ApiError(401, "INVALID_WALLET_SIGNATURE", "Wallet signature could not be verified");
+  }
+
+  const user = await repository.getOrCreateUser(challenge.userId || userId);
+  const existing = await repository.getUserByWalletAddressNormalized?.(normalized.walletAddressNormalized);
+  if (existing && existing.id !== user.id) {
+    throw new ApiError(409, "WALLET_ALREADY_LINKED", "Wallet is already linked to another user");
+  }
+
+  let linked;
+  try {
+    linked = await repository.linkWalletToUser(user.id, {
+      walletAddress: normalized.walletAddress,
+      walletAddressNormalized: normalized.walletAddressNormalized,
+      walletProvider: normalized.walletProvider || challenge.walletProvider
+    });
+  } catch (error) {
+    if (error.code === "WALLET_ALREADY_LINKED") {
+      throw new ApiError(409, "WALLET_ALREADY_LINKED", "Wallet is already linked to another user");
+    }
+    throw error;
+  }
+
+  const usedChallenge = await repository.markWalletChallengeUsed(challenge.id, new Date().toISOString());
+  if (!usedChallenge) {
+    throw new ApiError(409, "WALLET_CHALLENGE_USED", "Wallet challenge was already used");
+  }
+
+  return {
+    user: linked,
+    wallet: {
+      walletAddress: normalized.walletAddress,
+      walletProvider: normalized.walletProvider || challenge.walletProvider || null
+    }
+  };
+}
+
+async function getCredits(repository, userId) {
+  const user = await repository.getOrCreateUser(userId);
+  return {
+    balance: user.creditBalance ?? 0,
+    transactions: await repository.listCreditTransactionsByUser(user.id)
+  };
+}
+
+async function chargeDemoCredits(repository, input, userId) {
+  const normalized = validateDemoCreditChargeRequest(input);
+  const user = await repository.getOrCreateUser(userId);
+  const transaction = await repository.addCreditTransaction(user.id, {
+    amount: normalized.credits,
+    reason: "DEMO_CHARGE",
+    metadataJson: {
+      priceMnt: normalized.priceMnt
+    }
+  });
+
+  if (!transaction) {
+    throw new ApiError(404, "USER_NOT_FOUND", "User not found");
+  }
+
+  return {
+    balance: transaction.balanceAfter,
+    transaction
+  };
+}
+
+async function listMyBattles(repository, userId) {
+  const user = await repository.getOrCreateUser(userId);
+  return addBattleStats(repository, await repository.listBattlesByUser(user.id));
+}
+
+async function listMyComments(repository, userId) {
+  const user = await repository.getOrCreateUser(userId);
+  const [socialComments, feedEntries] = await Promise.all([
+    repository.listSocialCommentsByUser(user.id),
+    repository.listEntriesByUser?.(user.id) ?? []
+  ]);
+
+  return [
+    ...socialComments.map((comment) => ({
+      kind: "SOCIAL_COMMENT",
+      ...comment
+    })),
+    ...feedEntries.map((entry) => ({
+      kind: "FEED_COMMENT",
+      id: entry.id,
+      battleId: entry.battleId,
+      targetEntryId: null,
+      authorUserId: entry.submittedByUserId,
+      content: entry.content,
+      createdAt: entry.createdAt,
+      battle: entry.battle ?? null,
+      entry
+    }))
+  ].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+async function listMyLikes(repository, userId) {
+  const user = await repository.getOrCreateUser(userId);
+  const [entryLikes, battleLikes] = await Promise.all([
+    repository.listEntryLikesByUser(user.id),
+    repository.listBattleLikesByUser?.(user.id) ?? []
+  ]);
+
+  return [
+    ...entryLikes.map((like) => ({
+      kind: "ENTRY_LIKE",
+      ...like
+    })),
+    ...battleLikes.map((like) => ({
+      kind: "BATTLE_LIKE",
+      ...like,
+      entry: null
+    }))
+  ].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
 async function closeBattle(repository, battleId) {
   const battle = await getBattleOrThrow(repository, battleId);
+  const entries = await repository.listEntriesByBattle(battleId);
+  if (entries.length === 0) {
+    throw new ApiError(409, "BATTLE_CANNOT_CLOSE", "Cannot close a battle without entries");
+  }
+
   try {
     assertCanCloseBattle(battle);
     assertBattleStatusTransition(battle.status, BattleStatus.CLOSED);
@@ -310,4 +793,184 @@ async function getBattleOrThrow(repository, battleId) {
     throw new ApiError(404, "BATTLE_NOT_FOUND", "Battle not found");
   }
   return battle;
+}
+
+async function addBattleStats(repository, battles) {
+  return Promise.all(battles.map((battle) => addOneBattleStats(repository, battle)));
+}
+
+async function toFeedBattle(repository, battle, userId) {
+  const [entries, stats, isBattleLiked, participation] = await Promise.all([
+    repository.listEntriesByBattle(battle.id),
+    repository.getBattleStats?.(battle.id) ?? {},
+    repository.getBattleLikeState?.(battle.id, userId) ?? false,
+    repository.getParticipation?.(battle.id, userId) ?? null
+  ]);
+  const comments = await Promise.all(entries.map((entry) => toFeedComment(repository, entry, userId)));
+
+  return {
+    id: battle.id,
+    type: battle.battleType,
+    author: battle.isAnonymous ? "익명 우기미" : battle.createdByUserId,
+    title: battle.title || battle.prompt || "새로운 우기기",
+    description: battle.description || battle.prompt || "",
+    likeCount: stats.battleLikeCount ?? 0,
+    status: getFeedStatus(battle),
+    recommendedScore: battle.recommendedScore ?? 50,
+    createdAt: battle.createdAt,
+    deadline: formatFeedDeadline(battle.deadlineAt),
+    createdByMe: battle.createdByUserId === userId,
+    imageUrl: battle.imageUrl || undefined,
+    options: (battle.options || []).map((option) => option.text),
+    comments,
+    stats,
+    isBattleLiked,
+    isParticipated: Boolean(participation),
+    selectedOption: getOptionTextById(battle, participation?.optionId) ?? null,
+    selectedOptionId: participation?.optionId ?? null
+  };
+}
+
+async function toFeedComment(repository, entry, userId) {
+  const stats = await repository.getEntryStats?.(entry.id, userId);
+  return {
+    id: entry.id,
+    entryId: entry.id,
+    author: entry.submittedByUserId,
+    text: entry.content,
+    likeCount: stats?.likeCount ?? 0,
+    likedByMe: stats?.likedByMe ?? false,
+    optionId: entry.optionId || null,
+    createdAt: entry.createdAt
+  };
+}
+
+function toFeedResult(result) {
+  const verdict = result.verdict ?? {};
+  const entries = result.entries ?? [];
+  const winnerEntry = verdict.winnerEntryId
+    ? entries.find((entry) => entry.id === verdict.winnerEntryId)
+    : null;
+  const winnerOption = verdict.winnerOptionId
+    ? result.battle.options?.find((option) => option.id === verdict.winnerOptionId)
+    : null;
+  const optionResults = Array.isArray(verdict.optionScores)
+    ? verdict.optionScores.map((item) => {
+        const option = result.battle.options?.find((candidate) => candidate.id === item.optionId);
+        return {
+          label: option?.text ?? item.optionId,
+          percentage: Math.round(Number(item.score) || 0)
+        };
+      })
+    : undefined;
+
+  return {
+    winnerUserId: winnerEntry?.submittedByUserId ?? null,
+    winnerEntryId: winnerEntry?.id ?? null,
+    winnerOptionId: winnerOption?.id ?? null,
+    winnerName:
+      verdict.winnerType === "OPTION"
+        ? winnerOption?.text ?? "우승 진영"
+        : winnerEntry?.submittedByUserId ?? winnerOption?.text ?? "우승자",
+    winnerDetail:
+      verdict.winnerType === "OPTION"
+        ? winnerOption
+          ? `${winnerOption.text} 진영`
+          : verdict.verdictText ?? ""
+        : winnerEntry?.content ?? verdict.verdictText ?? "",
+    rewardCredits: DEFAULT_REWARD_CREDITS,
+    verdictLines: [verdict.verdictTitle, verdict.verdictText, verdict.shareSummary].filter(Boolean),
+    optionResults
+  };
+}
+
+function getFeedStatus(battle) {
+  if (battle.status === BattleStatus.JUDGING) return "EVALUATING";
+  if (battle.status === BattleStatus.SETTLED) return "COMPLETED";
+  if (battle.status === BattleStatus.FAILED) return "CLOSED";
+  if (battle.status === BattleStatus.OPEN && battle.deadlineAt) {
+    const deadline = new Date(battle.deadlineAt);
+    if (Number.isFinite(deadline.getTime()) && deadline.getTime() <= Date.now()) {
+      return "EXPIRED";
+    }
+  }
+  return battle.status;
+}
+
+function formatFeedDeadline(deadlineAt) {
+  if (!deadlineAt) {
+    return "";
+  }
+  const date = new Date(deadlineAt);
+  if (!Number.isFinite(date.getTime())) {
+    return "";
+  }
+  const pad = (value) => String(value).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function getOptionTextById(battle, optionId) {
+  if (!optionId) {
+    return null;
+  }
+  return battle.options?.find((option) => option.id === optionId)?.text ?? null;
+}
+
+async function addOneBattleStats(repository, battle) {
+  if (!repository.getBattleStats) {
+    return battle;
+  }
+  return {
+    ...battle,
+    stats: await repository.getBattleStats(battle.id)
+  };
+}
+
+async function addEntryStats(repository, entries, userId) {
+  if (!repository.getEntryStats) {
+    return entries;
+  }
+  const user = userId ? await repository.getOrCreateUser(userId) : null;
+  return Promise.all(
+    entries.map(async (entry) => ({
+      ...entry,
+      stats: await repository.getEntryStats(entry.id, user?.id)
+    }))
+  );
+}
+
+function buildWalletChallengeMessage({ walletAddress, nonce, issuedAt, expiresAt }) {
+  return [
+    "MGG wallet connection",
+    "",
+    `Address: ${walletAddress}`,
+    `Nonce: ${nonce}`,
+    `Issued At: ${issuedAt}`,
+    `Expires At: ${expiresAt}`
+  ].join("\n");
+}
+
+function publicWalletChallenge(challenge) {
+  return {
+    id: challenge.id,
+    walletAddress: challenge.walletAddress,
+    walletProvider: challenge.walletProvider,
+    message: challenge.message,
+    nonce: challenge.nonce,
+    issuedAt: challenge.issuedAt,
+    expiresAt: challenge.expiresAt
+  };
+}
+
+async function verifyWalletSignature(message, walletAddress, signature) {
+  try {
+    const { verifyMessage } = await import("viem");
+    return verifyMessage({
+      address: walletAddress,
+      message,
+      signature
+    });
+  } catch {
+    return false;
+  }
 }

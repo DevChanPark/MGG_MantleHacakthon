@@ -35,12 +35,53 @@ export function createApiApp({ repository, config, aiJudgeService, settlementSer
         });
       }
 
+      if (method === "POST" && path === "/api/auth/wallet/challenge") {
+        return created(await battleService.createWalletChallenge(request.body, userId));
+      }
+
+      if (method === "POST" && path === "/api/auth/wallet/verify") {
+        return ok(await battleService.verifyWallet(request.body, userId));
+      }
+
       if (method === "GET" && path === "/api/users/me") {
         return ok(await battleService.getOrCreateUser(userId));
       }
 
       if (method === "PATCH" && path === "/api/users/me") {
         return ok(await battleService.updateUserProfile(request.body, userId));
+      }
+
+      if (method === "GET" && path === "/api/users/me/credits") {
+        return ok(await battleService.getCredits(userId));
+      }
+
+      if (method === "POST" && path === "/api/users/me/credits/demo-charge") {
+        return created(await battleService.chargeDemoCredits(request.body, userId));
+      }
+
+      if (method === "GET" && path === "/api/users/me/battles") {
+        return ok({ battles: await battleService.listMyBattles(userId) });
+      }
+
+      if (method === "GET" && path === "/api/users/me/comments") {
+        return ok({ comments: await battleService.listMyComments(userId) });
+      }
+
+      if (method === "GET" && path === "/api/users/me/likes") {
+        return ok({ likes: await battleService.listMyLikes(userId) });
+      }
+
+      if (method === "GET" && path === "/api/users/me/notifications") {
+        return ok({ notifications: await battleService.listNotifications(userId) });
+      }
+
+      if (method === "GET" && path === "/api/feed/battles") {
+        return ok({ battles: await battleService.listFeedBattles(userId) });
+      }
+
+      if (method === "POST" && path === "/api/feed/battles") {
+        const battle = await battleService.createBattle(request.body, userId);
+        return created({ battle: await battleService.getFeedBattle(battle.id, userId) });
       }
 
       if (method === "GET" && path === "/api/battles") {
@@ -59,17 +100,61 @@ export function createApiApp({ repository, config, aiJudgeService, settlementSer
         return created({ upload: await resolvedUploadService.uploadImage(request.body) });
       }
 
+      const entryLikeMatch = path.match(/^\/api\/entries\/([^/]+)\/like$/);
+      if (entryLikeMatch) {
+        const entryId = safeDecodePathComponent(entryLikeMatch[1]);
+        if (method === "POST") {
+          return ok(await battleService.setEntryLike(entryId, userId, true));
+        }
+        if (method === "DELETE") {
+          return ok(await battleService.setEntryLike(entryId, userId, false));
+        }
+      }
+
+      const feedCommentLikeMatch = path.match(/^\/api\/feed\/comments\/([^/]+)\/like$/);
+      if (feedCommentLikeMatch) {
+        const entryId = safeDecodePathComponent(feedCommentLikeMatch[1]);
+        if (method === "POST") {
+          return ok(await battleService.setEntryLike(entryId, userId, true));
+        }
+        if (method === "DELETE") {
+          return ok(await battleService.setEntryLike(entryId, userId, false));
+        }
+      }
+
+      const feedBattleMatch = path.match(/^\/api\/feed\/battles\/([^/]+)(?:\/(.+))?$/);
+      if (feedBattleMatch) {
+        const battleId = safeDecodePathComponent(feedBattleMatch[1]);
+        const action = feedBattleMatch[2];
+
+        if (method === "GET" && !action) {
+          return ok({ battle: await battleService.getFeedBattle(battleId, userId) });
+        }
+
+        if (method === "POST" && action === "participations") {
+          return created(await battleService.participateInBattle(battleId, request.body, userId));
+        }
+
+        if (method === "POST" && action === "comments") {
+          return created({ comment: await battleService.createFeedComment(battleId, request.body, userId) });
+        }
+
+        if (method === "POST" && action === "evaluate") {
+          return ok(await battleService.evaluateFeedBattle(battleId));
+        }
+
+        if (method === "POST" && action === "rewards/claim") {
+          return created(await battleService.claimFeedReward(battleId, userId));
+        }
+      }
+
       const battleMatch = path.match(/^\/api\/battles\/([^/]+)(?:\/([^/]+))?$/);
       if (battleMatch) {
         const battleId = safeDecodePathComponent(battleMatch[1]);
         const action = battleMatch[2];
 
         if (method === "GET" && !action) {
-          const [battle, entries] = await Promise.all([
-            battleService.getBattle(battleId),
-            repository.listEntriesByBattle(battleId)
-          ]);
-          return ok({ battle, entries });
+          return ok(await battleService.getBattleDetail(battleId, userId));
         }
 
         if (method === "POST" && action === "entries") {
@@ -78,6 +163,27 @@ export function createApiApp({ repository, config, aiJudgeService, settlementSer
 
         if (method === "POST" && action === "reports") {
           return created({ report: await battleService.createReport(battleId, request.body, userId) });
+        }
+
+        if (method === "GET" && action === "comments") {
+          return ok({ comments: await battleService.listSocialComments(battleId) });
+        }
+
+        if (method === "POST" && action === "comments") {
+          return created({ comment: await battleService.createSocialComment(battleId, request.body, userId) });
+        }
+
+        if (method === "POST" && action === "shares") {
+          return created(await battleService.shareBattle(battleId, request.body, userId));
+        }
+
+        if (action === "like") {
+          if (method === "POST") {
+            return ok(await battleService.setBattleLike(battleId, userId, true));
+          }
+          if (method === "DELETE") {
+            return ok(await battleService.setBattleLike(battleId, userId, false));
+          }
         }
 
         if (method === "POST" && action === "close") {
@@ -117,7 +223,7 @@ export function createApiApp({ repository, config, aiJudgeService, settlementSer
     res.setHeader("content-type", "application/json; charset=utf-8");
     res.setHeader("access-control-allow-origin", config.corsOrigin);
     res.setHeader("access-control-allow-headers", "content-type, x-user-id");
-    res.setHeader("access-control-allow-methods", "GET,POST,PATCH,OPTIONS");
+    res.setHeader("access-control-allow-methods", "GET,POST,PATCH,DELETE,OPTIONS");
     res.end(JSON.stringify(result.body));
   }
 

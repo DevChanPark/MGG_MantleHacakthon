@@ -10,19 +10,21 @@ the frontend branch was read but not modified.
 
 1. App startup/profile hydration: `GET /api/users/me`
 2. Signup profile completion/profile edit: `PATCH /api/users/me`
-3. Battle list/home data: `GET /api/battles`
-4. Battle detail: `GET /api/battles/:battleId`
-5. Entry submission: `POST /api/battles/:battleId/entries`
-6. Battle close: `POST /api/battles/:battleId/close`
-7. Backend judging: `POST /api/battles/:battleId/judge`
-8. Result screen: `GET /api/battles/:battleId/result`
-9. Archive/profile settled list: `GET /api/archive`
+3. gAon battle list/home data: `GET /api/feed/battles`
+4. gAon create battle: `POST /api/feed/battles`
+5. gAon battle detail: `GET /api/feed/battles/:battleId`
+6. Participation: `POST /api/feed/battles/:battleId/participations`
+7. Judged feed comment: `POST /api/feed/battles/:battleId/comments`
+8. Demo evaluation: `POST /api/feed/battles/:battleId/evaluate`
+9. Reward claim: `POST /api/feed/battles/:battleId/rewards/claim`
+10. Notifications: `GET /api/users/me/notifications`
 
 ## MVP Decisions
 
 - Demo identity is fixed to `x-user-id: demo-seed-user` for frontend API calls.
-- Keep credits, purchase/payment flows, likes, share counts, social comments,
-  and profile comment/like tabs mocked or disabled for MVP.
+- Use backend demo APIs for credits, likes, share counts, social comments, and
+  current-account profile comment/like tabs.
+- Keep real payment approval/settlement and public profile social tabs deferred.
 - Use the backend demo dataset for list/detail/result screens before adding a
   full battle creation UX.
 - If close/judge controls are needed for the demo, expose them as demo-only
@@ -31,6 +33,9 @@ the frontend branch was read but not modified.
   Mantle settlement itself.
 - Treat `JUDGING` primarily as a loading state during the judge request. The
   backend transitions `CLOSED -> JUDGING -> SETTLED` inside one judge call.
+- For the latest gAon feed UI, prefer `/api/feed/*` endpoints because they map
+  backend statuses to `OPEN`, `CLOSED`, `EVALUATING`, `COMPLETED`, and
+  `EXPIRED`.
 
 ## Screen Data Map
 
@@ -47,16 +52,19 @@ Future navigation targets:
 
 ### Signup Wallet
 
-Backend data needed now:
+Endpoints:
 
-- none before wallet provider is selected
+- `POST /api/auth/wallet/challenge`
+- `POST /api/auth/wallet/verify`
 
 Frontend-held input:
 
 - `walletProvider`: `MetaMask`, `OKX Wallet`, or `WalletConnect`
 - `walletAddress`: wallet address from the wallet connection flow
 
-Send to backend on the profile step with `PATCH /api/users/me`.
+Call challenge, ask the wallet to sign `challenge.message`, then verify the
+signature. Do not send wallet fields through `PATCH /api/users/me`; that route
+rejects wallet metadata so the signature flow remains the source of truth.
 
 ### Signup Profile
 
@@ -70,9 +78,7 @@ Payload:
 {
   "nickname": "demo-captain",
   "intro": "Turns unlikely arguments into demo data.",
-  "avatarUrl": "/uploads/profile.gif",
-  "walletProvider": "MetaMask",
-  "walletAddress": "0x1111111111111111111111111111111111111111"
+  "avatarUrl": "/uploads/profile.gif"
 }
 ```
 
@@ -86,14 +92,18 @@ Notes:
 
 - Profile image upload can use `POST /api/uploads/image` first, then pass the
   returned `upload.imageUrl` as `avatarUrl`.
-- Wallet fields are metadata only. Do not put wallet keys or backend provider
-  secrets in the frontend.
+- Wallet fields must be linked through the challenge/verify flow. Do not put
+  wallet keys or backend provider secrets in the frontend.
 
 ### Profile Summary
 
 Endpoint:
 
 - `GET /api/users/me`
+- `GET /api/users/me/credits`
+- `GET /api/users/me/battles`
+- `GET /api/users/me/comments`
+- `GET /api/users/me/likes`
 
 Fields:
 
@@ -103,6 +113,11 @@ Fields:
 - `avatarUrl`
 - `walletProvider`
 - `walletAddress`
+- `creditBalance`
+
+`/comments` includes social comments plus gAon feed comments created after
+participation. `/likes` includes liked entries/feed comments plus liked battle
+cards.
 
 Fallback display:
 
@@ -114,7 +129,9 @@ Fallback display:
 
 Endpoint:
 
+- `GET /api/feed/battles`
 - `GET /api/battles`
+- `GET /api/users/me/battles`
 
 Fields:
 
@@ -127,6 +144,10 @@ Fields:
 - `battle.createdAt`
 - `battle.closedAt`
 - `battle.settledAt`
+- `battle.stats.entryCount`
+- `battle.stats.commentCount`
+- `battle.stats.likeCount`
+- `battle.stats.shareCount`
 
 Frontend filters:
 
@@ -140,8 +161,18 @@ Frontend filters:
 
 Endpoint:
 
+- `GET /api/feed/battles/:battleId`
+- `POST /api/feed/battles/:battleId/participations`
+- `POST /api/feed/battles/:battleId/comments`
+- `POST /api/feed/comments/:entryId/like`
+- `DELETE /api/feed/comments/:entryId/like`
 - `GET /api/battles/:battleId`
 - `POST /api/battles/:battleId/entries`
+- `GET /api/battles/:battleId/comments`
+- `POST /api/battles/:battleId/comments`
+- `POST /api/entries/:entryId/like`
+- `DELETE /api/entries/:entryId/like`
+- `POST /api/battles/:battleId/shares`
 
 Entry payloads:
 
@@ -162,6 +193,17 @@ State behavior:
 
 - enable entry form only when `battle.status === "OPEN"`
 - disable entry form for `CLOSED`, `JUDGING`, `SETTLED`, and `FAILED`
+- render social comments separately from battle entries; social comments are not
+  judged by AI.
+- In gAon feed screens, comments are judged entries and require participation
+  first.
+- `POST /api/feed/battles/:battleId/participations` returns `balance`,
+  `alreadyParticipated`, and `selectedOption`.
+- `POST /api/feed/battles/:battleId/evaluate` returns the normal settled result
+  plus `feedResult` for the winner modal.
+- `POST /api/feed/battles/:battleId/rewards/claim` can reward the winning entry
+  owner for TEXT/IMAGE battles or participants on the winning option for OPTION
+  battles.
 
 ### Result And Share
 
@@ -224,12 +266,10 @@ Use for:
 
 Do not create backend data models for these until separately approved:
 
-- credits/current balance
-- credit purchase packages/history/payment approval
-- likes
-- share counts
-- social comments separate from battle entries
-- profile tabs for comments and likes
+- real credit payment approval/settlement
+- real-money credit purchase history
+- public profile comment/like tabs for other users
+- external share destination integrations
 
 ## Frontend Connection Points
 
@@ -247,15 +287,15 @@ only; no frontend files were changed.
 
 - Lines 394-413 render login/signup actions.
 - Signup currently routes to `#signup`; no backend data is needed before that.
-- Login modal wallet choices can later hydrate the profile with
-  `GET /api/users/me` after the chosen wallet flow completes.
+- Login modal wallet choices should call the wallet challenge/verify flow, then
+  hydrate the profile with `GET /api/users/me`.
 
 ### `Frontend_b/src/screens/SignupWalletScreen.tsx`
 
 - Lines 6-20 define wallet provider choices.
 - Lines 25-26 route to `#signup-profile`.
 - Preserve the selected provider/address in frontend state or route-level state
-  and submit it from the profile step via `PATCH /api/users/me`.
+  long enough to call wallet challenge/verify before or during signup.
 
 ### `Frontend_b/src/screens/SignupProfileScreen.tsx`
 
@@ -286,10 +326,12 @@ Recommended API wiring:
 - Replace profile summary copy/image with `GET /api/users/me`.
 - Replace battle filter/post list data with `GET /api/battles` for MVP demo
   lists.
-- Use `GET /api/archive` for settled/archive data until a user-scoped endpoint
-  is approved.
-- Keep credits, purchases, likes, share counts, social comments, and profile
-  comment/like tabs mocked or disabled for MVP.
+- Use `GET /api/users/me/battles`, `GET /api/users/me/comments`, and
+  `GET /api/users/me/likes` for current-account profile tabs.
+- Use `GET /api/users/me/credits` and `POST /api/users/me/credits/demo-charge`
+  for the demo credit panel.
+- Use `GET /api/archive` for settled/archive data where a global archive is
+  desired.
 
 ## Guardrails
 

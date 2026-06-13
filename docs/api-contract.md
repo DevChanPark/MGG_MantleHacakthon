@@ -57,28 +57,213 @@ User response:
   "avatarUrl": null,
   "walletAddress": null,
   "walletProvider": null,
+  "creditBalance": 0,
   "createdAt": "2026-06-09T00:00:00.000Z"
 }
 ```
 
 ## `PATCH /api/users/me`
 
-Updates MVP profile metadata for the current demo user. Wallet fields are
-profile metadata only; the backend still owns real AI execution and Mantle
-settlement transactions.
+Updates MVP profile metadata for the current demo user. Wallet fields are not
+accepted here; connect wallets through the wallet challenge/verify API.
 
 ```json
 {
   "nickname": "demo-captain",
   "intro": "Turns unlikely arguments into demo data.",
-  "avatarUrl": "/uploads/profile.gif",
-  "walletProvider": "MetaMask",
-  "walletAddress": "0x1111111111111111111111111111111111111111"
+  "avatarUrl": "/uploads/profile.gif"
 }
 ```
 
-`nickname` must be unique and not reserved when provided. `walletAddress` must
-be an EVM address when provided.
+`nickname` must be unique and not reserved when provided.
+
+## Wallet Connection API
+
+The frontend can connect a wallet through a challenge/signature flow. For the
+MVP demo, this links wallet metadata to the current `x-user-id` user.
+
+### `POST /api/auth/wallet/challenge`
+
+```json
+{
+  "walletAddress": "0x1111111111111111111111111111111111111111",
+  "walletProvider": "MetaMask"
+}
+```
+
+Returns a message that the frontend asks the wallet to sign:
+
+```json
+{
+  "challenge": {
+    "id": "challenge-id",
+    "walletAddress": "0x1111111111111111111111111111111111111111",
+    "walletProvider": "MetaMask",
+    "message": "MGG wallet connection\n...",
+    "nonce": "random-nonce",
+    "issuedAt": "2026-06-09T00:00:00.000Z",
+    "expiresAt": "2026-06-09T00:05:00.000Z"
+  }
+}
+```
+
+### `POST /api/auth/wallet/verify`
+
+```json
+{
+  "challengeId": "challenge-id",
+  "walletAddress": "0x1111111111111111111111111111111111111111",
+  "walletProvider": "MetaMask",
+  "signature": "0x..."
+}
+```
+
+Returns the linked user and wallet summary. Reused, expired, mismatched, or
+invalid signatures are rejected.
+
+## Demo Credits
+
+Credits are demo ledger data only. They do not create real payment, reward,
+entry fee, or gambling flows.
+
+### `GET /api/users/me/credits`
+
+Returns the current demo credit balance and transaction history.
+
+### `POST /api/users/me/credits/demo-charge`
+
+```json
+{
+  "credits": 30,
+  "priceMnt": 30
+}
+```
+
+Returns the new balance and credit transaction.
+
+## Profile-Owned Lists
+
+These endpoints power the profile tabs for the current account only:
+
+- `GET /api/users/me/battles`
+- `GET /api/users/me/comments`: social comments plus gAon feed comments created
+  after participation.
+- `GET /api/users/me/likes`: liked entries/feed comments plus liked battle
+  cards.
+- `GET /api/users/me/notifications`
+
+## gAon Feed API
+
+The latest `feature/frontend-gAon` screens can use these feed-shaped endpoints
+instead of adapting the lower-level battle DTOs directly.
+
+### `GET /api/feed/battles`
+
+Returns `FeedBattle` items shaped for `HomeFeed` / `BattleCard`:
+
+```json
+{
+  "battles": [
+    {
+      "id": "battle-id",
+      "type": "TEXT_OPEN",
+      "author": "demo-user",
+      "title": "gAon feed battle",
+      "description": "Battle body",
+      "likeCount": 1,
+      "status": "OPEN",
+      "recommendedScore": 50,
+      "createdAt": "2026-06-09T00:00:00.000Z",
+      "deadline": "2026-12-31 23:59",
+      "createdByMe": true,
+      "comments": [
+        {
+          "id": "entry-id",
+          "entryId": "entry-id",
+          "author": "demo-user",
+          "text": "My judged feed comment.",
+          "likeCount": 1,
+          "likedByMe": true
+        }
+      ],
+      "isBattleLiked": true,
+      "isParticipated": true,
+      "selectedOption": null,
+      "selectedOptionId": null
+    }
+  ]
+}
+```
+
+Status mapping:
+
+- backend `JUDGING` -> feed `EVALUATING`
+- backend `SETTLED` -> feed `COMPLETED`
+- expired open battles with `deadlineAt` -> feed `EXPIRED`
+
+### `POST /api/feed/battles`
+
+Creates a battle from the gAon create form. Accepts `title`, `content`,
+`deadline`, `isAnonymous`, `options`, and `imageUrl` in addition to the existing
+MVP battle fields.
+
+### `GET /api/feed/battles/:battleId`
+
+Returns one feed-shaped battle.
+
+### `POST /api/feed/battles/:battleId/participations`
+
+Spends the demo participation cost, currently 3 credits, and records the current
+user's participation. `OPTION` battles require `optionId` or `optionText`.
+The response includes `balance`, `alreadyParticipated`, and `selectedOption`.
+
+### `POST /api/feed/battles/:battleId/comments`
+
+Adds a judged feed comment. This creates a backend entry, so it is included in
+AI judging. The user must participate first.
+
+### `POST /api/feed/comments/:entryId/like`
+
+Likes one feed comment/entry.
+
+### `DELETE /api/feed/comments/:entryId/like`
+
+Removes the current user's like from one feed comment/entry.
+
+### `POST /api/battles/:battleId/like`
+
+Likes a battle card.
+
+### `DELETE /api/battles/:battleId/like`
+
+Removes the current user's battle like.
+
+### `POST /api/feed/battles/:battleId/evaluate`
+
+Closes an open battle if needed, runs backend AI judging and Mantle settlement,
+and returns the settled result. The original result fields remain present, and
+the response also includes `feedResult` for the gAon winner modal:
+
+```json
+{
+  "feedResult": {
+    "winnerUserId": "user-id-or-null",
+    "winnerEntryId": "entry-id-or-null",
+    "winnerOptionId": "option-id-or-null",
+    "winnerName": "Pour",
+    "winnerDetail": "Pour 진영",
+    "rewardCredits": 30,
+    "verdictLines": ["AI verdict title", "AI verdict text"],
+    "optionResults": [{ "label": "Pour", "percentage": 88 }]
+  }
+}
+```
+
+### `POST /api/feed/battles/:battleId/rewards/claim`
+
+Awards the demo winner reward, currently 30 credits, when the current user owns
+the winning entry. For `OPTION` battles, participants on the winning option can
+claim. Rewards are claimable once.
 
 ## `GET /api/battles`
 
@@ -123,6 +308,28 @@ IMAGE_CAPTION:
 
 Returns battle detail and entries.
 
+Battle list/detail responses include a `stats` object when supported:
+
+```json
+{
+  "entryCount": 2,
+  "commentCount": 1,
+  "likeCount": 3,
+  "battleLikeCount": 1,
+  "participationCount": 1,
+  "shareCount": 1
+}
+```
+
+Entry detail responses include:
+
+```json
+{
+  "likeCount": 1,
+  "likedByMe": true
+}
+```
+
 ## `POST /api/battles/:battleId/entries`
 
 Submits an entry while battle status is `OPEN`.
@@ -157,11 +364,50 @@ Creates a simple MVP moderation report for a battle or one entry. This does not 
 
 `targetEntryId` must belong to the battle when provided.
 
+## Social Comments, Likes, And Shares
+
+Social comments are separate from battle entries and are never included in AI
+judging.
+
+### `GET /api/battles/:battleId/comments`
+
+Returns social comments for the battle.
+
+### `POST /api/battles/:battleId/comments`
+
+```json
+{
+  "targetEntryId": "optional-entry-id",
+  "content": "A regular social comment."
+}
+```
+
+`targetEntryId`, when provided, must belong to the battle.
+
+### `POST /api/entries/:entryId/like`
+
+Likes one entry for the current user and returns `{ "liked": true, "likeCount": 1 }`.
+
+### `DELETE /api/entries/:entryId/like`
+
+Removes the current user's like and returns `{ "liked": false, "likeCount": 0 }`.
+
+### `POST /api/battles/:battleId/shares`
+
+```json
+{
+  "channel": "copy-link"
+}
+```
+
+Records a demo share event and returns the updated `shareCount`.
+
 ## `POST /api/battles/:battleId/close`
 
 Transitions an `OPEN` battle to `CLOSED`.
 
 Returns `409 BATTLE_CANNOT_CLOSE` if the battle is no longer `OPEN`.
+Also returns `409 BATTLE_CANNOT_CLOSE` if the battle has no entries.
 
 ## `POST /api/battles/:battleId/judge`
 

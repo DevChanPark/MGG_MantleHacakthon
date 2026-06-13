@@ -20,12 +20,22 @@ model User {
   intro       String?
   avatarUrl   String?
   walletAddress String?
+  walletAddressNormalized String? @unique
   walletProvider String?
+  creditBalance Int      @default(0)
   createdAt   DateTime @default(now())
 
   battles Battle[]
   entries Entry[]
   reports Report[]
+  walletChallenges WalletChallenge[]
+  creditTransactions CreditTransaction[]
+  socialComments SocialComment[]
+  entryLikes EntryLike[]
+  battleLikes BattleLike[]
+  participations BattleParticipation[]
+  battleShares BattleShare[]
+  notifications Notification[]
 
   @@map("users")
 }
@@ -35,7 +45,12 @@ model Battle {
   battleType        String       @db.VarChar(32)
   status            String       @default("OPEN") @db.VarChar(32)
   prompt            String?
+  title             String?
+  description       String?
   imageUrl          String?
+  deadlineAt        DateTime?
+  isAnonymous       Boolean      @default(false)
+  recommendedScore  Int          @default(50)
   createdByUserId   String
   failureReason     String?
   createdAt         DateTime     @default(now())
@@ -50,6 +65,11 @@ model Battle {
   verdict   Verdict?
   settlement Settlement?
   reports   Report[]
+  socialComments SocialComment[]
+  likes     BattleLike[]
+  participations BattleParticipation[]
+  shares    BattleShare[]
+  notifications Notification[]
 
   @@index([battleType])
   @@index([status])
@@ -64,6 +84,7 @@ model BattleOption {
 
   battle  Battle  @relation(fields: [battleId], references: [id], onDelete: Cascade)
   entries Entry[]
+  participations BattleParticipation[]
 
   @@index([battleId])
   @@map("battle_options")
@@ -80,10 +101,147 @@ model Entry {
   battle      Battle        @relation(fields: [battleId], references: [id], onDelete: Cascade)
   option      BattleOption? @relation(fields: [optionId], references: [id])
   submittedBy User         @relation(fields: [submittedByUserId], references: [id])
+  socialComments SocialComment[]
+  likes       EntryLike[]
+  participations BattleParticipation[]
 
   @@index([battleId])
   @@index([optionId])
   @@map("entries")
+}
+
+model BattleParticipation {
+  id                  String   @id @default(cuid())
+  battleId            String
+  userId              String
+  optionId            String?
+  entryId             String?
+  costCredits         Int
+  creditTransactionId String?
+  rewardClaimedAt     DateTime?
+  createdAt           DateTime @default(now())
+
+  battle Battle @relation(fields: [battleId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  option BattleOption? @relation(fields: [optionId], references: [id], onDelete: SetNull)
+  entry  Entry? @relation(fields: [entryId], references: [id], onDelete: SetNull)
+
+  @@unique([battleId, userId])
+  @@index([userId])
+  @@index([entryId])
+  @@map("battle_participations")
+}
+
+model WalletChallenge {
+  id                      String    @id @default(cuid())
+  userId                  String?
+  walletAddress           String
+  walletAddressNormalized String
+  walletProvider          String?
+  nonce                   String
+  message                 String
+  issuedAt                DateTime  @default(now())
+  expiresAt               DateTime
+  usedAt                  DateTime?
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([walletAddressNormalized])
+  @@index([expiresAt])
+  @@map("wallet_challenges")
+}
+
+model CreditTransaction {
+  id           String   @id @default(cuid())
+  userId       String
+  amount       Int
+  reason       String
+  balanceAfter Int
+  metadataJson Json?
+  createdAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("credit_transactions")
+}
+
+model SocialComment {
+  id             String   @id @default(cuid())
+  battleId       String
+  targetEntryId  String?
+  authorUserId   String
+  content        String
+  createdAt      DateTime @default(now())
+
+  battle      Battle @relation(fields: [battleId], references: [id], onDelete: Cascade)
+  targetEntry Entry? @relation(fields: [targetEntryId], references: [id], onDelete: Cascade)
+  author      User   @relation(fields: [authorUserId], references: [id], onDelete: Cascade)
+
+  @@index([battleId])
+  @@index([targetEntryId])
+  @@index([authorUserId])
+  @@map("social_comments")
+}
+
+model EntryLike {
+  id        String   @id @default(cuid())
+  entryId   String
+  userId    String
+  createdAt DateTime @default(now())
+
+  entry Entry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([entryId, userId])
+  @@index([userId])
+  @@map("entry_likes")
+}
+
+model BattleLike {
+  id        String   @id @default(cuid())
+  battleId  String
+  userId    String
+  createdAt DateTime @default(now())
+
+  battle Battle @relation(fields: [battleId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([battleId, userId])
+  @@index([userId])
+  @@map("battle_likes")
+}
+
+model BattleShare {
+  id        String   @id @default(cuid())
+  battleId  String
+  userId    String?
+  channel   String?
+  createdAt DateTime @default(now())
+
+  battle Battle @relation(fields: [battleId], references: [id], onDelete: Cascade)
+  user   User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([battleId])
+  @@index([userId])
+  @@map("battle_shares")
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  battleId  String?
+  title     String
+  body      String
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  battle Battle? @relation(fields: [battleId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([battleId])
+  @@map("notifications")
 }
 
 model JudgingRule {
