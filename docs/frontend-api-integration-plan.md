@@ -201,6 +201,66 @@ Do not create backend data models for these until separately approved:
 - social comments separate from battle entries
 - profile tabs for comments and likes
 
+## Frontend Connection Points
+
+These references come from `origin/frontend-b`. The frontend branch was read
+only; no frontend files were changed.
+
+### `Frontend_b/src/App.tsx`
+
+- Lines 17-26 route `#signup`, `#signup-profile`, and `#profile` to the signup
+  and profile screens.
+- Add app-level API base/config here only if the frontend team wants a shared
+  client wrapper near the route shell.
+
+### `Frontend_b/src/screens/OnboardingFeed.tsx`
+
+- Lines 394-413 render login/signup actions.
+- Signup currently routes to `#signup`; no backend data is needed before that.
+- Login modal wallet choices can later hydrate the profile with
+  `GET /api/users/me` after the chosen wallet flow completes.
+
+### `Frontend_b/src/screens/SignupWalletScreen.tsx`
+
+- Lines 6-20 define wallet provider choices.
+- Lines 25-26 route to `#signup-profile`.
+- Preserve the selected provider/address in frontend state or route-level state
+  and submit it from the profile step via `PATCH /api/users/me`.
+
+### `Frontend_b/src/screens/SignupProfileScreen.tsx`
+
+- Lines 5-18 contain local nickname duplicate mock validation.
+- Lines 34-51 create a local image preview with `FileReader`.
+- Lines 105-138 render connected wallet, nickname, and intro fields.
+- Line 148 is the signup completion action.
+
+Recommended API wiring:
+
+- Upload a selected profile image with `POST /api/uploads/image` and use
+  `upload.imageUrl` as `avatarUrl`.
+- On signup completion, call `PATCH /api/users/me`.
+- Treat `400 VALIDATION_ERROR` and `409 NICKNAME_TAKEN` as form errors.
+- Keep frontend nickname checks for instant UX, but let the backend response be
+  the source of truth.
+
+### `Frontend_b/src/screens/ProfileScreen.tsx`
+
+- Lines 13-36 define static `profilePosts`.
+- Lines 39-65 define local credit packages and local credit state.
+- Lines 81-97 render profile summary and credit row.
+- Lines 100-167 render content tabs, battle type filters, and the post list.
+- Lines 213-227 mount the credit panel and purchase-complete modal.
+
+Recommended API wiring:
+
+- Replace profile summary copy/image with `GET /api/users/me`.
+- Replace battle filter/post list data with `GET /api/battles` for MVP demo
+  lists.
+- Use `GET /api/archive` for settled/archive data until a user-scoped endpoint
+  is approved.
+- Keep credits, purchases, likes, share counts, social comments, and profile
+  comment/like tabs mocked or disabled for MVP.
+
 ## Guardrails
 
 - Frontend renders state and calls APIs.
