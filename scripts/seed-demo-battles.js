@@ -1,10 +1,22 @@
 const API_BASE_URL = process.env.API_BASE_URL || "http://127.0.0.1:4000";
 const DEMO_USER_ID = process.env.DEMO_USER_ID || "demo-seed-user";
-const DEMO_NICKNAME = process.env.DEMO_NICKNAME || "우기기 장인";
+const DEMO_NICKNAME = process.env.DEMO_NICKNAME || "demo-captain";
 const DEMO_IMAGE_BASE64 =
   "R0lGODlhAQABAPAAAP///wAAACH5BAAAAAAALAAAAAABAAEAAAICRAEAOw==";
 
 const seeds = [
+  {
+    key: "TEXT_OPEN_OPEN",
+    desiredStatus: "OPEN",
+    battle: {
+      battleType: "TEXT_OPEN",
+      prompt: "Demo: TEXT_OPEN_OPEN - Give a paperclip a campaign slogan."
+    },
+    entries: [
+      { content: "Small loop, big platform." },
+      { content: "Holding documents together since before it was cool." }
+    ]
+  },
   {
     key: "OPTION_OPEN",
     desiredStatus: "OPEN",
@@ -19,6 +31,30 @@ const seeds = [
     ]
   },
   {
+    key: "IMAGE_CAPTION_OPEN",
+    desiredStatus: "OPEN",
+    battle: {
+      battleType: "IMAGE_CAPTION",
+      prompt: "Demo: IMAGE_CAPTION_OPEN - Give this image a dramatic title."
+    },
+    entries: [
+      { content: "One pixel, infinite consequences." },
+      { content: "The square that knew too much." }
+    ]
+  },
+  {
+    key: "TEXT_OPEN_CLOSED",
+    desiredStatus: "CLOSED",
+    battle: {
+      battleType: "TEXT_OPEN",
+      prompt: "Demo: TEXT_OPEN_CLOSED - Explain why a calendar needs a vacation."
+    },
+    entries: [
+      { content: "It has been carrying everyone's deadlines without a break." },
+      { content: "Every month it turns the page and still shows up." }
+    ]
+  },
+  {
     key: "OPTION_SETTLED",
     desiredStatus: "SETTLED",
     battle: {
@@ -30,18 +66,6 @@ const seeds = [
       { optionText: "Triangle kimbap", content: "Compact, portable, and already shaped like a survival badge." },
       { optionText: "Tteokbokki", content: "Spice is morale, and morale wins long campaigns." },
       { optionText: "Canned peaches", content: "Shelf life is the quiet superpower here." }
-    ]
-  },
-  {
-    key: "IMAGE_CAPTION_OPEN",
-    desiredStatus: "OPEN",
-    battle: {
-      battleType: "IMAGE_CAPTION",
-      prompt: "Demo: IMAGE_CAPTION_OPEN - Give this image a dramatic title."
-    },
-    entries: [
-      { content: "One pixel, infinite consequences." },
-      { content: "The square that knew too much." }
     ]
   },
   {
@@ -102,6 +126,17 @@ async function main() {
     const battle = await createBattle(seed, imageUrl);
     await submitEntries(battle, seed.entries);
 
+    if (seed.desiredStatus === "CLOSED") {
+      const closed = await request("POST", `/api/battles/${battle.id}/close`);
+      summary.push({
+        key: seed.key,
+        action: "created",
+        id: battle.id,
+        status: closed.battle.status
+      });
+      continue;
+    }
+
     if (seed.desiredStatus === "SETTLED") {
       await request("POST", `/api/battles/${battle.id}/close`);
       const result = await request("POST", `/api/battles/${battle.id}/judge`);
@@ -130,6 +165,9 @@ async function main() {
 async function createBattle(seed, imageUrl) {
   const body = { ...seed.battle };
   if (body.battleType === "IMAGE_CAPTION") {
+    if (!imageUrl) {
+      throw new Error(`Missing demo image URL for ${seed.key}`);
+    }
     body.imageUrl = imageUrl;
   }
 
@@ -182,7 +220,7 @@ async function seedDemoProfile(avatarUrl) {
 async function updateDemoProfile(avatarUrl) {
   return request("PATCH", "/api/users/me", {
     nickname: DEMO_NICKNAME,
-    intro: "말 안 되는 주장도 끝까지 밀어붙이는 중",
+    intro: "Turns unlikely arguments into demo data.",
     avatarUrl,
     walletProvider: "MetaMask",
     walletAddress: "0x1111111111111111111111111111111111111111"

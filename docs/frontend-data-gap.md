@@ -124,11 +124,15 @@ Current demo seed set:
 
 - demo profile user with nickname, intro, avatar URL, wallet provider, and
   wallet address metadata
+- `OPEN` `TEXT_OPEN` battle
 - `OPEN` `OPTION` battle
 - `OPEN` `IMAGE_CAPTION` battle
+- `CLOSED` `TEXT_OPEN` battle
 - `SETTLED` `OPTION` battle
 - `SETTLED` `IMAGE_CAPTION` battle
 - `SETTLED` `TEXT_OPEN` battle
+
+Full dataset loading details live in `docs/frontend-demo-dataset.md`.
 
 ## Remaining Decisions
 

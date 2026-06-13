@@ -19,7 +19,8 @@
     "prisma:status": "node scripts/prisma.js migrate status --schema prisma/schema.prisma",
     "prisma:deploy": "node scripts/prisma.js migrate deploy --schema prisma/schema.prisma",
     "prisma:migrate": "node scripts/prisma.js migrate dev --schema prisma/schema.prisma",
-    "seed:demo": "node scripts/seed-demo-battles.js"
+    "seed:demo": "node scripts/seed-demo-battles.js",
+    "smoke:api": "node scripts/smoke-api-flow.js"
   },
   "dependencies": {
     "@prisma/client": "^6.0.0",
