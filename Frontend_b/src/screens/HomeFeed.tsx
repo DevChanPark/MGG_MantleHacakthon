@@ -23,11 +23,13 @@ interface HomeFeedProps {
   participatedBattleIds: string[];
   likedBattleIds: string[];
   likedCommentIds: string[];
+  searchTerm: string;
   onFilterChange: (battleType: BattleType) => void;
   onOptionSelect: (battleId: string, option: string) => void;
   onBattleLike: (battleId: string) => void;
   onCommentLike: (battleId: string, commentId: string) => void;
   onCommentAdd: (battleId: string, text: string) => void;
+  onCommentReplyAdd: (battleId: string, commentId: string, text: string) => void;
   onShareBattle: (battle: FeedBattle) => void;
   onRequireParticipation: () => void;
   onParticipationRequest: (battle: FeedBattle) => void;
@@ -44,11 +46,13 @@ export function HomeFeed({
   participatedBattleIds,
   likedBattleIds,
   likedCommentIds,
+  searchTerm,
   onFilterChange,
   onOptionSelect,
   onBattleLike,
   onCommentLike,
   onCommentAdd,
+  onCommentReplyAdd,
   onShareBattle,
   onRequireParticipation,
   onParticipationRequest,
@@ -73,7 +77,21 @@ export function HomeFeed({
   }, []);
 
   const filteredBattles = useMemo(() => {
-    const nextBattles = battles.filter((battle) => battle.type === activeFilter);
+    const normalizedSearchTerm = searchTerm.trim().toLowerCase();
+    const nextBattles = battles.filter((battle) => {
+      if (battle.type !== activeFilter) {
+        return false;
+      }
+
+      if (!normalizedSearchTerm) {
+        return true;
+      }
+
+      return [battle.title, battle.description, battle.author]
+        .join(' ')
+        .toLowerCase()
+        .includes(normalizedSearchTerm);
+    });
 
     return [...nextBattles].sort((a, b) => {
       if (a.isLocalDraft !== b.isLocalDraft) {
@@ -88,9 +106,9 @@ export function HomeFeed({
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       }
 
-      return b.recommendedScore - a.recommendedScore || b.likeCount - a.likeCount;
+      return (b.recommendedScore ?? 0) - (a.recommendedScore ?? 0) || b.likeCount - a.likeCount;
     });
-  }, [activeFilter, battles, selectedSort]);
+  }, [activeFilter, battles, searchTerm, selectedSort]);
 
   const selectedSortLabel = SORT_OPTIONS.find((option) => option.value === selectedSort)?.label ?? '정렬 기준';
 
@@ -159,6 +177,7 @@ export function HomeFeed({
             onBattleLike={() => onBattleLike(battle.id)}
             onCommentLike={(commentId) => onCommentLike(battle.id, commentId)}
             onCommentAdd={(text) => onCommentAdd(battle.id, text)}
+            onCommentReplyAdd={(commentId, text) => onCommentReplyAdd(battle.id, commentId, text)}
             onShare={() => onShareBattle(battle)}
             onRequireParticipation={onRequireParticipation}
             onParticipationRequest={() => onParticipationRequest(battle)}

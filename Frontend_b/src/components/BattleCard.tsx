@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import commentIcon from '../../assets/action-icons/comment.svg';
 import heartIcon from '../../assets/action-icons/heart.svg';
 import shareIcon from '../../assets/action-icons/share.svg';
-import { getMockBattleResult, type FeedBattle } from '../mocks/battles';
+import { getMockBattleResult, type FeedBattle, type PreviewComment } from '../mocks/battles';
 
 interface BattleCardProps {
   battle: FeedBattle;
@@ -14,6 +14,7 @@ interface BattleCardProps {
   onBattleLike: () => void;
   onCommentLike: (commentId: string) => void;
   onCommentAdd: (text: string) => void;
+  onCommentReplyAdd: (commentId: string, text: string) => void;
   onShare: () => void;
   onRequireParticipation: () => void;
   onParticipationRequest: () => void;
@@ -33,16 +34,19 @@ export function BattleCard({
   onBattleLike,
   onCommentLike,
   onCommentAdd,
+  onCommentReplyAdd,
   onShare,
   onRequireParticipation,
   onParticipationRequest,
-  onCloseBattle,
   onCompleteEvaluation,
   onOpenWinnerModal,
   onOpenDetail,
 }: BattleCardProps) {
   const [isCommentComposerOpen, setIsCommentComposerOpen] = useState(false);
   const [commentInput, setCommentInput] = useState('');
+  const [replyingCommentId, setReplyingCommentId] = useState<string | null>(null);
+  const [replyInput, setReplyInput] = useState('');
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
 
   const result = useMemo(() => getMockBattleResult(battle), [battle]);
   const commentCount = battle.comments.length;
@@ -53,19 +57,106 @@ export function BattleCard({
   const cardClassName = `battle-card battle-card-${battle.type.toLowerCase().replace('_', '-')}`;
   const hasManyComments = battle.comments.length > 2;
   const safeOptions = battle.type === 'OPTION' ? (battle.options ?? []).filter(Boolean) : [];
+  const shouldShowOptionRatio = battle.type === 'OPTION' && Boolean(selectedOption || isCompleted) && result.optionResults;
 
   const handleCommentSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     event.stopPropagation();
-
     onCommentAdd(commentInput);
     setCommentInput('');
     setIsCommentComposerOpen(false);
   };
 
+  const handleReplySubmit = (event: React.FormEvent<HTMLFormElement>, commentId: string) => {
+    event.preventDefault();
+    event.stopPropagation();
+    onCommentReplyAdd(commentId, replyInput);
+    setReplyInput('');
+    setReplyingCommentId(null);
+  };
+
   const stopAndRun = (event: React.MouseEvent, callback: () => void) => {
     event.stopPropagation();
     callback();
+  };
+
+  const handleReplyClick = (commentId: string) => {
+    if (!isParticipated) {
+      onRequireParticipation();
+      return;
+    }
+
+    setReplyInput('');
+    setReplyingCommentId((currentId) => (currentId === commentId ? null : commentId));
+  };
+
+  const renderComment = (comment: PreviewComment) => {
+    const isCommentLiked = likedCommentIds.includes(comment.id);
+
+    return (
+      <div className="comment-thread" key={comment.id}>
+        <div className="comment-preview-item">
+          <div className="comment-avatar" aria-hidden="true" />
+          <div className="comment-copy">
+            <strong>{comment.author}</strong>
+            <p>{comment.text}</p>
+            <button className="comment-reply-button" type="button" onClick={() => handleReplyClick(comment.id)}>
+              답글
+            </button>
+          </div>
+          <button
+            className={`comment-like-button${isCommentLiked ? ' is-liked' : ''}`}
+            type="button"
+            aria-pressed={isCommentLiked}
+            aria-label={`${comment.author} 댓글 좋아요`}
+            onClick={() => onCommentLike(comment.id)}
+          >
+            <img className="comment-heart-img" src={heartIcon} alt="" aria-hidden="true" />
+            <small>{comment.likeCount}</small>
+          </button>
+        </div>
+
+        {comment.replies && comment.replies.length > 0 && (
+          <div className="comment-replies">
+            {comment.replies.map((reply) => {
+              const isReplyLiked = likedCommentIds.includes(reply.id);
+
+              return (
+                <div className="comment-reply-item" key={reply.id}>
+                  <div className="comment-avatar is-reply" aria-hidden="true" />
+                  <div className="comment-copy">
+                    <strong>{reply.author}</strong>
+                    <p>{reply.text}</p>
+                  </div>
+                  <button
+                    className={`comment-like-button${isReplyLiked ? ' is-liked' : ''}`}
+                    type="button"
+                    aria-pressed={isReplyLiked}
+                    aria-label={`${reply.author} 대댓글 좋아요`}
+                    onClick={() => onCommentLike(reply.id)}
+                  >
+                    <img className="comment-heart-img" src={heartIcon} alt="" aria-hidden="true" />
+                    <small>{reply.likeCount}</small>
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {replyingCommentId === comment.id && (
+          <form className="reply-composer" onSubmit={(event) => handleReplySubmit(event, comment.id)}>
+            <input
+              value={replyInput}
+              onChange={(event) => setReplyInput(event.target.value)}
+              placeholder="답글을 입력하세요"
+              aria-label="답글 입력"
+            />
+            <button type="submit">등록</button>
+          </form>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -81,31 +172,18 @@ export function BattleCard({
       }}
     >
       <div className="battle-status-row">
-        {false && isOpen && (
-          <button className="battle-close-button" type="button" onClick={(event) => stopAndRun(event, onCloseBattle)}>
-            마감
-          </button>
-        )}
         {isEvaluating && (
           <>
             <span className="battle-status-chip">AI 평가 중</span>
-            <button
-              className="battle-complete-button"
-              type="button"
-              onClick={(event) => stopAndRun(event, onCompleteEvaluation)}
-            >
-              AI 평가 완료
+            <button className="battle-complete-button" type="button" onClick={(event) => stopAndRun(event, onCompleteEvaluation)}>
+              AI 평가 완료 처리
             </button>
           </>
         )}
         {isCompleted && (
           <>
             <span className="battle-status-chip is-complete">AI 평가 완료</span>
-            <button
-              className="battle-winner-button"
-              type="button"
-              onClick={(event) => stopAndRun(event, onOpenWinnerModal)}
-            >
+            <button className="battle-winner-button" type="button" onClick={(event) => stopAndRun(event, onOpenWinnerModal)}>
               우승자 확인
             </button>
           </>
@@ -121,7 +199,7 @@ export function BattleCard({
           <p className="battle-card-deadline">마감 기한 {battle.deadline}</p>
           <p className="battle-card-description">{battle.description}</p>
 
-          {battle.type === 'OPTION' && !isCompleted && safeOptions.length > 0 && (
+          {battle.type === 'OPTION' && !shouldShowOptionRatio && safeOptions.length > 0 && (
             <div className="battle-option-list" aria-label="선택지">
               {safeOptions.map((option) => (
                 <button
@@ -138,11 +216,11 @@ export function BattleCard({
             </div>
           )}
 
-          {battle.type === 'OPTION' && isCompleted && result.optionResults && (
-            <div className="battle-result-options" aria-label="선택지별 결과">
+          {battle.type === 'OPTION' && shouldShowOptionRatio && result.optionResults && (
+            <div className="battle-result-options" aria-label="선택지별 비율">
               {result.optionResults.map((option) => (
                 <div
-                  className={`battle-result-option${option.label === result.winnerName ? ' is-winner' : ''}`}
+                  className={`battle-result-option${option.label === (selectedOption ?? result.winnerName) ? ' is-winner' : ''}`}
                   key={`${battle.id}-${option.label}`}
                 >
                   <span>{option.label}</span>
@@ -155,7 +233,14 @@ export function BattleCard({
           {battle.type === 'IMAGE_CAPTION' && (
             <div className="battle-image-frame">
               {battle.imageUrl ? (
-                <img className="battle-card-thumbnail" src={battle.imageUrl} alt="" />
+                <button
+                  className="battle-image-button"
+                  type="button"
+                  onClick={(event) => stopAndRun(event, () => setPreviewImageUrl(battle.imageUrl ?? null))}
+                  aria-label="이미지 확대"
+                >
+                  <img className="battle-card-thumbnail" src={battle.imageUrl} alt="" />
+                </button>
               ) : (
                 <div className="battle-image-placeholder">이미지 준비중</div>
               )}
@@ -207,51 +292,41 @@ export function BattleCard({
         {isParticipated ? '참여 완료' : isOpen ? '참여하기' : '마감된 게시글'}
       </button>
 
-      <div className="comment-preview" onClick={(event) => event.stopPropagation()}>
-        <p className="comment-preview-title">댓글 {commentCount}</p>
+      {isParticipated ? (
+        <div className="comment-preview" onClick={(event) => event.stopPropagation()}>
+          <p className="comment-preview-title">댓글 {commentCount}</p>
 
-        <div className={`comment-preview-list${hasManyComments ? ' is-scrollable' : ''}`}>
-          {battle.comments.length > 0 ? (
-            battle.comments.map((comment) => {
-              const isCommentLiked = likedCommentIds.includes(comment.id);
+          <div className={`comment-preview-list${hasManyComments ? ' is-scrollable' : ''}`}>
+            {battle.comments.length > 0 ? (
+              battle.comments.slice(0, 2).map(renderComment)
+            ) : (
+              <p className="comment-empty">아직 댓글이 없습니다. 참여 후 첫 댓글을 남겨보세요.</p>
+            )}
+          </div>
 
-              return (
-                <div className="comment-preview-item" key={comment.id}>
-                  <div className="comment-avatar" aria-hidden="true" />
-                  <div className="comment-copy">
-                    <strong>{comment.author}</strong>
-                    <p>{comment.text}</p>
-                  </div>
-                  <button
-                    className={`comment-like-button${isCommentLiked ? ' is-liked' : ''}`}
-                    type="button"
-                    aria-pressed={isCommentLiked}
-                    aria-label={`${comment.author} 댓글 좋아요`}
-                    onClick={() => onCommentLike(comment.id)}
-                  >
-                    <img className="comment-heart-img" src={heartIcon} alt="" aria-hidden="true" />
-                    <small>{comment.likeCount}</small>
-                  </button>
-                </div>
-              );
-            })
-          ) : (
-            <p className="comment-empty">아직 댓글이 없습니다. 참여 후 첫 댓글을 남겨보세요.</p>
+          {battle.comments.length > 2 && (
+            <button className="comment-view-all-button" type="button" onClick={onOpenDetail}>
+              댓글 전체보기
+            </button>
+          )}
+
+          {isCommentComposerOpen && (
+            <form className="comment-composer" onSubmit={handleCommentSubmit}>
+              <input
+                value={commentInput}
+                onChange={(event) => setCommentInput(event.target.value)}
+                placeholder="댓글을 입력하세요"
+                aria-label="댓글 입력"
+              />
+              <button type="submit">등록</button>
+            </form>
           )}
         </div>
-
-        {isParticipated && isCommentComposerOpen && (
-          <form className="comment-composer" onSubmit={handleCommentSubmit}>
-            <input
-              value={commentInput}
-              onChange={(event) => setCommentInput(event.target.value)}
-              placeholder="댓글을 입력하세요"
-              aria-label="댓글 입력"
-            />
-            <button type="submit">등록</button>
-          </form>
-        )}
-      </div>
+      ) : (
+        <div className="comment-locked-message" onClick={(event) => event.stopPropagation()}>
+          참여 후 댓글을 확인할 수 있습니다.
+        </div>
+      )}
 
       {isEvaluating && (
         <div className="ai-evaluating-box" role="status">
@@ -271,6 +346,17 @@ export function BattleCard({
           {result.verdictLines.map((line) => (
             <p key={line}>{line}</p>
           ))}
+        </div>
+      )}
+
+      {previewImageUrl && (
+        <div className="image-zoom-overlay" role="presentation" onClick={() => setPreviewImageUrl(null)}>
+          <div className="image-zoom-modal" role="dialog" aria-modal="true" aria-label="이미지 확대" onClick={(event) => event.stopPropagation()}>
+            <button className="image-zoom-close" type="button" onClick={() => setPreviewImageUrl(null)} aria-label="이미지 닫기">
+              ×
+            </button>
+            <img src={previewImageUrl} alt="" />
+          </div>
         </div>
       )}
     </article>

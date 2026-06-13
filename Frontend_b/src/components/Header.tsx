@@ -1,12 +1,28 @@
-import React from 'react';
+import React, { useState } from 'react';
 import mggLogo from '../../assets/brand/mgg-logo.png';
 
 interface HeaderProps {
   isNotificationOpen?: boolean;
+  hasUnreadNotifications?: boolean;
+  searchTerm?: string;
+  onSearchChange?: (value: string) => void;
   onNotificationClick?: () => void;
 }
 
-export function Header({ isNotificationOpen = false, onNotificationClick }: HeaderProps) {
+export function Header({
+  isNotificationOpen = false,
+  hasUnreadNotifications = false,
+  searchTerm = '',
+  onSearchChange,
+  onNotificationClick,
+}: HeaderProps) {
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+
+  const closeSearch = () => {
+    setIsSearchOpen(false);
+    onSearchChange?.('');
+  };
+
   return (
     <header className="app-header">
       <div className="header-left">
@@ -16,14 +32,20 @@ export function Header({ isNotificationOpen = false, onNotificationClick }: Head
       </div>
 
       <div className="header-actions">
-        <button className="header-icon-btn" type="button" aria-label="검색">
+        <button
+          className="header-icon-btn"
+          type="button"
+          aria-label="검색"
+          aria-expanded={isSearchOpen}
+          onClick={() => setIsSearchOpen((isOpen) => !isOpen)}
+        >
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <circle cx="10.5" cy="10.5" r="6.5" />
             <path d="m16 16 5 5" />
           </svg>
         </button>
         <button
-          className={`header-icon-btn notification-trigger${isNotificationOpen ? ' is-active' : ''}`}
+          className={`header-icon-btn notification-trigger${isNotificationOpen ? ' is-active' : ''}${hasUnreadNotifications ? ' has-unread' : ''}`}
           type="button"
           aria-label="알림"
           aria-expanded={isNotificationOpen}
@@ -35,6 +57,21 @@ export function Header({ isNotificationOpen = false, onNotificationClick }: Head
           </svg>
         </button>
       </div>
+
+      {isSearchOpen && (
+        <div className="header-search-panel" role="search">
+          <input
+            value={searchTerm}
+            onChange={(event) => onSearchChange?.(event.target.value)}
+            autoFocus
+            placeholder="검색어 입력"
+            aria-label="게시글 검색"
+          />
+          <button type="button" onClick={closeSearch} aria-label="검색 닫기">
+            ×
+          </button>
+        </div>
+      )}
     </header>
   );
 }

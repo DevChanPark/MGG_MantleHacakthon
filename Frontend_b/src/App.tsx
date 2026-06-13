@@ -26,12 +26,14 @@ import {
   type CreateBattleDraft,
   type BattleType,
   type FeedBattle,
+  type PreviewComment,
 } from './mocks/battles';
 
 export default function App() {
   const [route, setRoute] = useState(() => getRoute());
   const [battles, setBattles] = useState(() => initialMockBattles);
   const [homeFilter, setHomeFilter] = useState<BattleType>(() => getSavedBattleType());
+  const [searchTerm, setSearchTerm] = useState('');
   const [credits, setCredits] = useState(() => getInitialCredits());
   const [likedBattleIds, setLikedBattleIds] = useState<string[]>([]);
   const [likedCommentIds, setLikedCommentIds] = useState<string[]>([]);
@@ -120,11 +122,7 @@ export default function App() {
         battle.id === battleId
           ? {
               ...battle,
-              comments: battle.comments.map((comment) =>
-                comment.id === commentId
-                  ? { ...comment, likeCount: comment.likeCount + (wasLiked ? -1 : 1) }
-                  : comment,
-              ),
+              comments: updateCommentLikeTree(battle.comments, commentId, wasLiked),
             }
           : battle,
       ),
@@ -165,8 +163,55 @@ export default function App() {
                   author: '나',
                   text: nextComment,
                   likeCount: 0,
+                  replies: [],
                 },
               ],
+            }
+          : battle,
+      ),
+    );
+  };
+
+  const handleCommentReplyAdd = (battleId: string, commentId: string, text: string) => {
+    const nextReply = text.trim();
+    const battle = visibleBattles.find((currentBattle) => currentBattle.id === battleId);
+
+    if (!nextReply) {
+      return;
+    }
+
+    if (!battle || !canParticipateInBattle(battle)) {
+      showNotice('마감된 게시글입니다.');
+      return;
+    }
+
+    if (!participatedBattleIds.includes(battleId)) {
+      showNotice('참여하기를 눌러야 답글을 등록할 수 있습니다.');
+      return;
+    }
+
+    setBattles((currentBattles) =>
+      currentBattles.map((battle) =>
+        battle.id === battleId
+          ? {
+              ...battle,
+              comments: battle.comments.map((comment) =>
+                comment.id === commentId
+                  ? {
+                      ...comment,
+                      replies: [
+                        ...(comment.replies ?? []),
+                        {
+                          id: `${comment.id}-reply-${Date.now()}`,
+                          author: MOCK_CURRENT_USER.nickname,
+                          text: nextReply,
+                          likeCount: 0,
+                          replies: [],
+                        },
+                      ],
+                    }
+                  : comment,
+              ),
             }
           : battle,
       ),
@@ -277,6 +322,8 @@ export default function App() {
   const renderWithAppShell = (children: ReactNode, options: { hideHeader?: boolean } = {}) => (
     <AppShell
       hideHeader={options.hideHeader}
+      searchTerm={searchTerm}
+      onSearchChange={setSearchTerm}
       overlay={
         <>
           <ParticipationModal
@@ -339,6 +386,8 @@ export default function App() {
         onBattleLike={handleBattleLike}
         onCommentLike={handleCommentLike}
         onCommentAdd={handleCommentAdd}
+        onCommentReplyAdd={handleCommentReplyAdd}
+        searchTerm={searchTerm}
         onShareBattle={handleShareBattle}
         onRequireParticipation={handleRequireParticipation}
         onParticipationRequest={handleParticipationRequest}
@@ -375,6 +424,7 @@ export default function App() {
         onBattleLike={() => handleBattleLike(selectedBattle.id)}
         onCommentLike={(commentId) => handleCommentLike(selectedBattle.id, commentId)}
         onCommentAdd={(text) => handleCommentAdd(selectedBattle.id, text)}
+        onCommentReplyAdd={(commentId, text) => handleCommentReplyAdd(selectedBattle.id, commentId, text)}
         onShareBattle={handleShareBattle}
         onRequireParticipation={handleRequireParticipation}
         onParticipationRequest={() => handleParticipationRequest(selectedBattle)}
@@ -445,4 +495,21 @@ function getInitialCredits() {
   }
 
   return MOCK_CURRENT_USER.credits;
+}
+
+function updateCommentLikeTree(comments: PreviewComment[], commentId: string, wasLiked: boolean): PreviewComment[] {
+  return comments.map((comment) => {
+    if (comment.id === commentId) {
+      return { ...comment, likeCount: Math.max(0, comment.likeCount + (wasLiked ? -1 : 1)) };
+    }
+
+    if (comment.replies?.length) {
+      return {
+        ...comment,
+        replies: updateCommentLikeTree(comment.replies, commentId, wasLiked),
+      };
+    }
+
+    return comment;
+  });
 }
