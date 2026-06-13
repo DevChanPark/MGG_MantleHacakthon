@@ -61,6 +61,16 @@ export default function App() {
     window.sessionStorage.setItem('mgg:credits', String(credits));
   }, [credits]);
 
+  useEffect(() => {
+    const appContent = document.querySelector('.app-content');
+
+    if (appContent instanceof HTMLElement) {
+      appContent.scrollTo({ top: 0, left: 0 });
+    }
+
+    window.scrollTo({ top: 0, left: 0 });
+  }, [route]);
+
   const handleCreateBattle = (draft: CreateBattleDraft) => {
     const nextBattle = createMockBattle(draft);
     setBattles((currentBattles) => [nextBattle, ...currentBattles]);

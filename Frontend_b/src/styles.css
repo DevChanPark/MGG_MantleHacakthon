@@ -1098,24 +1098,25 @@ select {
   left: 0;
   right: 0;
   top: 0;
-  height: calc(70 / 402 * var(--frame));
+  height: 78px;
   background: #fdfdfd;
 }
 
 .profile-header .app-logo-small {
-  left: calc(27 / 402 * var(--frame));
-  top: calc(28 / 402 * var(--frame));
-  width: calc(84.25 / 402 * var(--frame));
-  height: calc(26.7 / 402 * var(--frame));
+  left: 27px;
+  top: 28px;
+  width: 84px;
+  height: 27px;
+  object-fit: contain;
 }
 
 .profile-settings-button {
   position: absolute;
   z-index: 5;
-  right: calc(25 / 402 * var(--frame));
-  top: calc(28 / 402 * var(--frame));
+  right: 25px;
+  top: 25px;
   display: flex;
-  width: calc(24 / 402 * var(--frame));
+  width: 30px;
   aspect-ratio: 1;
   align-items: center;
   justify-content: center;
@@ -1127,8 +1128,8 @@ select {
 
 .profile-settings-icon {
   display: block;
-  width: calc(19 / 402 * var(--frame));
-  height: calc(19 / 402 * var(--frame));
+  width: 22px;
+  height: 22px;
   object-fit: contain;
 }
 
@@ -1872,23 +1873,23 @@ select {
   top: 0;
   z-index: 100;
   flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  display: block;
   width: 100%;
-  height: 112px;
-  padding: 30px 22px 18px;
+  height: 78px;
+  padding: 0;
   border-bottom: 1px solid transparent;
   background: #fdfdfd;
   box-shadow: none;
 }
 
 .header-left {
-  display: flex;
-  align-items: center;
+  display: block;
 }
 
 .header-logo {
+  position: absolute;
+  top: 28px;
+  left: 27px;
   margin: 0;
   padding: 0;
   line-height: 1;
@@ -1896,15 +1897,19 @@ select {
 
 .header-logo-img {
   display: block;
-  width: 136px;
-  height: auto;
+  width: 84px;
+  height: 27px;
   object-fit: contain;
 }
 
 .header-actions {
+  position: absolute;
+  top: 28px;
+  left: 316px;
+  right: auto;
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 15px;
 }
 
 .header-icon-btn {
@@ -1912,8 +1917,8 @@ select {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 38px;
-  height: 38px;
+  width: 32px;
+  height: 32px;
   padding: 0;
   border: 0;
   border-radius: 999px;
@@ -1933,8 +1938,8 @@ select {
 
 .header-icon-btn svg {
   display: block;
-  width: 32px;
-  height: 32px;
+  width: 22px;
+  height: 22px;
   fill: none;
   stroke: currentColor;
   stroke-width: 2.2;
@@ -1948,8 +1953,8 @@ select {
 
 .notification-trigger::after {
   position: absolute;
-  right: 7px;
-  top: 8px;
+  right: 4px;
+  top: 4px;
   width: 5px;
   height: 5px;
   border-radius: 50%;
@@ -1960,7 +1965,7 @@ select {
 .notification-panel {
   position: absolute;
   z-index: 260;
-  top: 92px;
+  top: 72px;
   right: 20px;
   width: min(288px, calc(100% - 40px));
   border: 1px solid #0e0e0e;
@@ -2112,8 +2117,8 @@ select {
 
 .bottom-nav-item svg {
   display: block;
-  width: 42px;
-  height: 42px;
+  width: 38px;
+  height: 38px;
   fill: currentColor;
   color: inherit;
 }
@@ -2132,9 +2137,9 @@ select {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 84px;
-  height: 84px;
-  margin-top: -42px;
+  width: 82px;
+  height: 82px;
+  margin-top: -40px;
   padding: 0;
   border: 2px solid var(--brand-black);
   border-radius: 50%;
@@ -2156,8 +2161,8 @@ select {
 
 .bottom-nav-center svg {
   display: block;
-  width: 46px;
-  height: 46px;
+  width: 42px;
+  height: 42px;
   fill: none;
   stroke: currentColor;
   stroke-width: 1.7;
@@ -2615,10 +2620,10 @@ select {
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  justify-content: flex-start;
+  gap: 0;
   width: 100%;
-  padding: 12px 14px 10px;
+  padding: 11px 16px 10px;
   background: #fdfdfd;
   border-bottom: 1px solid #0e0e0e;
   overflow-x: hidden;
@@ -2632,9 +2637,9 @@ select {
 
 .filter-group {
   display: grid;
-  flex: 1;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 7px;
+  flex: 0 0 auto;
+  grid-template-columns: repeat(3, 87px);
+  gap: 17px;
   min-width: 0;
 }
 
@@ -2642,14 +2647,16 @@ select {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  width: 87px;
+  height: 25px;
   min-width: 0;
-  min-height: 26px;
-  padding: 0 10px;
-  border: 1px solid #0e0e0e;
-  border-radius: 7px;
+  min-height: 25px;
+  padding: 0 6px;
+  border: 0.5px solid #0e0e0e;
+  border-radius: 5px;
   background: #fdfdfd;
   color: #0e0e0e;
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 500;
   letter-spacing: 0;
   cursor: pointer;
@@ -2670,12 +2677,15 @@ select {
 .sort-control {
   position: relative;
   flex: 0 0 auto;
+  margin-left: 21px;
 }
 
 .sort-btn {
   flex: 0 0 auto;
-  min-height: 26px;
-  padding: 0 0 0 4px;
+  width: 37px;
+  height: 15px;
+  min-height: 15px;
+  padding: 0;
   border: 0;
   background: transparent;
   color: #0e0e0e;
@@ -2683,6 +2693,8 @@ select {
   font-weight: 500;
   letter-spacing: 0;
   white-space: nowrap;
+  overflow: visible;
+  transform: translateY(5px);
   cursor: pointer;
 }
 
@@ -2732,7 +2744,7 @@ select {
 .battle-card {
   display: block;
   width: 100%;
-  padding: 18px 14px 16px;
+  padding: 14px 15px 16px;
   border-bottom: 1px solid rgba(14, 14, 14, 0.55);
   background: #fdfdfd;
   color: #0e0e0e;
@@ -2750,11 +2762,16 @@ select {
 
 .battle-status-row {
   display: flex;
-  min-height: 30px;
+  min-height: 0;
   align-items: center;
   justify-content: flex-end;
   gap: 7px;
-  margin: -4px 0 12px;
+  margin: 0 0 12px;
+}
+
+.battle-status-row:empty {
+  display: none;
+  margin: 0;
 }
 
 .battle-close-button,
@@ -2798,8 +2815,8 @@ select {
 
 .battle-card-main {
   display: grid;
-  grid-template-columns: 56px minmax(0, 1fr);
-  gap: 14px;
+  grid-template-columns: 67px minmax(0, 1fr);
+  gap: 12px;
   width: 100%;
   padding: 0;
   border: 0;
@@ -2818,9 +2835,10 @@ select {
 }
 
 .battle-card-avatar {
-  width: 52px;
-  height: 52px;
-  margin-top: 2px;
+  width: 57px;
+  height: 57px;
+  margin-top: 0;
+  border-width: 0.5px;
 }
 
 .battle-card-body {
@@ -2955,10 +2973,10 @@ select {
 .battle-card-actions {
   display: flex;
   align-items: center;
-  justify-content: space-around;
-  gap: 8px;
-  width: 100%;
-  margin: 20px 0 14px;
+  justify-content: space-between;
+  gap: 0;
+  width: calc(100% - 90px);
+  margin: 20px 17px 14px 45px;
   color: #0e0e0e;
   font-size: 11px;
   font-weight: 500;
@@ -2977,6 +2995,11 @@ select {
   cursor: pointer;
   font: inherit;
   white-space: nowrap;
+}
+
+.like-action {
+  width: 60px;
+  height: 15px;
 }
 
 .battle-participate-button {
@@ -3099,18 +3122,21 @@ select {
 }
 
 .comment-preview {
-  width: 100%;
-  padding: 10px 10px 10px;
-  border: 1px solid #0e0e0e;
-  border-radius: 8px;
+  width: 371px;
+  max-width: 100%;
+  min-height: 126px;
+  margin: 0 auto;
+  padding: 10px 13px 9px;
+  border: 0.5px solid #0e0e0e;
+  border-radius: 10px;
   background: #fdfdfd;
   overflow: hidden;
 }
 
 .comment-preview-list {
   display: grid;
-  gap: 10px;
-  max-height: 154px;
+  gap: 8px;
+  max-height: 92px;
   overflow-y: auto;
   padding-right: 2px;
   overscroll-behavior: contain;
@@ -3628,9 +3654,13 @@ select {
   overflow-x: hidden;
   background: #fdfdfd;
   color: #0e0e0e;
+  font-family: inherit;
 }
 
 .battle-detail-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
   display: grid;
   grid-template-columns: 36px minmax(0, 1fr) auto;
   gap: 10px;
@@ -3844,41 +3874,46 @@ select {
 }
 
 @media (max-width: 374px) {
-  .app-header {
-    padding-right: 16px;
-    padding-left: 16px;
-  }
-
   .header-logo {
+    left: 20px;
     line-height: 1;
   }
 
   .header-logo-img {
-    width: 124px;
+    width: 84px;
+    height: 27px;
   }
 
   .header-actions {
+    left: auto;
+    right: 14px;
     gap: 8px;
   }
 
   .home-filters {
-    gap: 8px;
-    padding-right: 10px;
-    padding-left: 10px;
+    gap: 6px;
+    padding-right: 12px;
+    padding-left: 12px;
   }
 
   .filter-group {
-    gap: 6px;
+    flex: 1 1 auto;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 5px;
   }
 
   .filter-btn {
-    min-height: 38px;
-    padding: 0 5px;
-    font-size: 12px;
+    width: auto;
+    min-height: 25px;
+    padding: 0 4px;
+    font-size: 10px;
   }
 
   .sort-btn {
-    font-size: 11px;
+    max-width: 58px;
+    overflow: hidden;
+    font-size: 9.5px;
+    text-overflow: clip;
   }
 
   .battle-card {
