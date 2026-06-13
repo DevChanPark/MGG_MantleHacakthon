@@ -54,8 +54,8 @@ Payload:
 
 ```json
 {
-  "nickname": "우기기 장인",
-  "intro": "말 안 되는 주장도 끝까지 밀어붙이는 중",
+  "nickname": "demo-captain",
+  "intro": "Turns unlikely arguments into demo data.",
   "avatarUrl": "/uploads/profile.gif",
   "walletProvider": "MetaMask",
   "walletAddress": "0x1111111111111111111111111111111111111111"
@@ -174,6 +174,14 @@ Render:
 - `settlement.txHash`
 - `settlement.explorerUrl`
 - `verdict.shareSummary`
+
+Mode boundary:
+
+- Use `GET /api/health` to verify `ai.mode` and `mantle.mode` in local/demo
+  environments.
+- `GET /api/battles/:battleId/result` returns settlement metadata, not a
+  settlement `mode` field. The frontend should not decide whether to execute
+  real settlement; the backend owns mock/real mode selection.
 
 ### Archive
 
