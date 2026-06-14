@@ -82,11 +82,11 @@ test("normalizes wallet challenge and verify DTOs without hardcoding one wallet"
 test("validates credit package, quote, and exchange DTOs", () => {
   const creditPackage = validateCreditPackage({
     credits: 30,
-    priceMnt: "0.03",
-    priceWei: "30000000000000000"
+    priceMnt: "30",
+    priceWei: "30000000000000000000"
   });
   assert.equal(creditPackage.credits, 30);
-  assert.equal(creditPackage.priceWei, "30000000000000000");
+  assert.equal(creditPackage.priceWei, "30000000000000000000");
 
   const quoteRequest = validateCreditQuoteRequest({
     credits: 30,
@@ -94,7 +94,7 @@ test("validates credit package, quote, and exchange DTOs", () => {
   });
   assert.equal(quoteRequest.credits, 30);
   assert.equal(quoteRequest.walletAddressNormalized, WALLET);
-  assert.equal(quoteRequest.package.priceWei, "30000000000000000");
+  assert.equal(quoteRequest.package.priceWei, "30000000000000000000");
 
   assert.throws(() => validateCreditQuoteRequest({ credits: 31 }), /Invalid credit quote request/);
 
@@ -102,8 +102,8 @@ test("validates credit package, quote, and exchange DTOs", () => {
     quote: {
       id: "quote-1",
       credits: 30,
-      priceMnt: "0.03",
-      priceWei: "30000000000000000",
+      priceMnt: "30",
+      priceWei: "30000000000000000000",
       tokenSymbol: MNT_SYMBOL,
       chainId: MANTLE_TESTNET_CHAIN_ID,
       receiverAddress: RECEIVER,

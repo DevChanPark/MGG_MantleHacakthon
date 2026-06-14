@@ -23,7 +23,7 @@ Required backend env examples:
 | `MANTLE_CREDIT_CHAIN_ID` | credit exchange only | Expected Mantle chain id for credit exchange, default `5003`. |
 | `MANTLE_CREDIT_RPC_URL` | credit exchange only | RPC used to verify credit exchange receipts. May reuse `MANTLE_RPC_URL`. |
 | `MANTLE_CREDIT_CONFIRMATIONS` | credit exchange only | Number of confirmations required before crediting, default `1`. |
-| `MNT_CREDIT_RATE` | credit exchange only | Reserved conversion-rate knob. Current MVP packages are fixed in `DEFAULT_CREDIT_PACKAGES`, starting at `0.01` MNT for `10` credits. |
+| `MNT_CREDIT_RATE` | credit exchange only | Reserved conversion-rate knob. Current MVP packages are fixed in `DEFAULT_CREDIT_PACKAGES`, starting at `10` MNT for `10` credits. |
 | `STORAGE_PROVIDER` | yes | MVP implementation supports `local`. |
 | `STORAGE_BUCKET` | future | Reserved for object storage. |
 | `STORAGE_ACCESS_KEY` | future | Reserved for object storage. |
