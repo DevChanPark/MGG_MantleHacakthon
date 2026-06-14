@@ -21,8 +21,20 @@ const walletOptions = [
   },
 ];
 
-export function SignupWalletScreen() {
-  const moveToProfileStep = () => {
+type SignupWalletScreenProps = {
+  isConnecting?: boolean;
+  walletError?: string;
+  onWalletConnect?: (walletProvider: string) => Promise<void>;
+};
+
+export function SignupWalletScreen({ isConnecting = false, walletError = '', onWalletConnect }: SignupWalletScreenProps) {
+  const connectWallet = async (walletProvider: string) => {
+    if (!onWalletConnect) {
+      window.location.hash = 'signup-profile';
+      return;
+    }
+
+    await onWalletConnect(walletProvider);
     window.location.hash = 'signup-profile';
   };
 
@@ -48,7 +60,12 @@ export function SignupWalletScreen() {
                 className="signup-wallet-button"
                 type="button"
                 key={option.label}
-                onClick={moveToProfileStep}
+                disabled={isConnecting}
+                onClick={() => {
+                  void connectWallet(option.label.replace(/로 연결하기|으로 연결하기|로 다른 지갑 연결하기/g, '')).catch(
+                    () => undefined,
+                  );
+                }}
               >
                 <img
                   className={`wallet-icon ${option.iconClassName}`}
@@ -56,10 +73,11 @@ export function SignupWalletScreen() {
                   alt=""
                   aria-hidden="true"
                 />
-                <span>{option.label}</span>
+                <span>{isConnecting ? '지갑 연결 중' : option.label}</span>
               </button>
             ))}
           </div>
+          {walletError ? <p className="signup-wallet-error">{walletError}</p> : null}
         </div>
       </section>
     </main>

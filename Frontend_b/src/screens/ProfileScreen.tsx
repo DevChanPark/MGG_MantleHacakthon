@@ -34,6 +34,8 @@ type ProfileBattleFilter = 'open' | 'option' | 'image';
 export type CreditPackage = {
   credits: number;
   price: number;
+  priceMnt?: string;
+  priceWei?: string;
 };
 
 export const creditPackages: CreditPackage[] = [
@@ -49,9 +51,17 @@ interface ProfileScreenProps {
   credits?: number;
   walletAddress?: string;
   onAddCredits?: (amount: number) => void;
+  packages?: CreditPackage[];
+  onPurchaseCredits?: (creditPackage: CreditPackage) => Promise<number>;
 }
 
-export function ProfileScreen({ credits = 30, walletAddress = '0x12ab...89ef', onAddCredits }: ProfileScreenProps) {
+export function ProfileScreen({
+  credits = 30,
+  walletAddress = '지갑 미연결',
+  onAddCredits,
+  packages = creditPackages,
+  onPurchaseCredits,
+}: ProfileScreenProps) {
   const [activeContentTab, setActiveContentTab] = useState<ProfileContentTab>('posts');
   const [activeBattleFilter, setActiveBattleFilter] = useState<ProfileBattleFilter>('open');
   const [currentCredits, setCurrentCredits] = useState(credits);
@@ -59,6 +69,8 @@ export function ProfileScreen({ credits = 30, walletAddress = '0x12ab...89ef', o
   const [isCreditInfoOpen, setIsCreditInfoOpen] = useState(false);
   const [selectedCreditPackage, setSelectedCreditPackage] = useState<CreditPackage | null>(null);
   const [completedCreditTotal, setCompletedCreditTotal] = useState<number | null>(null);
+  const [isCreditPurchasePending, setIsCreditPurchasePending] = useState(false);
+  const [creditPurchaseError, setCreditPurchaseError] = useState('');
 
   useEffect(() => {
     setCurrentCredits(credits);
@@ -68,14 +80,28 @@ export function ProfileScreen({ credits = 30, walletAddress = '0x12ab...89ef', o
     setIsCreditPanelOpen(false);
     setIsCreditInfoOpen(false);
     setSelectedCreditPackage(null);
+    setCreditPurchaseError('');
   };
 
-  const approveCreditPurchase = (creditPackage: CreditPackage) => {
-    const nextCreditTotal = currentCredits + creditPackage.credits;
-    setCurrentCredits(nextCreditTotal);
-    onAddCredits?.(creditPackage.credits);
-    closeCreditPanel();
-    setCompletedCreditTotal(nextCreditTotal);
+  const approveCreditPurchase = async (creditPackage: CreditPackage) => {
+    setCreditPurchaseError('');
+    setIsCreditPurchasePending(true);
+
+    try {
+      const nextCreditTotal = onPurchaseCredits
+        ? await onPurchaseCredits(creditPackage)
+        : currentCredits + creditPackage.credits;
+      setCurrentCredits(nextCreditTotal);
+      if (!onPurchaseCredits) {
+        onAddCredits?.(creditPackage.credits);
+      }
+      closeCreditPanel();
+      setCompletedCreditTotal(nextCreditTotal);
+    } catch (error) {
+      setCreditPurchaseError(error instanceof Error ? error.message : '크레딧 구매에 실패했습니다.');
+    } finally {
+      setIsCreditPurchasePending(false);
+    }
   };
 
   return (
@@ -226,8 +252,10 @@ export function ProfileScreen({ credits = 30, walletAddress = '0x12ab...89ef', o
           isInfoOpen={isCreditInfoOpen}
           currentCredits={currentCredits}
           walletAddress={walletAddress}
-          packages={creditPackages}
+          packages={packages}
           selectedPackage={selectedCreditPackage}
+          isPurchasePending={isCreditPurchasePending}
+          purchaseError={creditPurchaseError}
           onClose={closeCreditPanel}
           onToggleInfo={() => setIsCreditInfoOpen((value) => !value)}
           onCloseInfo={() => setIsCreditInfoOpen(false)}
@@ -269,6 +297,8 @@ type CreditChargePanelProps = {
   walletAddress: string;
   packages: CreditPackage[];
   selectedPackage: CreditPackage | null;
+  isPurchasePending?: boolean;
+  purchaseError?: string;
   onClose: () => void;
   onToggleInfo: () => void;
   onCloseInfo: () => void;
@@ -284,6 +314,8 @@ export function CreditChargePanel({
   walletAddress,
   packages,
   selectedPackage,
+  isPurchasePending = false,
+  purchaseError = '',
   onClose,
   onToggleInfo,
   onCloseInfo,
@@ -326,7 +358,7 @@ export function CreditChargePanel({
             onClick={() => onSelectPackage(creditPackage)}
           >
             <span>크레딧 <strong>{creditPackage.credits}개</strong></span>
-            <strong>{creditPackage.price} MNT</strong>
+            <strong>{creditPackage.priceMnt ?? creditPackage.price} MNT</strong>
           </button>
         ))}
       </div>
@@ -341,15 +373,21 @@ export function CreditChargePanel({
             <div className="credit-payment-summary">
               <div>
                 <span>크레딧 {selectedPackage.credits}개</span>
-                <strong>{selectedPackage.price} MNT</strong>
+                <strong>{selectedPackage.priceMnt ?? selectedPackage.price} MNT</strong>
               </div>
               <div>
                 <span>지갑주소</span>
                 <span>{walletAddress}</span>
               </div>
             </div>
-            <button className="credit-approve-button" type="button" onClick={() => onApprovePayment(selectedPackage)}>
-              승인 요청하기
+            {purchaseError ? <p className="credit-payment-error">{purchaseError}</p> : null}
+            <button
+              className="credit-approve-button"
+              type="button"
+              disabled={isPurchasePending}
+              onClick={() => onApprovePayment(selectedPackage)}
+            >
+              {isPurchasePending ? '승인 대기 중' : '승인 요청하기'}
             </button>
           </>
         ) : null}

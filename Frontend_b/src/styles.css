@@ -564,6 +564,23 @@ select {
   outline-offset: 2px;
 }
 
+.login-wallet-button:disabled,
+.signup-wallet-button:disabled,
+.credit-approve-button:disabled {
+  cursor: wait;
+  opacity: 0.62;
+}
+
+.login-wallet-error,
+.signup-wallet-error,
+.credit-payment-error {
+  margin: 10px 0 0;
+  color: #d34d30;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
 .signup-feed {
   display: flex;
   width: 100vw;

@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { OnboardingFeed } from './screens/OnboardingFeed';
 import { HomeFeed } from './screens/HomeFeed';
 import { BattleDetailScreen } from './screens/BattleDetailScreen';
-import { ProfileScreen } from './screens/ProfileScreen';
+import { ProfileScreen, creditPackages as fallbackCreditPackages, type CreditPackage } from './screens/ProfileScreen';
 import { SignupProfileScreen } from './screens/SignupProfileScreen';
 import { SignupWalletScreen } from './screens/SignupWalletScreen';
 import { CreateBattleScreen } from './screens/CreateBattleScreen';
@@ -28,6 +28,16 @@ import {
   type FeedBattle,
   type PreviewComment,
 } from './mocks/battles';
+import {
+  ApiClientError,
+  createCreditQuote,
+  exchangeCredits,
+  getCreditPackages,
+  getCredits,
+  getMe,
+  type ApiUser,
+} from './api/client';
+import { connectWalletWithSignature, sendNativeMntTransfer } from './api/wallet';
 
 export default function App() {
   const [route, setRoute] = useState(() => getRoute());
@@ -35,6 +45,12 @@ export default function App() {
   const [homeFilter, setHomeFilter] = useState<BattleType>(() => getSavedBattleType());
   const [searchTerm, setSearchTerm] = useState('');
   const [credits, setCredits] = useState(() => getInitialCredits());
+  const [currentUser, setCurrentUser] = useState<ApiUser | null>(null);
+  const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  const [walletProvider, setWalletProvider] = useState<string | null>(null);
+  const [creditPackageOptions, setCreditPackageOptions] = useState<CreditPackage[]>(fallbackCreditPackages);
+  const [isWalletConnecting, setIsWalletConnecting] = useState(false);
+  const [walletError, setWalletError] = useState('');
   const [likedBattleIds, setLikedBattleIds] = useState<string[]>([]);
   const [likedCommentIds, setLikedCommentIds] = useState<string[]>([]);
   const [participatedBattleIds, setParticipatedBattleIds] = useState<string[]>([]);
@@ -57,6 +73,42 @@ export default function App() {
 
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
+  useEffect(() => {
+    let isActive = true;
+
+    Promise.allSettled([getMe(), getCredits(), getCreditPackages()]).then(([userResult, creditsResult, packagesResult]) => {
+      if (!isActive) {
+        return;
+      }
+
+      if (userResult.status === 'fulfilled') {
+        setCurrentUser(userResult.value);
+        setWalletAddress(userResult.value.walletAddress);
+        setWalletProvider(userResult.value.walletProvider);
+        setCredits(userResult.value.creditBalance);
+      }
+
+      if (creditsResult.status === 'fulfilled') {
+        setCredits(creditsResult.value.balance);
+      }
+
+      if (packagesResult.status === 'fulfilled') {
+        setCreditPackageOptions(
+          packagesResult.value.packages.map((creditPackage) => ({
+            credits: creditPackage.credits,
+            price: Number(creditPackage.priceMnt),
+            priceMnt: creditPackage.priceMnt,
+            priceWei: creditPackage.priceWei,
+          })),
+        );
+      }
+    });
+
+    return () => {
+      isActive = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -261,6 +313,48 @@ export default function App() {
     setCredits((currentCredits) => currentCredits + amount);
   };
 
+  const handleWalletConnect = async (providerName: string) => {
+    setIsWalletConnecting(true);
+    setWalletError('');
+
+    try {
+      const verified = await connectWalletWithSignature(providerName);
+      setCurrentUser(verified.user);
+      setWalletAddress(verified.wallet.walletAddress);
+      setWalletProvider(verified.wallet.walletProvider);
+
+      const nextCredits = await getCredits();
+      setCredits(nextCredits.balance);
+    } catch (error) {
+      const message = getUserFacingErrorMessage(error);
+      setWalletError(message);
+      showNotice(message);
+      throw error;
+    } finally {
+      setIsWalletConnecting(false);
+    }
+  };
+
+  const handlePurchaseCredits = async (creditPackage: CreditPackage) => {
+    if (!walletAddress) {
+      await handleWalletConnect('MetaMask');
+    }
+
+    const quote = await createCreditQuote(creditPackage.credits);
+    const txHash = await sendNativeMntTransfer({
+      to: quote.quote.receiverAddress,
+      valueWei: quote.quote.priceWei,
+      chainId: quote.quote.chainId,
+    });
+    const exchanged = await exchangeCredits({
+      quoteId: quote.quote.id,
+      txHash,
+    });
+
+    setCredits(exchanged.balance);
+    return exchanged.balance;
+  };
+
   const handleRequireParticipation = () => {
     showNotice('참여 후 댓글을 작성할 수 있습니다.');
   };
@@ -322,7 +416,7 @@ export default function App() {
           <ParticipationModal
             battle={participationBattle}
             credits={credits}
-            walletAddress={MOCK_WALLET_ADDRESS}
+            walletAddress={walletAddress ?? MOCK_WALLET_ADDRESS}
             isParticipated={participationBattle ? participatedBattleIds.includes(participationBattle.id) : false}
             selectedOption={pendingParticipationOption}
             onClose={() => {
@@ -357,7 +451,13 @@ export default function App() {
 
   // Onboarding routes (no layout wrapper)
   if (route === 'signup') {
-    return <SignupWalletScreen />;
+    return (
+      <SignupWalletScreen
+        isConnecting={isWalletConnecting}
+        walletError={walletError}
+        onWalletConnect={handleWalletConnect}
+      />
+    );
   }
 
   if (route === 'signup-profile') {
@@ -430,7 +530,13 @@ export default function App() {
 
   if (route === 'profile') {
     return renderWithAppShell(
-      <ProfileScreen credits={credits} walletAddress={MOCK_WALLET_ADDRESS} onAddCredits={handleAddCredits} />,
+      <ProfileScreen
+        credits={credits}
+        walletAddress={walletAddress ?? '지갑 미연결'}
+        packages={creditPackageOptions}
+        onAddCredits={handleAddCredits}
+        onPurchaseCredits={handlePurchaseCredits}
+      />,
       { hideHeader: true },
     );
   }
@@ -441,7 +547,13 @@ export default function App() {
     );
   }
 
-  return <OnboardingFeed />;
+  return (
+    <OnboardingFeed
+      isWalletConnecting={isWalletConnecting}
+      walletError={walletError}
+      onWalletConnect={handleWalletConnect}
+    />
+  );
 }
 
 function getRoute() {
@@ -488,6 +600,23 @@ function getInitialCredits() {
   }
 
   return MOCK_CURRENT_USER.credits;
+}
+
+function getUserFacingErrorMessage(error: unknown) {
+  if (error instanceof ApiClientError) {
+    if (error.code === 'CREDIT_EXCHANGE_DISABLED') {
+      return '크레딧 교환이 아직 비활성화되어 있습니다.';
+    }
+    if (error.code === 'WALLET_REQUIRED') {
+      return '지갑 연결 후 다시 시도해주세요.';
+    }
+    if (error.code === 'CREDIT_EXCHANGE_NOT_READY') {
+      return '크레딧 교환 설정을 확인해주세요.';
+    }
+    return error.message;
+  }
+
+  return error instanceof Error ? error.message : '요청을 처리하지 못했습니다.';
 }
 
 function updateCommentLikeTree(comments: PreviewComment[], commentId: string, wasLiked: boolean): PreviewComment[] {

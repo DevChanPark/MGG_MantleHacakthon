@@ -84,7 +84,7 @@ const onboardingPages = [
 
 const carouselPages = onboardingPages.slice(2);
 
-export function OnboardingFeed() {
+export function OnboardingFeed(props: OnboardingFeedProps) {
   const [requestedPageId, setRequestedPageId] = useState(() => getRequestedPageId());
   const requestedPageIndex = onboardingPages.findIndex((page) => page.id === requestedPageId);
   const hasRequestedPage = requestedPageIndex !== -1;
@@ -97,19 +97,19 @@ export function OnboardingFeed() {
   }, []);
 
   if (!hasRequestedPage) {
-    return <AutoOnboardingCarousel />;
+    return <AutoOnboardingCarousel {...props} />;
   }
 
   const page = onboardingPages[requestedPageIndex];
 
   return (
     <main className="onboarding-feed" aria-label="MGG onboarding feed">
-      <OnboardingPageShell page={page}>{renderPage(page, true)}</OnboardingPageShell>
+      <OnboardingPageShell page={page}>{renderPage(page, true, props)}</OnboardingPageShell>
     </main>
   );
 }
 
-function AutoOnboardingCarousel() {
+function AutoOnboardingCarousel({ isWalletConnecting, walletError, onWalletConnect }: OnboardingFeedProps) {
   const [activePageIndex, setActivePageIndex] = useState(0);
   const [dragStartX, setDragStartX] = useState<number | null>(null);
 
@@ -167,7 +167,11 @@ function AutoOnboardingCarousel() {
         </div>
 
         <PageDots activeIndex={activePageIndex} />
-        <AuthActions />
+        <AuthActions
+          isWalletConnecting={isWalletConnecting}
+          walletError={walletError}
+          onWalletConnect={onWalletConnect}
+        />
       </div>
     </main>
   );
@@ -185,7 +189,12 @@ type OnboardingPage = (typeof onboardingPages)[number];
 
 type AuthPageProps = {
   showActions?: boolean;
+  isWalletConnecting?: boolean;
+  walletError?: string;
+  onWalletConnect?: (walletProvider: string) => Promise<void>;
 };
+
+type OnboardingFeedProps = Omit<AuthPageProps, 'showActions'>;
 
 function getWrappedPageIndex(pageIndex: number, pageCount: number) {
   return (pageIndex + pageCount) % pageCount;
@@ -203,15 +212,15 @@ function getPageLabel(page: OnboardingPage) {
           : 'MGG share result';
 }
 
-function renderPage(page: OnboardingPage, showActions: boolean) {
+function renderPage(page: OnboardingPage, showActions: boolean, authProps: OnboardingFeedProps = {}) {
   return page.kind === 'welcome' ? (
-    <WelcomePage showActions={showActions} />
+    <WelcomePage showActions={showActions} {...authProps} />
   ) : page.kind === 'type-select' ? (
-    <TypeSelectPage showActions={showActions} />
+    <TypeSelectPage showActions={showActions} {...authProps} />
   ) : page.kind === 'ai-judge' ? (
-    <AiJudgePage showActions={showActions} />
+    <AiJudgePage showActions={showActions} {...authProps} />
   ) : page.kind === 'share-result' ? (
-    <ShareResultPage showActions={showActions} />
+    <ShareResultPage showActions={showActions} {...authProps} />
   ) : (
     <LogoPage page={page} />
   );
@@ -260,7 +269,7 @@ function LogoPage({ page }: LogoPageProps) {
   );
 }
 
-function WelcomePage({ showActions = true }: AuthPageProps) {
+function WelcomePage({ showActions = true, isWalletConnecting, walletError, onWalletConnect }: AuthPageProps) {
   return (
     <div className="welcome-frame">
       <div className="welcome-hero" aria-hidden="true" />
@@ -269,7 +278,13 @@ function WelcomePage({ showActions = true }: AuthPageProps) {
 
       <PageDots activeIndex={0} />
 
-      {showActions ? <AuthActions /> : null}
+      {showActions ? (
+        <AuthActions
+          isWalletConnecting={isWalletConnecting}
+          walletError={walletError}
+          onWalletConnect={onWalletConnect}
+        />
+      ) : null}
     </div>
   );
 }
@@ -293,7 +308,7 @@ function WelcomeContent() {
   );
 }
 
-function TypeSelectPage({ showActions = true }: AuthPageProps) {
+function TypeSelectPage({ showActions = true, isWalletConnecting, walletError, onWalletConnect }: AuthPageProps) {
   return (
     <div className="welcome-frame type-select-frame">
       <div className="type-select-hero" aria-hidden="true" />
@@ -302,7 +317,13 @@ function TypeSelectPage({ showActions = true }: AuthPageProps) {
       <TypeSelectContent />
 
       <PageDots activeIndex={1} />
-      {showActions ? <AuthActions /> : null}
+      {showActions ? (
+        <AuthActions
+          isWalletConnecting={isWalletConnecting}
+          walletError={walletError}
+          onWalletConnect={onWalletConnect}
+        />
+      ) : null}
     </div>
   );
 }
@@ -325,7 +346,7 @@ function TypeSelectContent() {
   );
 }
 
-function AiJudgePage({ showActions = true }: AuthPageProps) {
+function AiJudgePage({ showActions = true, isWalletConnecting, walletError, onWalletConnect }: AuthPageProps) {
   return (
     <div className="welcome-frame ai-judge-frame">
       <div className="ai-judge-hero" aria-hidden="true" />
@@ -334,7 +355,13 @@ function AiJudgePage({ showActions = true }: AuthPageProps) {
       <AiJudgeContent />
 
       <PageDots activeIndex={2} />
-      {showActions ? <AuthActions /> : null}
+      {showActions ? (
+        <AuthActions
+          isWalletConnecting={isWalletConnecting}
+          walletError={walletError}
+          onWalletConnect={onWalletConnect}
+        />
+      ) : null}
     </div>
   );
 }
@@ -348,7 +375,7 @@ function AiJudgeContent() {
   );
 }
 
-function ShareResultPage({ showActions = true }: AuthPageProps) {
+function ShareResultPage({ showActions = true, isWalletConnecting, walletError, onWalletConnect }: AuthPageProps) {
   return (
     <div className="welcome-frame share-result-frame">
       <div className="share-result-hero" aria-hidden="true" />
@@ -357,7 +384,13 @@ function ShareResultPage({ showActions = true }: AuthPageProps) {
       <ShareResultContent />
 
       <PageDots activeIndex={3} />
-      {showActions ? <AuthActions /> : null}
+      {showActions ? (
+        <AuthActions
+          isWalletConnecting={isWalletConnecting}
+          walletError={walletError}
+          onWalletConnect={onWalletConnect}
+        />
+      ) : null}
     </div>
   );
 }
@@ -391,7 +424,7 @@ function PageDots({ activeIndex }: PageDotsProps) {
   );
 }
 
-function AuthActions() {
+function AuthActions({ isWalletConnecting = false, walletError = '', onWalletConnect }: OnboardingFeedProps) {
   const [isLoginOpen, setIsLoginOpen] = useState(false);
 
   const openSignupFeed = () => {
@@ -410,16 +443,26 @@ function AuthActions() {
         계정을 생성하거나 로그인하면 당사의 <a href="#terms">이용약관(EULA)</a> 및{' '}
         <a href="#privacy">개인정보 처리 방침</a>에 동의하는 것으로 간주됩니다.
       </p>
-      {isLoginOpen ? <LoginModal onClose={() => setIsLoginOpen(false)} /> : null}
+      {isLoginOpen ? (
+        <LoginModal
+          isWalletConnecting={isWalletConnecting}
+          walletError={walletError}
+          onWalletConnect={onWalletConnect}
+          onClose={() => setIsLoginOpen(false)}
+        />
+      ) : null}
     </div>
   );
 }
 
 type LoginModalProps = {
   onClose: () => void;
+  isWalletConnecting?: boolean;
+  walletError?: string;
+  onWalletConnect?: (walletProvider: string) => Promise<void>;
 };
 
-function LoginModal({ onClose }: LoginModalProps) {
+function LoginModal({ onClose, isWalletConnecting = false, walletError = '', onWalletConnect }: LoginModalProps) {
   const closeOnBackdrop = (event: MouseEvent<HTMLDivElement>) => {
     if (event.target === event.currentTarget) {
       onClose();
@@ -436,7 +479,19 @@ function LoginModal({ onClose }: LoginModalProps) {
 
         <div className="login-wallet-options">
           {loginWalletOptions.map((option) => (
-            <button className="login-wallet-button" type="button" key={option.strongLabel}>
+            <button
+              className="login-wallet-button"
+              type="button"
+              key={option.strongLabel}
+              disabled={isWalletConnecting}
+              onClick={() => {
+                if (!onWalletConnect) {
+                  window.location.hash = 'signup';
+                  return;
+                }
+                void onWalletConnect(option.strongLabel).then(onClose).catch(() => undefined);
+              }}
+            >
               <img
                 className={`wallet-icon ${option.iconClassName}`}
                 src={option.iconSrc}
@@ -450,6 +505,7 @@ function LoginModal({ onClose }: LoginModalProps) {
             </button>
           ))}
         </div>
+        {walletError ? <p className="login-wallet-error">{walletError}</p> : null}
       </section>
     </div>
   );
