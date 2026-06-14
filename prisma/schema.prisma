@@ -94,12 +94,15 @@ model Entry {
   id                String   @id @default(cuid())
   battleId          String
   optionId          String?
+  parentEntryId     String?
   content           String
   submittedByUserId String
   createdAt         DateTime @default(now())
 
   battle      Battle        @relation(fields: [battleId], references: [id], onDelete: Cascade)
   option      BattleOption? @relation(fields: [optionId], references: [id])
+  parentEntry Entry?        @relation("EntryReplies", fields: [parentEntryId], references: [id], onDelete: Cascade)
+  replies     Entry[]       @relation("EntryReplies")
   submittedBy User         @relation(fields: [submittedByUserId], references: [id])
   socialComments SocialComment[]
   likes       EntryLike[]
@@ -107,6 +110,7 @@ model Entry {
 
   @@index([battleId])
   @@index([optionId])
+  @@index([parentEntryId])
   @@map("entries")
 }
 

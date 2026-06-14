@@ -287,11 +287,11 @@ export function validateDemoCreditChargeRequest(input) {
 export function validateSocialCommentRequest(input) {
   const body = ensureObject(input, "request body");
   const details = [];
-  const content = normalizeOptionalString(body.content);
+  const content = normalizeOptionalString(body.content) || normalizeOptionalString(body.text);
   const targetEntryId = normalizeOptionalString(body.targetEntryId);
 
   if (!content) {
-    details.push("content is required");
+    details.push("content or text is required");
   } else if (content.length > MAX_SOCIAL_COMMENT_LENGTH) {
     details.push(`content must be ${MAX_SOCIAL_COMMENT_LENGTH} characters or fewer`);
   }

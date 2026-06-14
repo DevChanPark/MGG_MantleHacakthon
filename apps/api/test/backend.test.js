@@ -410,7 +410,7 @@ test("gAon feed flow supports create, participation spend, comments, evaluation,
     method: "POST",
     url: `/api/feed/battles/${created.body.battle.id}/comments`,
     headers,
-    body: { content: "My judged feed comment." }
+    body: { text: "My judged feed comment." }
   });
   assert.equal(comment.statusCode, 201);
   assert.equal(comment.body.comment.text, "My judged feed comment.");
@@ -424,6 +424,25 @@ test("gAon feed flow supports create, participation spend, comments, evaluation,
   assert.equal(commentLike.body.liked, true);
   assert.equal(commentLike.body.likeCount, 1);
 
+  const reply = await app.inject({
+    method: "POST",
+    url: `/api/feed/comments/${comment.body.comment.id}/replies`,
+    headers,
+    body: { text: "Nested reply from the latest gAon UI." }
+  });
+  assert.equal(reply.statusCode, 201);
+  assert.equal(reply.body.reply.text, "Nested reply from the latest gAon UI.");
+  assert.equal(reply.body.reply.parentEntryId, comment.body.comment.id);
+
+  const replyLike = await app.inject({
+    method: "POST",
+    url: `/api/feed/comments/${reply.body.reply.id}/like`,
+    headers
+  });
+  assert.equal(replyLike.statusCode, 200);
+  assert.equal(replyLike.body.liked, true);
+  assert.equal(replyLike.body.likeCount, 1);
+
   const detail = await app.inject({
     method: "GET",
     url: `/api/feed/battles/${created.body.battle.id}`,
@@ -434,6 +453,8 @@ test("gAon feed flow supports create, participation spend, comments, evaluation,
   assert.equal(detail.body.battle.isBattleLiked, true);
   assert.equal(detail.body.battle.comments.length, 1);
   assert.equal(detail.body.battle.comments[0].likedByMe, true);
+  assert.equal(detail.body.battle.comments[0].replies.length, 1);
+  assert.equal(detail.body.battle.comments[0].replies[0].likedByMe, true);
   assert.equal(detail.body.battle.stats.participationCount, 1);
 
   const evaluated = await app.inject({
@@ -443,7 +464,11 @@ test("gAon feed flow supports create, participation spend, comments, evaluation,
   });
   assert.equal(evaluated.statusCode, 200);
   assert.equal(evaluated.body.battle.status, BattleStatus.SETTLED);
+  assert.equal(evaluated.body.entries.some((entry) => entry.id === reply.body.reply.id), false);
+  assert.equal(evaluated.body.feedResult.winnerCommentId, evaluated.body.feedResult.winnerEntryId);
+  assert.equal(evaluated.body.feedResult.participantCount, 1);
   assert.equal(evaluated.body.feedResult.rewardCredits, 30);
+  assert.ok(evaluated.body.feedResult.aiSummary);
   assert.ok(evaluated.body.feedResult.verdictLines.length > 0);
 
   const reward = await app.inject({
@@ -470,10 +495,44 @@ test("gAon feed flow supports create, participation spend, comments, evaluation,
   });
   assert.equal(notifications.statusCode, 200);
   assert.ok(notifications.body.notifications.length >= 2);
+  assert.equal(notifications.body.notifications.some((item) => item.isRead), false);
+
+  const firstNotification = notifications.body.notifications[0];
+  assert.equal(firstNotification.readAt, null);
+  assert.equal(firstNotification.isRead, false);
+  assert.equal(firstNotification.targetType, "battle");
+
+  const forbiddenRead = await app.inject({
+    method: "POST",
+    url: `/api/users/me/notifications/${firstNotification.id}/read`,
+    headers: { "x-user-id": "other-gaon-user" }
+  });
+  assert.equal(forbiddenRead.statusCode, 404);
+  assert.equal(forbiddenRead.body.error.code, "NOTIFICATION_NOT_FOUND");
+
+  const readOne = await app.inject({
+    method: "POST",
+    url: `/api/users/me/notifications/${firstNotification.id}/read`,
+    headers
+  });
+  assert.equal(readOne.statusCode, 200);
+  assert.equal(readOne.body.notification.id, firstNotification.id);
+  assert.equal(readOne.body.notification.isRead, true);
+  assert.ok(readOne.body.notification.readAt);
+
+  const readAll = await app.inject({
+    method: "POST",
+    url: "/api/users/me/notifications/read-all",
+    headers
+  });
+  assert.equal(readAll.statusCode, 200);
+  assert.ok(readAll.body.readCount >= 1);
+  assert.equal(readAll.body.notifications.every((item) => item.isRead), true);
 
   const myComments = await app.inject({ method: "GET", url: "/api/users/me/comments", headers });
   assert.equal(myComments.statusCode, 200);
   assert.equal(myComments.body.comments.some((item) => item.kind === "FEED_COMMENT" && item.id === comment.body.comment.id), true);
+  assert.equal(myComments.body.comments.some((item) => item.kind === "FEED_COMMENT" && item.id === reply.body.reply.id), true);
 
   const myLikes = await app.inject({ method: "GET", url: "/api/users/me/likes", headers });
   assert.equal(myLikes.statusCode, 200);
@@ -546,6 +605,8 @@ test("OPTION feed rewards can be claimed by participants on the winning option",
   });
   assert.equal(evaluated.statusCode, 200);
   assert.equal(evaluated.body.feedResult.winnerName, "Pour");
+  assert.equal(evaluated.body.feedResult.winningOptionId, evaluated.body.feedResult.winnerOptionId);
+  assert.ok(evaluated.body.feedResult.optionStats.some((item) => item.label === "Pour"));
 
   const reward = await app.inject({
     method: "POST",
@@ -554,6 +615,23 @@ test("OPTION feed rewards can be claimed by participants on the winning option",
   });
   assert.equal(reward.statusCode, 201);
   assert.equal(reward.body.balance, 57);
+});
+
+test("expired open feed battles map to the latest gAon evaluating state", async () => {
+  const app = makeApp();
+  const created = await app.inject({
+    method: "POST",
+    url: "/api/feed/battles",
+    headers: { "x-user-id": "expired-feed-user" },
+    body: {
+      battleType: BattleType.TEXT_OPEN,
+      title: "Expired feed battle",
+      content: "This should enter the evaluation UI after deadline.",
+      deadline: "2020-01-01 00:00"
+    }
+  });
+  assert.equal(created.statusCode, 201);
+  assert.equal(created.body.battle.status, "EVALUATING");
 });
 
 test("request body cannot spoof creator or entry submitter identity", async () => {

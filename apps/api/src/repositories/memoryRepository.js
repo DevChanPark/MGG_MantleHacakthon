@@ -40,6 +40,9 @@ export class MemoryRepository {
     this.state.battleShares ??= [];
     this.state.notifications ??= [];
     this.state.users.forEach(normalizeUserProfileFields);
+    this.state.entries.forEach((entry) => {
+      entry.parentEntryId ??= null;
+    });
   }
 
   exportState() {
@@ -312,6 +315,7 @@ export class MemoryRepository {
       id: randomUUID(),
       battleId: input.battleId,
       optionId: input.optionId || null,
+      parentEntryId: input.parentEntryId || null,
       content: input.content,
       submittedByUserId: input.submittedByUserId,
       createdAt: now()
@@ -330,14 +334,14 @@ export class MemoryRepository {
   }
 
   async listEntriesByUser(userId) {
-    const feedEntryIds = new Set(
+    const participatedBattleIds = new Set(
       this.state.participations
-        .filter((participation) => participation.userId === userId && participation.entryId)
-        .map((participation) => participation.entryId)
+        .filter((participation) => participation.userId === userId)
+        .map((participation) => participation.battleId)
     );
     return clone(
       this.state.entries
-        .filter((entry) => entry.submittedByUserId === userId && feedEntryIds.has(entry.id))
+        .filter((entry) => entry.submittedByUserId === userId && participatedBattleIds.has(entry.battleId))
         .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
         .map((entry) => ({
           ...entry,
@@ -727,6 +731,38 @@ export class MemoryRepository {
         .filter((notification) => notification.userId === userId)
         .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
     );
+  }
+
+  async markNotificationRead(notificationId, userId, readAt = now()) {
+    const notification = this.state.notifications.find((item) => item.id === notificationId && item.userId === userId);
+    if (!notification) {
+      return null;
+    }
+
+    if (!notification.readAt) {
+      notification.readAt = readAt;
+      await this.afterMutation();
+    }
+    return clone(notification);
+  }
+
+  async markAllNotificationsRead(userId, readAt = now()) {
+    let readCount = 0;
+    for (const notification of this.state.notifications) {
+      if (notification.userId === userId && !notification.readAt) {
+        notification.readAt = readAt;
+        readCount += 1;
+      }
+    }
+
+    if (readCount > 0) {
+      await this.afterMutation();
+    }
+
+    return {
+      readCount,
+      notifications: await this.listNotificationsByUser(userId)
+    };
   }
 
   async afterMutation() {}

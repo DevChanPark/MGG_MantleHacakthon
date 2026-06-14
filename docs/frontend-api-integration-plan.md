@@ -15,15 +15,18 @@ the frontend branch was read but not modified.
 5. gAon battle detail: `GET /api/feed/battles/:battleId`
 6. Participation: `POST /api/feed/battles/:battleId/participations`
 7. Judged feed comment: `POST /api/feed/battles/:battleId/comments`
-8. Demo evaluation: `POST /api/feed/battles/:battleId/evaluate`
-9. Reward claim: `POST /api/feed/battles/:battleId/rewards/claim`
-10. Notifications: `GET /api/users/me/notifications`
+8. Judged feed reply: `POST /api/feed/comments/:entryId/replies`
+9. Demo evaluation: `POST /api/feed/battles/:battleId/evaluate`
+10. Reward claim: `POST /api/feed/battles/:battleId/rewards/claim`
+11. Notifications: `GET /api/users/me/notifications`
+12. Notification read state: `POST /api/users/me/notifications/:notificationId/read`
+    and `POST /api/users/me/notifications/read-all`
 
 ## MVP Decisions
 
 - Demo identity is fixed to `x-user-id: demo-seed-user` for frontend API calls.
 - Use backend demo APIs for credits, likes, share counts, social comments, and
-  current-account profile comment/like tabs.
+  current-account profile comment/like/notification tabs.
 - Keep real payment approval/settlement and public profile social tabs deferred.
 - Use the backend demo dataset for list/detail/result screens before adding a
   full battle creation UX.
@@ -197,10 +200,17 @@ State behavior:
   judged by AI.
 - In gAon feed screens, comments are judged entries and require participation
   first.
+- For gAon judged comments, send `{ "content": "..." }`; the backend also
+  accepts `{ "text": "..." }` to match the current component callback naming.
+- For latest nested replies, call `POST /api/feed/comments/:entryId/replies`.
+  Replies are returned under each feed comment's `replies` array and use the
+  same like endpoints as comments. They are conversation context, not AI winner
+  candidates.
 - `POST /api/feed/battles/:battleId/participations` returns `balance`,
   `alreadyParticipated`, and `selectedOption`.
 - `POST /api/feed/battles/:battleId/evaluate` returns the normal settled result
-  plus `feedResult` for the winner modal.
+  plus `feedResult` for the winner modal, including `winnerCommentId`,
+  `participantCount`, `aiSummary`, and `optionStats`.
 - `POST /api/feed/battles/:battleId/rewards/claim` can reward the winning entry
   owner for TEXT/IMAGE battles or participants on the winning option for OPTION
   battles.

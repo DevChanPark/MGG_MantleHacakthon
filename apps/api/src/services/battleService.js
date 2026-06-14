@@ -48,9 +48,12 @@ export function createBattleService({ repository, aiJudgeService, settlementServ
     shareBattle: (battleId, input, userId) => shareBattle(repository, battleId, input, userId),
     participateInBattle: (battleId, input, userId) => participateInBattle(repository, battleId, input, userId),
     createFeedComment: (battleId, input, userId) => createFeedComment(repository, battleId, input, userId),
+    createFeedReply: (entryId, input, userId) => createFeedReply(repository, entryId, input, userId),
     evaluateFeedBattle: (battleId) => evaluateFeedBattle(repository, aiJudgeService, settlementService, config, battleId),
     claimFeedReward: (battleId, userId) => claimFeedReward(repository, battleId, userId),
     listNotifications: (userId) => listNotifications(repository, userId),
+    markNotificationRead: (notificationId, userId) => markNotificationRead(repository, notificationId, userId),
+    markAllNotificationsRead: (userId) => markAllNotificationsRead(repository, userId),
     closeBattle: (battleId) => closeBattle(repository, battleId),
     judgeBattle: (battleId) => judgeBattle(repository, aiJudgeService, settlementService, config, battleId),
     getResult: (battleId) => getResult(repository, battleId),
@@ -307,6 +310,45 @@ async function createFeedComment(repository, battleId, input, userId) {
   return toFeedComment(repository, entry, user.id);
 }
 
+async function createFeedReply(repository, parentEntryId, input, userId) {
+  const parentEntry = await repository.getEntry(parentEntryId);
+  if (!parentEntry) {
+    throw new ApiError(404, "COMMENT_NOT_FOUND", "Feed comment not found");
+  }
+
+  const battle = await getBattleOrThrow(repository, parentEntry.battleId);
+  if (getFeedStatus(battle) !== "OPEN") {
+    throw new ApiError(409, "BATTLE_NOT_OPEN", "Only open battles accept replies");
+  }
+
+  const normalized = validateSocialCommentRequest(input);
+  const moderation = moderateEntryContent(normalized.content);
+  if (!moderation.allowed) {
+    throw new ApiError(400, "ENTRY_REJECTED", "Reply did not pass moderation checks");
+  }
+
+  const user = await repository.getOrCreateUser(userId);
+  const participation = await repository.getParticipation(battle.id, user.id);
+  if (!participation) {
+    throw new ApiError(409, "PARTICIPATION_REQUIRED", "Participate before adding a reply");
+  }
+
+  const entry = await repository.addEntry({
+    battleId: battle.id,
+    content: normalized.content,
+    optionId: battle.battleType === "OPTION" ? participation.optionId : parentEntry.optionId || null,
+    parentEntryId: parentEntry.id,
+    submittedByUserId: user.id,
+    expectedBattleStatus: BattleStatus.OPEN
+  });
+
+  if (!entry) {
+    throw new ApiError(409, "BATTLE_NOT_OPEN", "Only open battles accept replies");
+  }
+
+  return toFeedComment(repository, entry, user.id);
+}
+
 async function evaluateFeedBattle(repository, aiJudgeService, settlementService, config, battleId) {
   const battle = await getBattleOrThrow(repository, battleId);
   if (battle.status === BattleStatus.OPEN) {
@@ -392,7 +434,28 @@ async function claimFeedReward(repository, battleId, userId) {
 
 async function listNotifications(repository, userId) {
   const user = await repository.getOrCreateUser(userId);
-  return repository.listNotificationsByUser?.(user.id) ?? [];
+  const notifications = await repository.listNotificationsByUser?.(user.id) ?? [];
+  return notifications.map(toNotificationDto);
+}
+
+async function markNotificationRead(repository, notificationId, userId) {
+  const user = await repository.getOrCreateUser(userId);
+  const notification = await repository.markNotificationRead?.(notificationId, user.id, new Date().toISOString());
+  if (!notification) {
+    throw new ApiError(404, "NOTIFICATION_NOT_FOUND", "Notification not found");
+  }
+  return {
+    notification: toNotificationDto(notification)
+  };
+}
+
+async function markAllNotificationsRead(repository, userId) {
+  const user = await repository.getOrCreateUser(userId);
+  const result = await repository.markAllNotificationsRead?.(user.id, new Date().toISOString());
+  return {
+    readCount: result?.readCount ?? 0,
+    notifications: (result?.notifications ?? []).map(toNotificationDto)
+  };
 }
 
 async function shareBattle(repository, battleId, input, userId) {
@@ -610,7 +673,7 @@ async function listMyLikes(repository, userId) {
 
 async function closeBattle(repository, battleId) {
   const battle = await getBattleOrThrow(repository, battleId);
-  const entries = await repository.listEntriesByBattle(battleId);
+  const entries = (await repository.listEntriesByBattle(battleId)).filter((entry) => !entry.parentEntryId);
   if (entries.length === 0) {
     throw new ApiError(409, "BATTLE_CANNOT_CLOSE", "Cannot close a battle without entries");
   }
@@ -642,7 +705,7 @@ async function judgeBattle(repository, aiJudgeService, settlementService, config
     throw new ApiError(409, "BATTLE_CANNOT_JUDGE", error.message);
   }
 
-  const entries = await repository.listEntriesByBattle(battleId);
+  const entries = (await repository.listEntriesByBattle(battleId)).filter((entry) => !entry.parentEntryId);
   if (entries.length === 0) {
     throw new ApiError(409, "NO_ENTRIES", "Cannot judge a battle without entries");
   }
@@ -733,7 +796,7 @@ async function getResult(repository, battleId) {
   }
 
   const [entries, verdict, settlement] = await Promise.all([
-    repository.listEntriesByBattle(battleId),
+    repository.listEntriesByBattle(battleId).then((entries) => entries.filter((entry) => !entry.parentEntryId)),
     repository.getVerdictByBattle(battleId),
     repository.getSettlementByBattle(battleId)
   ]);
@@ -806,7 +869,7 @@ async function toFeedBattle(repository, battle, userId) {
     repository.getBattleLikeState?.(battle.id, userId) ?? false,
     repository.getParticipation?.(battle.id, userId) ?? null
   ]);
-  const comments = await Promise.all(entries.map((entry) => toFeedComment(repository, entry, userId)));
+  const comments = await buildFeedCommentTree(repository, entries, userId);
 
   return {
     id: battle.id,
@@ -831,8 +894,26 @@ async function toFeedBattle(repository, battle, userId) {
   };
 }
 
-async function toFeedComment(repository, entry, userId) {
+async function buildFeedCommentTree(repository, entries, userId) {
+  const repliesByParentId = new Map();
+  const topLevelEntries = [];
+
+  for (const entry of entries) {
+    if (entry.parentEntryId) {
+      const replies = repliesByParentId.get(entry.parentEntryId) ?? [];
+      replies.push(entry);
+      repliesByParentId.set(entry.parentEntryId, replies);
+    } else {
+      topLevelEntries.push(entry);
+    }
+  }
+
+  return Promise.all(topLevelEntries.map((entry) => toFeedComment(repository, entry, userId, repliesByParentId)));
+}
+
+async function toFeedComment(repository, entry, userId, repliesByParentId = new Map()) {
   const stats = await repository.getEntryStats?.(entry.id, userId);
+  const replies = repliesByParentId.get(entry.id) ?? [];
   return {
     id: entry.id,
     entryId: entry.id,
@@ -841,6 +922,8 @@ async function toFeedComment(repository, entry, userId) {
     likeCount: stats?.likeCount ?? 0,
     likedByMe: stats?.likedByMe ?? false,
     optionId: entry.optionId || null,
+    parentEntryId: entry.parentEntryId || null,
+    replies: await Promise.all(replies.map((reply) => toFeedComment(repository, reply, userId, repliesByParentId))),
     createdAt: entry.createdAt
   };
 }
@@ -848,6 +931,7 @@ async function toFeedComment(repository, entry, userId) {
 function toFeedResult(result) {
   const verdict = result.verdict ?? {};
   const entries = result.entries ?? [];
+  const participantCount = new Set(entries.map((entry) => entry.submittedByUserId).filter(Boolean)).size;
   const winnerEntry = verdict.winnerEntryId
     ? entries.find((entry) => entry.id === verdict.winnerEntryId)
     : null;
@@ -863,11 +947,17 @@ function toFeedResult(result) {
         };
       })
     : undefined;
+  const optionStats = optionResults?.map((item, index) => ({
+    optionId: verdict.optionScores[index].optionId,
+    ...item
+  }));
 
   return {
     winnerUserId: winnerEntry?.submittedByUserId ?? null,
     winnerEntryId: winnerEntry?.id ?? null,
+    winnerCommentId: winnerEntry?.id ?? null,
     winnerOptionId: winnerOption?.id ?? null,
+    winningOptionId: winnerOption?.id ?? null,
     winnerName:
       verdict.winnerType === "OPTION"
         ? winnerOption?.text ?? "우승 진영"
@@ -878,8 +968,11 @@ function toFeedResult(result) {
           ? `${winnerOption.text} 진영`
           : verdict.verdictText ?? ""
         : winnerEntry?.content ?? verdict.verdictText ?? "",
+    participantCount,
     rewardCredits: DEFAULT_REWARD_CREDITS,
+    aiSummary: verdict.shareSummary ?? verdict.verdictText ?? "",
     verdictLines: [verdict.verdictTitle, verdict.verdictText, verdict.shareSummary].filter(Boolean),
+    optionStats,
     optionResults
   };
 }
@@ -891,10 +984,19 @@ function getFeedStatus(battle) {
   if (battle.status === BattleStatus.OPEN && battle.deadlineAt) {
     const deadline = new Date(battle.deadlineAt);
     if (Number.isFinite(deadline.getTime()) && deadline.getTime() <= Date.now()) {
-      return "EXPIRED";
+      return "EVALUATING";
     }
   }
   return battle.status;
+}
+
+function toNotificationDto(notification) {
+  return {
+    ...notification,
+    isRead: Boolean(notification.readAt),
+    targetType: notification.battleId ? "battle" : "profile",
+    time: notification.createdAt
+  };
 }
 
 function formatFeedDeadline(deadlineAt) {

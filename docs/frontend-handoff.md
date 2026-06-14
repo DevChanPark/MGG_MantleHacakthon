@@ -96,17 +96,22 @@ feed-shaped API:
    `참여하기`. This spends 3 demo credits and returns `selectedOption` for
    OPTION battles.
 5. `POST /api/feed/battles/:battleId/comments` after participation. This creates
-   a judged backend entry.
-6. `POST /api/battles/:battleId/like` and `DELETE /api/battles/:battleId/like`
+   a judged backend entry. Send `content`; `text` is accepted as a gAon
+   component compatibility alias.
+6. `POST /api/feed/comments/:entryId/replies` for nested gAon replies.
+7. `POST /api/battles/:battleId/like` and `DELETE /api/battles/:battleId/like`
    for battle card likes.
-7. `POST /api/feed/comments/:entryId/like` and
+8. `POST /api/feed/comments/:entryId/like` and
    `DELETE /api/feed/comments/:entryId/like` for comment likes.
-8. `POST /api/feed/battles/:battleId/evaluate` for the demo evaluate action.
+9. `POST /api/feed/battles/:battleId/evaluate` for the demo evaluate action.
    Use `feedResult` for the gAon winner modal.
-9. `POST /api/feed/battles/:battleId/rewards/claim` for winner credit claim.
+10. `POST /api/feed/battles/:battleId/rewards/claim` for winner credit claim.
    TEXT/IMAGE rewards use the winning entry; OPTION rewards use the winning
    option side.
-10. `GET /api/users/me/notifications` for the notification panel.
+11. `GET /api/users/me/notifications` for the notification panel.
+12. `POST /api/users/me/notifications/:notificationId/read` when the user taps
+    a notification, and `POST /api/users/me/notifications/read-all` for an
+    optional mark-all-read action.
 
 Feed comments are entries in the backend because the gAon UI uses them as AI
 judging material. The older social comment endpoints remain available for

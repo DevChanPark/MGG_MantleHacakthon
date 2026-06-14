@@ -58,7 +58,7 @@ Prisma schema 오류, 테스트 실패는 남아 있지 않다. 다만 코드리
 
 - 지갑 잔액조회는 MVP 필수가 아니라 제외하는 것이 맞다.
 - 실제 결제/온체인 구매도 MVP 범위 밖이다.
-- 알림 읽음 처리, 검색, public profile도 지금 만들 필요가 없다.
+- 검색, public profile은 지금 만들 필요가 없다.
 - 지금은 백엔드 기능 추가보다 프론트 mock 데이터 교체 중 payload mismatch만
   대응하는 것이 좋다.
 
@@ -191,13 +191,14 @@ API는 만들지 않고, current user 기준의 API만 보강했다.
 - `GET /api/users/me/comments`
 - `GET /api/users/me/likes`
 - `GET /api/users/me/notifications`
+- `POST /api/users/me/notifications/:notificationId/read`
+- `POST /api/users/me/notifications/read-all`
 
 정리한 범위:
 
 - `/comments`는 일반 social comment와 gAon feed comment를 함께 내려준다.
 - `/likes`는 entry/feed comment 좋아요와 battle card 좋아요를 함께 내려준다.
-- 알림은 목록 조회까지만 구현했다.
-- 알림 읽음 처리 API는 MVP 필수가 아니라 제외했다.
+- 알림은 목록 조회와 읽음 처리를 구현했다.
 
 ## 6. DB와 저장소 보강
 
@@ -239,7 +240,7 @@ Prisma schema와 JSON/메모리 저장소 양쪽을 함께 맞췄다. 테스트 
 | ParticipationModal | 3 크레딧 차감과 OPTION 진영 선택이 서버에 기록된다. 중복 클릭해도 잔액이 꼬이지 않는다. | participations |
 | RewardModal | AI 평가 결과와 보상 지급 상태를 서버 결과로 보여준다. | evaluate, rewards/claim |
 | ProfileScreen | 내 글, 내 댓글, 내 좋아요, 내 크레딧이 mock이 아니라 현재 계정 데이터가 된다. | users/me lists, credits |
-| NotificationPanel | 참여/보상 알림을 서버 목록으로 표시할 수 있다. | notifications |
+| NotificationPanel | 참여/보상 알림을 서버 목록으로 표시하고 클릭 시 읽음 처리할 수 있다. | notifications |
 
 ### Signup Wallet
 
@@ -354,11 +355,12 @@ public profile은 MVP 범위가 아니라 만들지 않았다.
 필요한 백엔드:
 
 - `GET /api/users/me/notifications`
+- `POST /api/users/me/notifications/:notificationId/read`
+- `POST /api/users/me/notifications/read-all`
 
 설명:
 
-참여 발생, 보상 지급 같은 알림 목록을 조회한다. 읽음 처리는 MVP 필수가 아니라
-추가하지 않았다.
+참여 발생, 보상 지급 같은 알림 목록을 조회하고, 알림 클릭 시 `readAt`을 기록한다.
 
 ## 일부러 하지 않은 것
 
@@ -367,7 +369,6 @@ MVP 범위를 지키기 위해 아래 기능은 제외했다.
 - 지갑 잔액 조회
 - 실제 MNT 결제
 - 실제 온체인 credit 구매
-- 알림 읽음 처리
 - public profile
 - 검색 API
 - 추천 알고리즘 고도화
@@ -380,7 +381,7 @@ MVP 범위를 지키기 위해 아래 기능은 제외했다.
 
 마지막 검증 결과:
 
-- `npm test`: 27개 통과
+- `npm test`: 28개 통과
 - `npm run prisma:validate`: 통과
 - `npm run prisma:generate`: 통과
 - 주요 JS 파일 `node --check`: 통과

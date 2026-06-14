@@ -75,6 +75,16 @@ export function createApiApp({ repository, config, aiJudgeService, settlementSer
         return ok({ notifications: await battleService.listNotifications(userId) });
       }
 
+      if (method === "POST" && path === "/api/users/me/notifications/read-all") {
+        return ok(await battleService.markAllNotificationsRead(userId));
+      }
+
+      const notificationReadMatch = path.match(/^\/api\/users\/me\/notifications\/([^/]+)\/read$/);
+      if (notificationReadMatch && method === "POST") {
+        const notificationId = safeDecodePathComponent(notificationReadMatch[1]);
+        return ok(await battleService.markNotificationRead(notificationId, userId));
+      }
+
       if (method === "GET" && path === "/api/feed/battles") {
         return ok({ battles: await battleService.listFeedBattles(userId) });
       }
@@ -120,6 +130,12 @@ export function createApiApp({ repository, config, aiJudgeService, settlementSer
         if (method === "DELETE") {
           return ok(await battleService.setEntryLike(entryId, userId, false));
         }
+      }
+
+      const feedCommentReplyMatch = path.match(/^\/api\/feed\/comments\/([^/]+)\/replies$/);
+      if (feedCommentReplyMatch && method === "POST") {
+        const entryId = safeDecodePathComponent(feedCommentReplyMatch[1]);
+        return created({ reply: await battleService.createFeedReply(entryId, request.body, userId) });
       }
 
       const feedBattleMatch = path.match(/^\/api\/feed\/battles\/([^/]+)(?:\/(.+))?$/);

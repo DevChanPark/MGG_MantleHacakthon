@@ -314,6 +314,7 @@ export class PrismaRepository {
         data: {
           battleId: input.battleId,
           optionId: input.optionId || null,
+          parentEntryId: input.parentEntryId || null,
           content: input.content,
           submittedByUserId: input.submittedByUserId
         }
@@ -335,8 +336,10 @@ export class PrismaRepository {
     const entries = await this.prisma.entry.findMany({
       where: {
         submittedByUserId: userId,
-        participations: {
-          some: { userId }
+        battle: {
+          participations: {
+            some: { userId }
+          }
         }
       },
       orderBy: { createdAt: "desc" },
@@ -793,6 +796,42 @@ export class PrismaRepository {
     });
     return notifications.map(formatNotification);
   }
+
+  async markNotificationRead(notificationId, userId, readAt) {
+    const existing = await this.prisma.notification.findFirst({
+      where: { id: notificationId, userId }
+    });
+    if (!existing) {
+      return null;
+    }
+
+    if (existing.readAt) {
+      return formatNotification(existing);
+    }
+
+    const notification = await this.prisma.notification.update({
+      where: { id: notificationId },
+      data: { readAt: toDate(readAt) }
+    });
+    return formatNotification(notification);
+  }
+
+  async markAllNotificationsRead(userId, readAt) {
+    const result = await this.prisma.notification.updateMany({
+      where: {
+        userId,
+        readAt: null
+      },
+      data: {
+        readAt: toDate(readAt)
+      }
+    });
+
+    return {
+      readCount: result.count,
+      notifications: await this.listNotificationsByUser(userId)
+    };
+  }
 }
 
 function battleInclude() {
@@ -848,6 +887,7 @@ function formatEntry(entry) {
     id: entry.id,
     battleId: entry.battleId,
     optionId: entry.optionId,
+    parentEntryId: entry.parentEntryId ?? null,
     content: entry.content,
     submittedByUserId: entry.submittedByUserId,
     createdAt: toIso(entry.createdAt)

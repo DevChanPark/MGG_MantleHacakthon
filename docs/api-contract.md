@@ -151,6 +151,11 @@ These endpoints power the profile tabs for the current account only:
 - `GET /api/users/me/likes`: liked entries/feed comments plus liked battle
   cards.
 - `GET /api/users/me/notifications`
+- `POST /api/users/me/notifications/:notificationId/read`
+- `POST /api/users/me/notifications/read-all`
+
+Notification responses include `readAt`, `isRead`, `targetType`, and `time`.
+Only the current user's notifications can be marked as read.
 
 ## gAon Feed API
 
@@ -199,7 +204,7 @@ Status mapping:
 
 - backend `JUDGING` -> feed `EVALUATING`
 - backend `SETTLED` -> feed `COMPLETED`
-- expired open battles with `deadlineAt` -> feed `EXPIRED`
+- expired open battles with `deadlineAt` -> feed `EVALUATING`
 
 ### `POST /api/feed/battles`
 
@@ -220,7 +225,27 @@ The response includes `balance`, `alreadyParticipated`, and `selectedOption`.
 ### `POST /api/feed/battles/:battleId/comments`
 
 Adds a judged feed comment. This creates a backend entry, so it is included in
-AI judging. The user must participate first.
+AI judging. The user must participate first. The request accepts `content` as
+the canonical field and `text` as the gAon component alias.
+
+```json
+{
+  "content": "My judged feed comment."
+}
+```
+
+### `POST /api/feed/comments/:entryId/replies`
+
+Adds a nested gAon reply under a feed comment. Replies use the same entry-backed
+comment shape as top-level feed comments, require prior participation, can be
+liked through `POST /api/feed/comments/:entryId/like`, and are not AI winner
+candidates.
+
+```json
+{
+  "text": "Nested reply from the gAon UI."
+}
+```
 
 ### `POST /api/feed/comments/:entryId/like`
 
@@ -249,11 +274,16 @@ the response also includes `feedResult` for the gAon winner modal:
   "feedResult": {
     "winnerUserId": "user-id-or-null",
     "winnerEntryId": "entry-id-or-null",
+    "winnerCommentId": "entry-id-or-null",
     "winnerOptionId": "option-id-or-null",
+    "winningOptionId": "option-id-or-null",
     "winnerName": "Pour",
     "winnerDetail": "Pour 진영",
+    "participantCount": 12,
     "rewardCredits": 30,
+    "aiSummary": "Short AI summary",
     "verdictLines": ["AI verdict title", "AI verdict text"],
+    "optionStats": [{ "optionId": "option-id", "label": "Pour", "percentage": 88 }],
     "optionResults": [{ "label": "Pour", "percentage": 88 }]
   }
 }
@@ -383,6 +413,7 @@ Returns social comments for the battle.
 ```
 
 `targetEntryId`, when provided, must belong to the battle.
+`text` is also accepted as a compatibility alias for `content`.
 
 ### `POST /api/entries/:entryId/like`
 
