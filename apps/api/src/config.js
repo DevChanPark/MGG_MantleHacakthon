@@ -5,6 +5,7 @@ loadDotEnvFile();
 
 export function loadConfig(env = process.env) {
   const databaseUrl = env.DATABASE_URL || "";
+  const mockMantle = booleanFromEnv(env.MOCK_MANTLE, true);
   return {
     apiPort: numberFromEnv(env.API_PORT, 4000),
     corsOrigin: env.CORS_ORIGIN || "*",
@@ -14,12 +15,13 @@ export function loadConfig(env = process.env) {
     openAiApiKey: env.OPENAI_API_KEY || "",
     openAiModel: env.OPENAI_MODEL || "gpt-4.1-mini",
     aiFallbackToMock: booleanFromEnv(env.AI_FALLBACK_TO_MOCK, false),
-    mockMantle: booleanFromEnv(env.MOCK_MANTLE, true),
+    mockMantle,
     mantleRpcUrl: env.MANTLE_RPC_URL || "",
     mantleChainId: numberFromEnv(env.MANTLE_CHAIN_ID, 5003),
     verdictRegistryAddress: env.VERDICT_REGISTRY_ADDRESS || "",
     serverWalletPrivateKey: env.SERVER_WALLET_PRIVATE_KEY || "",
     mantleCreditExchangeEnabled: booleanFromEnv(env.MANTLE_CREDIT_EXCHANGE_ENABLED, false),
+    mockCreditExchange: booleanFromEnv(env.MOCK_CREDIT_EXCHANGE, mockMantle),
     mantleCreditTreasuryAddress: env.MANTLE_CREDIT_TREASURY_ADDRESS || "",
     mantleCreditChainId: numberFromEnv(env.MANTLE_CREDIT_CHAIN_ID, numberFromEnv(env.MANTLE_CHAIN_ID, MANTLE_TESTNET_CHAIN_ID)),
     mantleCreditRpcUrl: env.MANTLE_CREDIT_RPC_URL || env.MANTLE_RPC_URL || "",

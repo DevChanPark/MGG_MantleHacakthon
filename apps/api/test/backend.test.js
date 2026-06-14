@@ -38,6 +38,7 @@ const testConfig = {
   mantleChainId: 5003,
   verdictRegistryAddress: "0x0000000000000000000000000000000000000000",
   mantleCreditExchangeEnabled: false,
+  mockCreditExchange: true,
   mantleCreditTreasuryAddress: "0x2222222222222222222222222222222222222222",
   mantleCreditChainId: MANTLE_TESTNET_CHAIN_ID,
   mantleCreditRpcUrl: "",

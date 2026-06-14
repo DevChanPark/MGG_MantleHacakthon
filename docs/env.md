@@ -18,11 +18,12 @@ Required backend env examples:
 | `VERDICT_REGISTRY_ADDRESS` | when `MOCK_MANTLE=false` | `AIVerdictRegistry` contract address. |
 | `SERVER_WALLET_PRIVATE_KEY` | when `MOCK_MANTLE=false` | Backend-only settlement wallet key. Never expose to frontend. |
 | `MANTLE_CREDIT_EXCHANGE_ENABLED` | credit exchange only | Enables testnet MNT-to-service-credit exchange. Keep `false` unless the demo should expose credit exchange. |
+| `MOCK_CREDIT_EXCHANGE` | credit exchange only | `true` accepts mock tx hashes for local demos. `false` verifies real Mantle receipt data, even when verdict settlement still uses `MOCK_MANTLE=true`. |
 | `MANTLE_CREDIT_TREASURY_ADDRESS` | credit exchange only | Receiver address for native testnet MNT transfers. |
 | `MANTLE_CREDIT_CHAIN_ID` | credit exchange only | Expected Mantle chain id for credit exchange, default `5003`. |
 | `MANTLE_CREDIT_RPC_URL` | credit exchange only | RPC used to verify credit exchange receipts. May reuse `MANTLE_RPC_URL`. |
 | `MANTLE_CREDIT_CONFIRMATIONS` | credit exchange only | Number of confirmations required before crediting, default `1`. |
-| `MNT_CREDIT_RATE` | credit exchange only | Demo conversion rate, currently planned as `1` MNT to `1` service credit. |
+| `MNT_CREDIT_RATE` | credit exchange only | Reserved conversion-rate knob. Current MVP packages are fixed in `DEFAULT_CREDIT_PACKAGES`, starting at `0.01` MNT for `10` credits. |
 | `STORAGE_PROVIDER` | yes | MVP implementation supports `local`. |
 | `STORAGE_BUCKET` | future | Reserved for object storage. |
 | `STORAGE_ACCESS_KEY` | future | Reserved for object storage. |
@@ -39,6 +40,7 @@ Local development should use:
 REPOSITORY_PROVIDER=prisma
 MOCK_AI=true
 MOCK_MANTLE=true
+MOCK_CREDIT_EXCHANGE=true
 STORAGE_PROVIDER=local
 ```
 

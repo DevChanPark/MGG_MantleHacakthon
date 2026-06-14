@@ -221,6 +221,7 @@ Database additions likely needed:
 Environment additions:
 
 - `MANTLE_CREDIT_EXCHANGE_ENABLED`
+- `MOCK_CREDIT_EXCHANGE`
 - `MANTLE_CREDIT_TREASURY_ADDRESS`
 - `MANTLE_CREDIT_CHAIN_ID`
 - `MANTLE_CREDIT_RPC_URL`
@@ -229,8 +230,9 @@ Environment additions:
 
 Local development modes:
 
-- `MOCK_MANTLE=true`: exchange can accept deterministic mock tx hashes for demo.
-- `MOCK_MANTLE=false`: backend verifies real Mantle testnet receipts.
+- `MOCK_MANTLE=true`: AI verdict settlement can stay mocked locally.
+- `MOCK_CREDIT_EXCHANGE=true`: exchange can accept deterministic mock tx hashes for demo.
+- `MOCK_CREDIT_EXCHANGE=false`: backend verifies real Mantle testnet receipts.
 
 ## 6. Role Boundaries
 

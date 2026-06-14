@@ -163,8 +163,8 @@ Returns supported service credit packages.
   "packages": [
     {
       "credits": 30,
-      "priceMnt": "30",
-      "priceWei": "30000000000000000000"
+      "priceMnt": "0.03",
+      "priceWei": "30000000000000000"
     }
   ],
   "tokenSymbol": "MNT",

@@ -295,6 +295,7 @@ POST /api/credits/exchange
 
 ```text
 MANTLE_CREDIT_EXCHANGE_ENABLED
+MOCK_CREDIT_EXCHANGE
 MANTLE_CREDIT_TREASURY_ADDRESS
 MANTLE_CREDIT_CHAIN_ID
 MANTLE_CREDIT_RPC_URL
@@ -305,8 +306,10 @@ MNT_CREDIT_RATE
 로컬 개발 모드:
 
 - `MOCK_MANTLE=true`
+  - AI verdict settlement can stay mocked locally
+- `MOCK_CREDIT_EXCHANGE=true`
   - mock txHash로 credit exchange demo 가능
-- `MOCK_MANTLE=false`
+- `MOCK_CREDIT_EXCHANGE=false`
   - 실제 Mantle testnet receipt 검증
 
 ## 9. Core 우선 구현 계획

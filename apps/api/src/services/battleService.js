@@ -996,7 +996,7 @@ function getCreditTreasuryAddress(config) {
 }
 
 async function verifyCreditExchangeTransaction(config, quote, txHash, user) {
-  if (config.mockMantle) {
+  if (config.mockCreditExchange ?? config.mockMantle) {
     return validateCreditExchangeMetadata({
       quoteId: quote.id,
       chainId: quote.chainId,

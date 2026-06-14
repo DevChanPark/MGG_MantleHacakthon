@@ -136,6 +136,7 @@ Use `MNT_EXCHANGE` for testnet MNT-to-credit conversions.
 
 ```text
 MANTLE_CREDIT_EXCHANGE_ENABLED
+MOCK_CREDIT_EXCHANGE
 MANTLE_CREDIT_TREASURY_ADDRESS
 MANTLE_CREDIT_CHAIN_ID
 MANTLE_CREDIT_RPC_URL
@@ -143,7 +144,7 @@ MANTLE_CREDIT_CONFIRMATIONS
 MNT_CREDIT_RATE
 ```
 
-`MOCK_MANTLE=true` may keep exchange local/mock for demos. `MOCK_MANTLE=false` should verify real Mantle testnet receipts.
+`MOCK_CREDIT_EXCHANGE=true` may keep exchange local/mock for demos. `MOCK_CREDIT_EXCHANGE=false` should verify real Mantle testnet receipts. This flag is separate from `MOCK_MANTLE`, so verdict settlement can remain mocked while credit exchange uses real receipt verification.
 
 ## Hashing Contract
 

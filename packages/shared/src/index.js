@@ -92,6 +92,7 @@ export const DEFAULT_CREDIT_EXCHANGE_CONFIRMATIONS = 1;
 export const RESERVED_NICKNAMES = Object.freeze(["무기기", "mgg", "관리자", "admin"]);
 export const CREDIT_EXCHANGE_ENV_KEYS = Object.freeze([
   "MANTLE_CREDIT_EXCHANGE_ENABLED",
+  "MOCK_CREDIT_EXCHANGE",
   "MANTLE_CREDIT_TREASURY_ADDRESS",
   "MANTLE_CREDIT_CHAIN_ID",
   "MANTLE_CREDIT_RPC_URL",
@@ -100,12 +101,12 @@ export const CREDIT_EXCHANGE_ENV_KEYS = Object.freeze([
 ]);
 export const DEFAULT_CREDIT_PACKAGES = Object.freeze(
   [
-    { credits: 10, priceMnt: "10", priceWei: mntToWeiString("10") },
-    { credits: 30, priceMnt: "30", priceWei: mntToWeiString("30") },
-    { credits: 50, priceMnt: "50", priceWei: mntToWeiString("50") },
-    { credits: 100, priceMnt: "100", priceWei: mntToWeiString("100") },
-    { credits: 200, priceMnt: "200", priceWei: mntToWeiString("200") },
-    { credits: 300, priceMnt: "300", priceWei: mntToWeiString("300") }
+    { credits: 10, priceMnt: "0.01", priceWei: mntToWeiString("0.01") },
+    { credits: 30, priceMnt: "0.03", priceWei: mntToWeiString("0.03") },
+    { credits: 50, priceMnt: "0.05", priceWei: mntToWeiString("0.05") },
+    { credits: 100, priceMnt: "0.1", priceWei: mntToWeiString("0.1") },
+    { credits: 200, priceMnt: "0.2", priceWei: mntToWeiString("0.2") },
+    { credits: 300, priceMnt: "0.3", priceWei: mntToWeiString("0.3") }
   ].map((creditPackage) => Object.freeze(creditPackage))
 );
 
