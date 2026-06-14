@@ -13,6 +13,7 @@ export class MemoryRepository {
       reports: [],
       walletChallenges: [],
       creditTransactions: [],
+      creditQuotes: [],
       socialComments: [],
       entryLikes: [],
       battleLikes: [],
@@ -33,6 +34,7 @@ export class MemoryRepository {
     this.state.reports ??= [];
     this.state.walletChallenges ??= [];
     this.state.creditTransactions ??= [];
+    this.state.creditQuotes ??= [];
     this.state.socialComments ??= [];
     this.state.entryLikes ??= [];
     this.state.battleLikes ??= [];
@@ -184,6 +186,83 @@ export class MemoryRepository {
         .filter((transaction) => transaction.userId === userId)
         .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
     );
+  }
+
+  async createCreditQuote(input) {
+    const quote = {
+      id: randomUUID(),
+      userId: input.userId,
+      walletAddress: input.walletAddress,
+      walletAddressNormalized: input.walletAddressNormalized,
+      credits: input.credits,
+      priceMnt: input.priceMnt,
+      priceWei: input.priceWei,
+      tokenSymbol: input.tokenSymbol || "MNT",
+      chainId: input.chainId,
+      receiverAddress: input.receiverAddress,
+      receiverAddressNormalized: input.receiverAddressNormalized,
+      expiresAt: input.expiresAt,
+      usedAt: null,
+      txHash: null,
+      creditTransactionId: null,
+      createdAt: now()
+    };
+    this.state.creditQuotes.push(quote);
+    await this.afterMutation();
+    return clone(quote);
+  }
+
+  async getCreditQuote(quoteId) {
+    return clone(this.state.creditQuotes.find((quote) => quote.id === quoteId) ?? null);
+  }
+
+  async getCreditQuoteByTxHash(txHash) {
+    return clone(this.state.creditQuotes.find((quote) => quote.txHash === txHash) ?? null);
+  }
+
+  async completeCreditQuoteExchange(input) {
+    const quote = this.state.creditQuotes.find((item) => item.id === input.quoteId);
+    if (!quote) {
+      return null;
+    }
+    if (quote.usedAt) {
+      const error = new Error("Credit quote already used");
+      error.code = "CREDIT_QUOTE_USED";
+      throw error;
+    }
+    const duplicateTx = this.state.creditQuotes.find((item) => item.txHash === input.txHash && item.id !== quote.id);
+    if (duplicateTx) {
+      const error = new Error("Credit exchange transaction already used");
+      error.code = "CREDIT_TX_ALREADY_USED";
+      throw error;
+    }
+
+    const user = this.state.users.find((item) => item.id === quote.userId);
+    if (!user) {
+      return null;
+    }
+
+    normalizeUserProfileFields(user);
+    user.creditBalance += input.amount;
+    const transaction = {
+      id: randomUUID(),
+      userId: quote.userId,
+      amount: input.amount,
+      reason: input.reason,
+      balanceAfter: user.creditBalance,
+      metadataJson: input.metadataJson,
+      createdAt: now()
+    };
+
+    quote.usedAt = input.usedAt || now();
+    quote.txHash = input.txHash;
+    quote.creditTransactionId = transaction.id;
+    this.state.creditTransactions.push(transaction);
+    await this.afterMutation();
+    return {
+      quote: clone(quote),
+      transaction: clone(transaction)
+    };
   }
 
   async createBattle(input) {

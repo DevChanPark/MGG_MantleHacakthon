@@ -59,6 +59,18 @@ export function createApiApp({ repository, config, aiJudgeService, settlementSer
         return created(await battleService.chargeDemoCredits(request.body, userId));
       }
 
+      if (method === "GET" && path === "/api/credits/packages") {
+        return ok(await battleService.getCreditPackages());
+      }
+
+      if (method === "POST" && path === "/api/credits/quote") {
+        return created(await battleService.createCreditQuote(request.body, userId));
+      }
+
+      if (method === "POST" && path === "/api/credits/exchange") {
+        return created(await battleService.exchangeCredits(request.body, userId));
+      }
+
       if (method === "GET" && path === "/api/users/me/battles") {
         return ok({ battles: await battleService.listMyBattles(userId) });
       }

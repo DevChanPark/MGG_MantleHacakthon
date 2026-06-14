@@ -164,6 +164,106 @@ export class PrismaRepository {
     return transactions.map(formatCreditTransaction);
   }
 
+  async createCreditQuote(input) {
+    const quote = await this.prisma.creditQuote.create({
+      data: {
+        userId: input.userId,
+        walletAddress: input.walletAddress,
+        walletAddressNormalized: input.walletAddressNormalized,
+        credits: input.credits,
+        priceMnt: input.priceMnt,
+        priceWei: input.priceWei,
+        tokenSymbol: input.tokenSymbol || "MNT",
+        chainId: input.chainId,
+        receiverAddress: input.receiverAddress,
+        receiverAddressNormalized: input.receiverAddressNormalized,
+        expiresAt: toDate(input.expiresAt)
+      }
+    });
+    return formatCreditQuote(quote);
+  }
+
+  async getCreditQuote(quoteId) {
+    const quote = await this.prisma.creditQuote.findUnique({
+      where: { id: quoteId }
+    });
+    return quote ? formatCreditQuote(quote) : null;
+  }
+
+  async getCreditQuoteByTxHash(txHash) {
+    const quote = await this.prisma.creditQuote.findUnique({
+      where: { txHash }
+    });
+    return quote ? formatCreditQuote(quote) : null;
+  }
+
+  async completeCreditQuoteExchange(input) {
+    try {
+      const result = await this.prisma.$transaction(async (tx) => {
+        const quote = await tx.creditQuote.findUnique({
+          where: { id: input.quoteId }
+        });
+        if (!quote) {
+          return null;
+        }
+        if (quote.usedAt) {
+          const error = new Error("Credit quote already used");
+          error.code = "CREDIT_QUOTE_USED";
+          throw error;
+        }
+
+        const duplicateTx = await tx.creditQuote.findUnique({
+          where: { txHash: input.txHash }
+        });
+        if (duplicateTx && duplicateTx.id !== quote.id) {
+          const error = new Error("Credit exchange transaction already used");
+          error.code = "CREDIT_TX_ALREADY_USED";
+          throw error;
+        }
+
+        const user = await tx.user.update({
+          where: { id: quote.userId },
+          data: {
+            creditBalance: { increment: input.amount }
+          }
+        });
+        const transaction = await tx.creditTransaction.create({
+          data: {
+            userId: quote.userId,
+            amount: input.amount,
+            reason: input.reason,
+            balanceAfter: user.creditBalance,
+            metadataJson: input.metadataJson ?? undefined
+          }
+        });
+        const updatedQuote = await tx.creditQuote.update({
+          where: { id: quote.id },
+          data: {
+            usedAt: toDate(input.usedAt),
+            txHash: input.txHash,
+            creditTransactionId: transaction.id
+          }
+        });
+
+        return { quote: updatedQuote, transaction };
+      });
+
+      return result
+        ? {
+            quote: formatCreditQuote(result.quote),
+            transaction: formatCreditTransaction(result.transaction)
+          }
+        : null;
+    } catch (error) {
+      if (error.code === "P2002" && error.meta?.target?.includes("txHash")) {
+        const duplicate = new Error("Credit exchange transaction already used");
+        duplicate.code = "CREDIT_TX_ALREADY_USED";
+        throw duplicate;
+      }
+      throw error;
+    }
+  }
+
   async createBattle(input) {
     const battle = await this.prisma.battle.create({
       data: {
@@ -961,6 +1061,27 @@ function formatWalletChallenge(challenge) {
     issuedAt: toIso(challenge.issuedAt),
     expiresAt: toIso(challenge.expiresAt),
     usedAt: toIso(challenge.usedAt)
+  };
+}
+
+function formatCreditQuote(quote) {
+  return {
+    id: quote.id,
+    userId: quote.userId,
+    walletAddress: quote.walletAddress,
+    walletAddressNormalized: quote.walletAddressNormalized,
+    credits: quote.credits,
+    priceMnt: quote.priceMnt,
+    priceWei: quote.priceWei,
+    tokenSymbol: quote.tokenSymbol,
+    chainId: quote.chainId,
+    receiverAddress: quote.receiverAddress,
+    receiverAddressNormalized: quote.receiverAddressNormalized,
+    expiresAt: toIso(quote.expiresAt),
+    usedAt: toIso(quote.usedAt),
+    txHash: quote.txHash,
+    creditTransactionId: quote.creditTransactionId,
+    createdAt: toIso(quote.createdAt)
   };
 }
 

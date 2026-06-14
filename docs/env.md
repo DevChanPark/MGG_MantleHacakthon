@@ -17,7 +17,7 @@ Required backend env examples:
 | `MANTLE_CHAIN_ID` | yes | `5003` for Mantle Sepolia, `5000` for Mantle mainnet. |
 | `VERDICT_REGISTRY_ADDRESS` | when `MOCK_MANTLE=false` | `AIVerdictRegistry` contract address. |
 | `SERVER_WALLET_PRIVATE_KEY` | when `MOCK_MANTLE=false` | Backend-only settlement wallet key. Never expose to frontend. |
-| `MANTLE_CREDIT_EXCHANGE_ENABLED` | credit exchange only | Enables testnet MNT-to-service-credit exchange. Keep `false` until backend receipt verification is implemented. |
+| `MANTLE_CREDIT_EXCHANGE_ENABLED` | credit exchange only | Enables testnet MNT-to-service-credit exchange. Keep `false` unless the demo should expose credit exchange. |
 | `MANTLE_CREDIT_TREASURY_ADDRESS` | credit exchange only | Receiver address for native testnet MNT transfers. |
 | `MANTLE_CREDIT_CHAIN_ID` | credit exchange only | Expected Mantle chain id for credit exchange, default `5003`. |
 | `MANTLE_CREDIT_RPC_URL` | credit exchange only | RPC used to verify credit exchange receipts. May reuse `MANTLE_RPC_URL`. |

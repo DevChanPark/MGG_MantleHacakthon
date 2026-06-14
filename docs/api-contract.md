@@ -141,10 +141,10 @@ Returns the current demo credit balance and transaction history.
 
 Returns the new balance and credit transaction.
 
-## Planned Testnet Credit Exchange API
+## Testnet Credit Exchange API
 
-This API is planned for the MetaMask testnet MNT-to-service-credit flow. It is
-not a gambling, paid reward pool, or real-money payout feature.
+This API powers the MetaMask testnet MNT-to-service-credit flow. It is not a
+gambling, paid reward pool, or real-money payout feature.
 
 Core contract source:
 

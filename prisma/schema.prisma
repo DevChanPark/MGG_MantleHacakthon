@@ -30,6 +30,7 @@ model User {
   reports Report[]
   walletChallenges WalletChallenge[]
   creditTransactions CreditTransaction[]
+  creditQuotes CreditQuote[]
   socialComments SocialComment[]
   entryLikes EntryLike[]
   battleLikes BattleLike[]
@@ -168,6 +169,32 @@ model CreditTransaction {
 
   @@index([userId])
   @@map("credit_transactions")
+}
+
+model CreditQuote {
+  id                      String    @id @default(cuid())
+  userId                  String
+  walletAddress           String
+  walletAddressNormalized String
+  credits                 Int
+  priceMnt                String
+  priceWei                String
+  tokenSymbol             String    @default("MNT")
+  chainId                 Int
+  receiverAddress         String
+  receiverAddressNormalized String
+  expiresAt               DateTime
+  usedAt                  DateTime?
+  txHash                  String?   @unique
+  creditTransactionId     String?
+  createdAt               DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([walletAddressNormalized])
+  @@index([expiresAt])
+  @@map("credit_quotes")
 }
 
 model SocialComment {

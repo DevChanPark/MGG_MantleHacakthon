@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
+import { MANTLE_TESTNET_CHAIN_ID } from "../../../packages/shared/src/index.js";
 
 loadDotEnvFile();
 
@@ -18,6 +19,12 @@ export function loadConfig(env = process.env) {
     mantleChainId: numberFromEnv(env.MANTLE_CHAIN_ID, 5003),
     verdictRegistryAddress: env.VERDICT_REGISTRY_ADDRESS || "",
     serverWalletPrivateKey: env.SERVER_WALLET_PRIVATE_KEY || "",
+    mantleCreditExchangeEnabled: booleanFromEnv(env.MANTLE_CREDIT_EXCHANGE_ENABLED, false),
+    mantleCreditTreasuryAddress: env.MANTLE_CREDIT_TREASURY_ADDRESS || "",
+    mantleCreditChainId: numberFromEnv(env.MANTLE_CREDIT_CHAIN_ID, numberFromEnv(env.MANTLE_CHAIN_ID, MANTLE_TESTNET_CHAIN_ID)),
+    mantleCreditRpcUrl: env.MANTLE_CREDIT_RPC_URL || env.MANTLE_RPC_URL || "",
+    mantleCreditConfirmations: numberFromEnv(env.MANTLE_CREDIT_CONFIRMATIONS, 1),
+    mntCreditRate: env.MNT_CREDIT_RATE || "1",
     storageProvider: env.STORAGE_PROVIDER || "local",
     storageBucket: env.STORAGE_BUCKET || "",
     storageAccessKey: env.STORAGE_ACCESS_KEY || "",

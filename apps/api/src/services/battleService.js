@@ -10,11 +10,22 @@ import {
 } from "../../../../packages/core/src/index.js";
 import {
   BattleStatus,
+  CreditTransactionReason,
+  DEFAULT_CREDIT_PACKAGES,
   DEFAULT_PARTICIPATION_COST,
   DEFAULT_REWARD_CREDITS,
+  MANTLE_TESTNET_CHAIN_ID,
+  MNT_SYMBOL,
+  isEvmAddress,
+  normalizeEvmAddress,
   validateCreateBattleRequest,
   validateCreateEntryRequest,
   validateBattleShareRequest,
+  validateCreditExchangeMetadata,
+  validateCreditExchangeRequest,
+  validateCreditExchangeResponse,
+  validateCreditQuoteRequest,
+  validateCreditQuoteResponse,
   validateDemoCreditChargeRequest,
   validateJudgeInput,
   validateParticipationRequest,
@@ -30,6 +41,7 @@ import { moderateEntryContent } from "./moderationService.js";
 
 const MAX_REPORT_REASON_LENGTH = 240;
 const WALLET_CHALLENGE_TTL_MS = 5 * 60 * 1000;
+const CREDIT_QUOTE_TTL_MS = 5 * 60 * 1000;
 
 export function createBattleService({ repository, aiJudgeService, settlementService, config }) {
   return {
@@ -64,6 +76,9 @@ export function createBattleService({ repository, aiJudgeService, settlementServ
     verifyWallet: (input, userId) => verifyWallet(repository, input, userId),
     getCredits: (userId) => getCredits(repository, userId),
     chargeDemoCredits: (input, userId) => chargeDemoCredits(repository, input, userId),
+    getCreditPackages: () => getCreditPackages(config),
+    createCreditQuote: (input, userId) => createCreditQuote(repository, input, userId, config),
+    exchangeCredits: (input, userId) => exchangeCredits(repository, input, userId, config),
     listMyBattles: (userId) => listMyBattles(repository, userId),
     listMyComments: (userId) => listMyComments(repository, userId),
     listMyLikes: (userId) => listMyLikes(repository, userId)
@@ -620,6 +635,115 @@ async function chargeDemoCredits(repository, input, userId) {
   };
 }
 
+function getCreditPackages(config) {
+  return {
+    enabled: Boolean(config.mantleCreditExchangeEnabled),
+    tokenSymbol: MNT_SYMBOL,
+    chainId: getCreditExchangeChainId(config),
+    receiverAddress: config.mantleCreditTreasuryAddress || null,
+    packages: DEFAULT_CREDIT_PACKAGES.map((creditPackage) => ({ ...creditPackage }))
+  };
+}
+
+async function createCreditQuote(repository, input, userId, config) {
+  ensureCreditExchangeEnabled(config);
+  const user = await repository.getOrCreateUser(userId);
+  ensureUserWalletLinked(user);
+  const userWalletAddressNormalized = getLinkedWalletAddressNormalized(user);
+
+  const normalized = validateCreditQuoteRequest({
+    ...input,
+    walletAddress: input?.walletAddress || user.walletAddress
+  });
+
+  if (normalized.walletAddressNormalized !== userWalletAddressNormalized) {
+    throw new ApiError(403, "WALLET_MISMATCH", "Quote wallet must match the linked wallet");
+  }
+
+  const receiverAddress = getCreditTreasuryAddress(config);
+  const expiresAt = new Date(Date.now() + CREDIT_QUOTE_TTL_MS).toISOString();
+  const quote = await repository.createCreditQuote({
+    userId: user.id,
+    walletAddress: user.walletAddress,
+    walletAddressNormalized: userWalletAddressNormalized,
+    credits: normalized.credits,
+    priceMnt: normalized.package.priceMnt,
+    priceWei: normalized.package.priceWei,
+    tokenSymbol: MNT_SYMBOL,
+    chainId: getCreditExchangeChainId(config),
+    receiverAddress,
+    receiverAddressNormalized: normalizeEvmAddress(receiverAddress),
+    expiresAt
+  });
+
+  return {
+    quote: validateCreditQuoteResponse({ quote })
+  };
+}
+
+async function exchangeCredits(repository, input, userId, config) {
+  ensureCreditExchangeEnabled(config);
+  const normalized = validateCreditExchangeRequest(input);
+  const user = await repository.getOrCreateUser(userId);
+  ensureUserWalletLinked(user);
+  const userWalletAddressNormalized = getLinkedWalletAddressNormalized(user);
+
+  const quote = await repository.getCreditQuote?.(normalized.quoteId);
+  if (!quote) {
+    throw new ApiError(404, "CREDIT_QUOTE_NOT_FOUND", "Credit quote not found");
+  }
+  if (quote.userId !== user.id) {
+    throw new ApiError(403, "CREDIT_QUOTE_FORBIDDEN", "Credit quote belongs to another user");
+  }
+  if (quote.usedAt) {
+    throw new ApiError(409, "CREDIT_QUOTE_USED", "Credit quote was already used");
+  }
+  if (quote.walletAddressNormalized !== userWalletAddressNormalized) {
+    throw new ApiError(403, "WALLET_MISMATCH", "Quote wallet must match the linked wallet");
+  }
+  if (new Date(quote.expiresAt).getTime() <= Date.now()) {
+    throw new ApiError(409, "CREDIT_QUOTE_EXPIRED", "Credit quote expired");
+  }
+
+  const existingTx = await repository.getCreditQuoteByTxHash?.(normalized.txHashNormalized);
+  if (existingTx && existingTx.id !== quote.id) {
+    throw new ApiError(409, "CREDIT_TX_ALREADY_USED", "Credit exchange transaction was already used");
+  }
+
+  const metadata = await verifyCreditExchangeTransaction(config, quote, normalized.txHashNormalized, user);
+  let result;
+  try {
+    result = await repository.completeCreditQuoteExchange({
+      quoteId: quote.id,
+      txHash: normalized.txHashNormalized,
+      usedAt: new Date().toISOString(),
+      amount: quote.credits,
+      reason: CreditTransactionReason.MNT_EXCHANGE,
+      metadataJson: metadata
+    });
+  } catch (error) {
+    if (error.code === "CREDIT_QUOTE_USED") {
+      throw new ApiError(409, "CREDIT_QUOTE_USED", "Credit quote was already used");
+    }
+    if (error.code === "CREDIT_TX_ALREADY_USED") {
+      throw new ApiError(409, "CREDIT_TX_ALREADY_USED", "Credit exchange transaction was already used");
+    }
+    throw error;
+  }
+
+  if (!result) {
+    throw new ApiError(404, "CREDIT_QUOTE_NOT_FOUND", "Credit quote not found");
+  }
+
+  return validateCreditExchangeResponse({
+    balance: result.transaction.balanceAfter,
+    transaction: {
+      ...result.transaction,
+      metadata: result.transaction.metadataJson
+    }
+  });
+}
+
 async function listMyBattles(repository, userId) {
   const user = await repository.getOrCreateUser(userId);
   return addBattleStats(repository, await repository.listBattlesByUser(user.id));
@@ -828,6 +952,116 @@ function validateCreateReportRequest(input) {
     reason,
     targetEntryId: targetEntryId || null
   };
+}
+
+function ensureCreditExchangeEnabled(config) {
+  if (!config.mantleCreditExchangeEnabled) {
+    throw new ApiError(403, "CREDIT_EXCHANGE_DISABLED", "Credit exchange is disabled");
+  }
+  getCreditTreasuryAddress(config);
+}
+
+function ensureUserWalletLinked(user) {
+  if (!user.walletAddress || !normalizeEvmAddress(user.walletAddress)) {
+    throw new ApiError(409, "WALLET_REQUIRED", "Connect a wallet before exchanging credits");
+  }
+}
+
+function getLinkedWalletAddressNormalized(user) {
+  return normalizeEvmAddress(user.walletAddress);
+}
+
+function getCreditExchangeChainId(config) {
+  return Number(config.mantleCreditChainId || config.mantleChainId || MANTLE_TESTNET_CHAIN_ID);
+}
+
+function getCreditTreasuryAddress(config) {
+  const receiverAddress = config.mantleCreditTreasuryAddress || "";
+  if (!isEvmAddress(receiverAddress)) {
+    throw new ApiError(503, "CREDIT_EXCHANGE_NOT_READY", "Credit exchange treasury address is not configured");
+  }
+  return receiverAddress;
+}
+
+async function verifyCreditExchangeTransaction(config, quote, txHash, user) {
+  if (config.mockMantle) {
+    return validateCreditExchangeMetadata({
+      quoteId: quote.id,
+      chainId: quote.chainId,
+      txHash,
+      from: user.walletAddress,
+      to: quote.receiverAddress,
+      valueWei: quote.priceWei,
+      confirmations: Number(config.mantleCreditConfirmations ?? 1)
+    });
+  }
+
+  if (!config.mantleCreditRpcUrl) {
+    throw new ApiError(503, "CREDIT_EXCHANGE_NOT_READY", "Mantle credit RPC URL is not configured");
+  }
+
+  const { createPublicClient, http } = await import("viem");
+  const publicClient = createPublicClient({
+    chain: {
+      id: quote.chainId,
+      name: "Mantle credit exchange",
+      nativeCurrency: {
+        name: MNT_SYMBOL,
+        symbol: MNT_SYMBOL,
+        decimals: 18
+      },
+      rpcUrls: {
+        default: {
+          http: [config.mantleCreditRpcUrl]
+        }
+      }
+    },
+    transport: http(config.mantleCreditRpcUrl)
+  });
+
+  let transaction;
+  let receipt;
+  try {
+    [transaction, receipt] = await Promise.all([
+      publicClient.getTransaction({ hash: txHash }),
+      publicClient.getTransactionReceipt({ hash: txHash })
+    ]);
+  } catch {
+    throw new ApiError(404, "CREDIT_TX_NOT_FOUND", "Credit exchange transaction was not found");
+  }
+
+  if (receipt.status !== "success") {
+    throw new ApiError(409, "CREDIT_TX_FAILED", "Credit exchange transaction failed");
+  }
+
+  const fromNormalized = normalizeEvmAddress(transaction.from);
+  const toNormalized = normalizeEvmAddress(transaction.to);
+  if (fromNormalized !== quote.walletAddressNormalized) {
+    throw new ApiError(403, "CREDIT_TX_SENDER_MISMATCH", "Credit exchange sender does not match linked wallet");
+  }
+  if (toNormalized !== quote.receiverAddressNormalized) {
+    throw new ApiError(403, "CREDIT_TX_RECEIVER_MISMATCH", "Credit exchange receiver does not match treasury");
+  }
+  if (transaction.value !== BigInt(quote.priceWei)) {
+    throw new ApiError(409, "CREDIT_TX_VALUE_MISMATCH", "Credit exchange value does not match quote");
+  }
+
+  const currentBlock = await publicClient.getBlockNumber();
+  const confirmations = Number(currentBlock - receipt.blockNumber + 1n);
+  const requiredConfirmations = Number(config.mantleCreditConfirmations ?? 1);
+  if (confirmations < requiredConfirmations) {
+    throw new ApiError(409, "CREDIT_TX_UNCONFIRMED", "Credit exchange transaction needs more confirmations");
+  }
+
+  return validateCreditExchangeMetadata({
+    quoteId: quote.id,
+    chainId: quote.chainId,
+    txHash,
+    from: transaction.from,
+    to: transaction.to,
+    valueWei: transaction.value.toString(),
+    confirmations
+  });
 }
 
 async function getOrCreateJudgingRule(repository, battle) {

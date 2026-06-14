@@ -20,6 +20,8 @@ import {
 import {
   BattleStatus,
   BattleType,
+  CreditTransactionReason,
+  MANTLE_TESTNET_CHAIN_ID,
   validateJudgeInput,
   validateJudgeOutput,
   validateResultResponse
@@ -35,6 +37,12 @@ const testConfig = {
   mockMantle: true,
   mantleChainId: 5003,
   verdictRegistryAddress: "0x0000000000000000000000000000000000000000",
+  mantleCreditExchangeEnabled: false,
+  mantleCreditTreasuryAddress: "0x2222222222222222222222222222222222222222",
+  mantleCreditChainId: MANTLE_TESTNET_CHAIN_ID,
+  mantleCreditRpcUrl: "",
+  mantleCreditConfirmations: 1,
+  mntCreditRate: "1",
   storageProvider: "local",
   localStorageDir: ".data/test-uploads"
 };
@@ -230,6 +238,125 @@ test("wallet challenge verifies an EVM signature and links the wallet to the cur
   });
   assert.equal(duplicate.statusCode, 409);
   assert.equal(duplicate.body.error.code, "WALLET_ALREADY_LINKED");
+});
+
+test("testnet MNT credit exchange uses wallet quotes and blocks reused tx hashes", async () => {
+  const { privateKeyToAccount } = await import("viem/accounts");
+  const account = privateKeyToAccount("0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
+  const config = {
+    ...testConfig,
+    mantleCreditExchangeEnabled: true,
+    mantleCreditTreasuryAddress: "0x2222222222222222222222222222222222222222"
+  };
+  const app = makeApp(config);
+  const headers = { "x-user-id": "credit-exchange-user" };
+
+  const packages = await app.inject({
+    method: "GET",
+    url: "/api/credits/packages",
+    headers
+  });
+  assert.equal(packages.statusCode, 200);
+  assert.equal(packages.body.enabled, true);
+  assert.equal(packages.body.chainId, MANTLE_TESTNET_CHAIN_ID);
+  assert.equal(packages.body.packages.some((item) => item.credits === 30), true);
+
+  const noWalletQuote = await app.inject({
+    method: "POST",
+    url: "/api/credits/quote",
+    headers,
+    body: { credits: 30 }
+  });
+  assert.equal(noWalletQuote.statusCode, 409);
+  assert.equal(noWalletQuote.body.error.code, "WALLET_REQUIRED");
+
+  const challenge = await app.inject({
+    method: "POST",
+    url: "/api/auth/wallet/challenge",
+    headers,
+    body: {
+      walletAddress: account.address,
+      walletProvider: "MetaMask"
+    }
+  });
+  const signature = await account.signMessage({ message: challenge.body.challenge.message });
+  const verified = await app.inject({
+    method: "POST",
+    url: "/api/auth/wallet/verify",
+    headers,
+    body: {
+      challengeId: challenge.body.challenge.id,
+      walletAddress: account.address,
+      walletProvider: "MetaMask",
+      signature
+    }
+  });
+  assert.equal(verified.statusCode, 200);
+
+  const quote = await app.inject({
+    method: "POST",
+    url: "/api/credits/quote",
+    headers,
+    body: { credits: 30 }
+  });
+  assert.equal(quote.statusCode, 201);
+  assert.equal(quote.body.quote.credits, 30);
+  assert.equal(quote.body.quote.walletAddressNormalized, account.address.toLowerCase());
+  assert.equal(quote.body.quote.receiverAddress, config.mantleCreditTreasuryAddress);
+
+  const txHash = `0x${"b".repeat(64)}`;
+  const exchanged = await app.inject({
+    method: "POST",
+    url: "/api/credits/exchange",
+    headers,
+    body: {
+      quoteId: quote.body.quote.id,
+      txHash
+    }
+  });
+  assert.equal(exchanged.statusCode, 201);
+  assert.equal(exchanged.body.balance, 30);
+  assert.equal(exchanged.body.transaction.reason, CreditTransactionReason.MNT_EXCHANGE);
+  assert.equal(exchanged.body.transaction.metadata.txHashNormalized, txHash);
+  assert.equal(exchanged.body.transaction.metadata.fromNormalized, account.address.toLowerCase());
+
+  const credits = await app.inject({
+    method: "GET",
+    url: "/api/users/me/credits",
+    headers
+  });
+  assert.equal(credits.body.balance, 30);
+  assert.equal(credits.body.transactions[0].reason, CreditTransactionReason.MNT_EXCHANGE);
+
+  const replay = await app.inject({
+    method: "POST",
+    url: "/api/credits/exchange",
+    headers,
+    body: {
+      quoteId: quote.body.quote.id,
+      txHash
+    }
+  });
+  assert.equal(replay.statusCode, 409);
+  assert.equal(replay.body.error.code, "CREDIT_QUOTE_USED");
+
+  const secondQuote = await app.inject({
+    method: "POST",
+    url: "/api/credits/quote",
+    headers,
+    body: { credits: 10 }
+  });
+  const reusedTx = await app.inject({
+    method: "POST",
+    url: "/api/credits/exchange",
+    headers,
+    body: {
+      quoteId: secondQuote.body.quote.id,
+      txHash
+    }
+  });
+  assert.equal(reusedTx.statusCode, 409);
+  assert.equal(reusedTx.body.error.code, "CREDIT_TX_ALREADY_USED");
 });
 
 test("demo credits, social comments, likes, shares, and my profile lists use backend data", async () => {
@@ -1263,12 +1390,12 @@ test("HTTP server returns safe 400 responses for malformed mobile requests", asy
   }
 });
 
-function makeApp() {
+function makeApp(config = testConfig) {
   return createApiApp({
     repository: new MemoryRepository(),
-    config: testConfig,
-    aiJudgeService: createAiJudgeService(testConfig),
-    settlementService: createSettlementService(testConfig)
+    config,
+    aiJudgeService: createAiJudgeService(config),
+    settlementService: createSettlementService(config)
   });
 }
 
