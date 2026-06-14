@@ -489,7 +489,12 @@ function LoginModal({ onClose, isWalletConnecting = false, walletError = '', onW
                   window.location.hash = 'signup';
                   return;
                 }
-                void onWalletConnect(option.strongLabel).then(onClose).catch(() => undefined);
+                void onWalletConnect(option.strongLabel)
+                  .then(() => {
+                    onClose();
+                    window.location.hash = 'home';
+                  })
+                  .catch(() => undefined);
               }}
             >
               <img

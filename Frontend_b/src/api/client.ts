@@ -124,6 +124,10 @@ export function getClientUserId() {
   return nextUserId;
 }
 
+export function getSavedClientUserId() {
+  return window.localStorage.getItem(USER_ID_STORAGE_KEY);
+}
+
 export function setClientUserId(userId: string) {
   window.localStorage.setItem(USER_ID_STORAGE_KEY, userId);
 }
@@ -137,7 +141,9 @@ export function getCredits() {
 }
 
 export function getCreditPackages() {
-  return apiFetch<CreditPackagesResponse>('/api/credits/packages');
+  return apiFetch<CreditPackagesResponse>('/api/credits/packages', {
+    includeUserId: false,
+  });
 }
 
 export function createWalletChallenge(walletAddress: string, walletProvider: string) {
@@ -176,13 +182,21 @@ export function exchangeCredits(input: { quoteId: string; txHash: string }) {
   });
 }
 
-async function apiFetch<T>(path: string, options: { method?: string; body?: unknown } = {}): Promise<T> {
+async function apiFetch<T>(
+  path: string,
+  options: { method?: string; body?: unknown; includeUserId?: boolean } = {},
+): Promise<T> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+
+  if (options.includeUserId !== false) {
+    headers['x-user-id'] = getClientUserId();
+  }
+
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: options.method || 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-user-id': getClientUserId(),
-    },
+    headers,
     body: options.body === undefined ? undefined : JSON.stringify(options.body),
   });
   const body = await response.json().catch(() => null);

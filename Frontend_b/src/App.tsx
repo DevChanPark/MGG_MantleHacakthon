@@ -35,6 +35,7 @@ import {
   getCreditPackages,
   getCredits,
   getMe,
+  getSavedClientUserId,
   setClientUserId,
   type ApiUser,
 } from './api/client';
@@ -50,6 +51,7 @@ export default function App() {
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [walletProvider, setWalletProvider] = useState<string | null>(null);
   const [creditPackageOptions, setCreditPackageOptions] = useState<CreditPackage[]>(fallbackCreditPackages);
+  const [isAuthHydrating, setIsAuthHydrating] = useState(true);
   const [isWalletConnecting, setIsWalletConnecting] = useState(false);
   const [walletError, setWalletError] = useState('');
   const [likedBattleIds, setLikedBattleIds] = useState<string[]>([]);
@@ -78,20 +80,25 @@ export default function App() {
 
   useEffect(() => {
     let isActive = true;
+    const savedUserId = getSavedClientUserId();
 
-    Promise.allSettled([getMe(), getCredits(), getCreditPackages()]).then(([userResult, creditsResult, packagesResult]) => {
+    Promise.allSettled([
+      savedUserId ? getMe() : Promise.resolve(null),
+      savedUserId ? getCredits() : Promise.resolve(null),
+      getCreditPackages(),
+    ]).then(([userResult, creditsResult, packagesResult]) => {
       if (!isActive) {
         return;
       }
 
-      if (userResult.status === 'fulfilled') {
+      if (userResult.status === 'fulfilled' && userResult.value?.walletAddress) {
         setCurrentUser(userResult.value);
         setWalletAddress(userResult.value.walletAddress);
         setWalletProvider(userResult.value.walletProvider);
         setCredits(userResult.value.creditBalance);
       }
 
-      if (creditsResult.status === 'fulfilled') {
+      if (creditsResult.status === 'fulfilled' && creditsResult.value) {
         setCredits(creditsResult.value.balance);
       }
 
@@ -105,6 +112,8 @@ export default function App() {
           })),
         );
       }
+
+      setIsAuthHydrating(false);
     });
 
     return () => {
@@ -125,6 +134,12 @@ export default function App() {
 
     window.scrollTo({ top: 0, left: 0 });
   }, [route]);
+
+  useEffect(() => {
+    if (!isAuthHydrating && isProtectedRoute(route) && !walletAddress && window.location.hash) {
+      window.location.hash = '';
+    }
+  }, [isAuthHydrating, route, walletAddress]);
 
   const handleCreateBattle = (draft: CreateBattleDraft) => {
     const nextBattle = createMockBattle(draft);
@@ -451,6 +466,22 @@ export default function App() {
     </AppShell>
   );
 
+  const onboarding = (
+    <OnboardingFeed
+      isWalletConnecting={isWalletConnecting}
+      walletError={walletError}
+      onWalletConnect={handleWalletConnect}
+    />
+  );
+
+  if (isProtectedRoute(route) && isAuthHydrating) {
+    return null;
+  }
+
+  if (isProtectedRoute(route) && !walletAddress) {
+    return onboarding;
+  }
+
   // Onboarding routes (no layout wrapper)
   if (route === 'signup') {
     return (
@@ -549,17 +580,15 @@ export default function App() {
     );
   }
 
-  return (
-    <OnboardingFeed
-      isWalletConnecting={isWalletConnecting}
-      walletError={walletError}
-      onWalletConnect={handleWalletConnect}
-    />
-  );
+  return onboarding;
 }
 
 function getRoute() {
-  return window.location.hash.replace('#', '') || 'home';
+  return window.location.hash.replace('#', '');
+}
+
+function isProtectedRoute(route: string) {
+  return route === 'home' || route === 'profile' || route.startsWith('battle/') || route.startsWith('create');
 }
 
 function getSavedBattleType(): BattleType {
