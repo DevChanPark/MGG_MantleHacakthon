@@ -575,7 +575,14 @@ async function verifyWallet(repository, input, userId) {
   const user = await repository.getOrCreateUser(challenge.userId || userId);
   const existing = await repository.getUserByWalletAddressNormalized?.(normalized.walletAddressNormalized);
   if (existing && existing.id !== user.id) {
-    throw new ApiError(409, "WALLET_ALREADY_LINKED", "Wallet is already linked to another user");
+    await markWalletChallengeUsedOrThrow(repository, challenge.id);
+    return {
+      user: existing,
+      wallet: {
+        walletAddress: existing.walletAddress || normalized.walletAddress,
+        walletProvider: existing.walletProvider || normalized.walletProvider || challenge.walletProvider || null
+      }
+    };
   }
 
   let linked;
@@ -592,10 +599,7 @@ async function verifyWallet(repository, input, userId) {
     throw error;
   }
 
-  const usedChallenge = await repository.markWalletChallengeUsed(challenge.id, new Date().toISOString());
-  if (!usedChallenge) {
-    throw new ApiError(409, "WALLET_CHALLENGE_USED", "Wallet challenge was already used");
-  }
+  await markWalletChallengeUsedOrThrow(repository, challenge.id);
 
   return {
     user: linked,
@@ -604,6 +608,14 @@ async function verifyWallet(repository, input, userId) {
       walletProvider: normalized.walletProvider || challenge.walletProvider || null
     }
   };
+}
+
+async function markWalletChallengeUsedOrThrow(repository, challengeId) {
+  const usedChallenge = await repository.markWalletChallengeUsed(challengeId, new Date().toISOString());
+  if (!usedChallenge) {
+    throw new ApiError(409, "WALLET_CHALLENGE_USED", "Wallet challenge was already used");
+  }
+  return usedChallenge;
 }
 
 async function getCredits(repository, userId) {

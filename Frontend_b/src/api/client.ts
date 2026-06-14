@@ -124,6 +124,10 @@ export function getClientUserId() {
   return nextUserId;
 }
 
+export function setClientUserId(userId: string) {
+  window.localStorage.setItem(USER_ID_STORAGE_KEY, userId);
+}
+
 export function getMe() {
   return apiFetch<ApiUser>('/api/users/me');
 }

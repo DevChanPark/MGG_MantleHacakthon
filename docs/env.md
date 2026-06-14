@@ -7,7 +7,7 @@ Required backend env examples:
 | `DATABASE_URL` | yes for Prisma | PostgreSQL URL used by Prisma migrations/client. |
 | `REPOSITORY_PROVIDER` | yes | Use `prisma` for PostgreSQL persistence. Use `json` only for lightweight local fallback. |
 | `API_PORT` | yes | Defaults to `4000`. |
-| `CORS_ORIGIN` | yes | Frontend origin, for example `http://localhost:3000`. |
+| `CORS_ORIGIN` | yes | Frontend origin, for example `http://localhost:5173` for the Vite app. |
 | `MOCK_AI` | yes | `true` for deterministic local judging. |
 | `OPENAI_API_KEY` | when `MOCK_AI=false` | AI provider key for real judging. |
 | `OPENAI_MODEL` | when `MOCK_AI=false` | Model name sent to the AI provider. |

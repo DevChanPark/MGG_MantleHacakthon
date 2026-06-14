@@ -1,5 +1,18 @@
 import { createWalletChallenge, verifyWallet } from './client';
 
+const MANTLE_SEPOLIA_CHAIN_ID = 5003;
+const MANTLE_SEPOLIA_CHAIN = {
+  chainId: numberToHex(MANTLE_SEPOLIA_CHAIN_ID),
+  chainName: 'Mantle Sepolia Testnet',
+  nativeCurrency: {
+    name: 'MNT',
+    symbol: 'MNT',
+    decimals: 18,
+  },
+  rpcUrls: ['https://rpc.sepolia.mantle.xyz'],
+  blockExplorerUrls: ['https://explorer.sepolia.mantle.xyz'],
+};
+
 type EthereumRequest = {
   method: string;
   params?: unknown[];
@@ -92,7 +105,13 @@ async function switchChainIfPossible(provider: EthereumProvider, chainId: number
     if (code !== 4902) {
       throw error;
     }
-    throw new Error('Mantle 테스트넷을 지갑에 먼저 추가해주세요.');
+    if (chainId !== MANTLE_SEPOLIA_CHAIN_ID) {
+      throw new Error('요청한 Mantle 네트워크를 지갑에 먼저 추가해주세요.');
+    }
+    await provider.request({
+      method: 'wallet_addEthereumChain',
+      params: [MANTLE_SEPOLIA_CHAIN],
+    });
   }
 }
 

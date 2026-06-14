@@ -35,6 +35,7 @@ import {
   getCreditPackages,
   getCredits,
   getMe,
+  setClientUserId,
   type ApiUser,
 } from './api/client';
 import { connectWalletWithSignature, sendNativeMntTransfer } from './api/wallet';
@@ -319,6 +320,7 @@ export default function App() {
 
     try {
       const verified = await connectWalletWithSignature(providerName);
+      setClientUserId(verified.user.id);
       setCurrentUser(verified.user);
       setWalletAddress(verified.wallet.walletAddress);
       setWalletProvider(verified.wallet.walletProvider);

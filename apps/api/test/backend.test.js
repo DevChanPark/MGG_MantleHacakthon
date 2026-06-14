@@ -226,7 +226,7 @@ test("wallet challenge verifies an EVM signature and links the wallet to the cur
     body: { walletAddress: account.address }
   });
   const duplicateSignature = await account.signMessage({ message: duplicateChallenge.body.challenge.message });
-  const duplicate = await app.inject({
+  const existingWalletLogin = await app.inject({
     method: "POST",
     url: "/api/auth/wallet/verify",
     headers: { "x-user-id": "other-wallet-user" },
@@ -236,8 +236,10 @@ test("wallet challenge verifies an EVM signature and links the wallet to the cur
       signature: duplicateSignature
     }
   });
-  assert.equal(duplicate.statusCode, 409);
-  assert.equal(duplicate.body.error.code, "WALLET_ALREADY_LINKED");
+  assert.equal(existingWalletLogin.statusCode, 200);
+  assert.equal(existingWalletLogin.body.user.id, "wallet-user");
+  assert.equal(existingWalletLogin.body.user.walletAddress, account.address);
+  assert.equal(existingWalletLogin.body.wallet.walletAddress, account.address);
 });
 
 test("testnet MNT credit exchange uses wallet quotes and blocks reused tx hashes", async () => {
