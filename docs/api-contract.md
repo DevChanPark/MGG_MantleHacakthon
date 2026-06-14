@@ -141,6 +141,66 @@ Returns the current demo credit balance and transaction history.
 
 Returns the new balance and credit transaction.
 
+## Planned Testnet Credit Exchange API
+
+This API is planned for the MetaMask testnet MNT-to-service-credit flow. It is
+not a gambling, paid reward pool, or real-money payout feature.
+
+Core contract source:
+
+- `DEFAULT_CREDIT_PACKAGES`
+- `validateCreditQuoteRequest`
+- `validateCreditQuoteResponse`
+- `validateCreditExchangeRequest`
+- `validateCreditExchangeResponse`
+
+### `GET /api/credits/packages`
+
+Returns supported service credit packages.
+
+```json
+{
+  "packages": [
+    {
+      "credits": 30,
+      "priceMnt": "30",
+      "priceWei": "30000000000000000000"
+    }
+  ],
+  "tokenSymbol": "MNT",
+  "chainId": 5003
+}
+```
+
+### `POST /api/credits/quote`
+
+```json
+{
+  "credits": 30
+}
+```
+
+Returns the amount of testnet MNT and treasury receiver address that the
+frontend should use for the MetaMask transfer.
+
+### `POST /api/credits/exchange`
+
+```json
+{
+  "quoteId": "quote-id",
+  "txHash": "0x..."
+}
+```
+
+The backend must verify the Mantle receipt before crediting the user:
+
+- transaction succeeded
+- sender matches the linked wallet
+- receiver matches the treasury address
+- value matches the quote
+- quote is not expired
+- txHash has not already been used
+
 ## Profile-Owned Lists
 
 These endpoints power the profile tabs for the current account only:

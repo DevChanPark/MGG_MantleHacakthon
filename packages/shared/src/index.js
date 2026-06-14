@@ -12,14 +12,41 @@ export const BattleStatus = Object.freeze({
   FAILED: "FAILED"
 });
 
+export const BattleDisplayStatus = Object.freeze({
+  OPEN: "OPEN",
+  CLOSED: "CLOSED",
+  EVALUATING: "EVALUATING",
+  COMPLETED: "COMPLETED",
+  EXPIRED: "EXPIRED",
+  FAILED: "FAILED"
+});
+
 export const WinnerType = Object.freeze({
   OPTION: "OPTION",
   ENTRY: "ENTRY"
 });
 
+export const WalletProvider = Object.freeze({
+  METAMASK: "MetaMask",
+  OKX: "OKX Wallet",
+  WALLET_CONNECT: "WalletConnect",
+  INJECTED: "Injected",
+  OTHER: "Other"
+});
+
+export const CreditTransactionReason = Object.freeze({
+  DEMO_CHARGE: "DEMO_CHARGE",
+  MNT_EXCHANGE: "MNT_EXCHANGE",
+  PARTICIPATION_SPEND: "PARTICIPATION_SPEND",
+  REWARD_CLAIM: "REWARD_CLAIM"
+});
+
 export const BattleTypeValues = Object.freeze(Object.values(BattleType));
 export const BattleStatusValues = Object.freeze(Object.values(BattleStatus));
+export const BattleDisplayStatusValues = Object.freeze(Object.values(BattleDisplayStatus));
 export const WinnerTypeValues = Object.freeze(Object.values(WinnerType));
+export const WalletProviderValues = Object.freeze(Object.values(WalletProvider));
+export const CreditTransactionReasonValues = Object.freeze(Object.values(CreditTransactionReason));
 
 export const JudgeOutputFields = Object.freeze([
   "winnerType",
@@ -55,9 +82,32 @@ export const MAX_WALLET_PROVIDER_LENGTH = 32;
 export const MAX_SHARE_CHANNEL_LENGTH = 32;
 export const MAX_SOCIAL_COMMENT_LENGTH = 500;
 export const MAX_DEMO_CREDIT_CHARGE = 1000;
+export const MAX_CREDIT_EXCHANGE_CREDITS = 1000;
 export const DEFAULT_PARTICIPATION_COST = 3;
 export const DEFAULT_REWARD_CREDITS = 30;
+export const MANTLE_TESTNET_CHAIN_ID = 5003;
+export const MNT_SYMBOL = "MNT";
+export const MNT_DECIMALS = 18;
+export const DEFAULT_CREDIT_EXCHANGE_CONFIRMATIONS = 1;
 export const RESERVED_NICKNAMES = Object.freeze(["무기기", "mgg", "관리자", "admin"]);
+export const CREDIT_EXCHANGE_ENV_KEYS = Object.freeze([
+  "MANTLE_CREDIT_EXCHANGE_ENABLED",
+  "MANTLE_CREDIT_TREASURY_ADDRESS",
+  "MANTLE_CREDIT_CHAIN_ID",
+  "MANTLE_CREDIT_RPC_URL",
+  "MANTLE_CREDIT_CONFIRMATIONS",
+  "MNT_CREDIT_RATE"
+]);
+export const DEFAULT_CREDIT_PACKAGES = Object.freeze(
+  [
+    { credits: 10, priceMnt: "10", priceWei: mntToWeiString("10") },
+    { credits: 30, priceMnt: "30", priceWei: mntToWeiString("30") },
+    { credits: 50, priceMnt: "50", priceWei: mntToWeiString("50") },
+    { credits: 100, priceMnt: "100", priceWei: mntToWeiString("100") },
+    { credits: 200, priceMnt: "200", priceWei: mntToWeiString("200") },
+    { credits: 300, priceMnt: "300", priceWei: mntToWeiString("300") }
+  ].map((creditPackage) => Object.freeze(creditPackage))
+);
 
 export class ContractValidationError extends Error {
   constructor(message, details = []) {
@@ -75,6 +125,10 @@ export function isBattleStatus(value) {
   return BattleStatusValues.includes(value);
 }
 
+export function isBattleDisplayStatus(value) {
+  return BattleDisplayStatusValues.includes(value);
+}
+
 export function assertValidBattleType(value) {
   if (!isBattleType(value)) {
     throw new ContractValidationError("Invalid battleType", [
@@ -85,6 +139,46 @@ export function assertValidBattleType(value) {
 
 export function isEvmAddress(value) {
   return typeof value === "string" && /^0x[a-fA-F0-9]{40}$/.test(value);
+}
+
+export function normalizeEvmAddress(value) {
+  const walletAddress = normalizeOptionalString(value);
+  return isEvmAddress(walletAddress) ? walletAddress.toLowerCase() : "";
+}
+
+export function assertValidEvmAddress(value, label = "walletAddress") {
+  if (!isEvmAddress(value)) {
+    throw new ContractValidationError(`Invalid ${label}`, [`${label} must be an EVM address`]);
+  }
+}
+
+export function isTxHash(value) {
+  return typeof value === "string" && /^0x[a-fA-F0-9]{64}$/.test(value);
+}
+
+export function normalizeTxHash(value) {
+  const txHash = normalizeOptionalString(value);
+  return isTxHash(txHash) ? txHash.toLowerCase() : "";
+}
+
+export function getDefaultCreditPackages() {
+  return DEFAULT_CREDIT_PACKAGES.map((creditPackage) => ({ ...creditPackage }));
+}
+
+export function findCreditPackageByCredits(credits, packages = DEFAULT_CREDIT_PACKAGES) {
+  const normalizedCredits = Number(credits);
+  return packages.find((creditPackage) => creditPackage.credits === normalizedCredits) ?? null;
+}
+
+export function mntToWeiString(value) {
+  const text = String(value).trim();
+  if (!/^\d+(?:\.\d{1,18})?$/.test(text)) {
+    throw new ContractValidationError("Invalid MNT amount", ["MNT amount must be a decimal string"]);
+  }
+
+  const [whole, fraction = ""] = text.split(".");
+  const paddedFraction = fraction.padEnd(MNT_DECIMALS, "0");
+  return (BigInt(whole) * 10n ** BigInt(MNT_DECIMALS) + BigInt(paddedFraction || "0")).toString();
 }
 
 export function validateCreateBattleRequest(input) {
@@ -205,7 +299,7 @@ export function validateWalletChallengeRequest(input) {
   const body = ensureObject(input, "request body");
   const details = [];
   const walletAddress = normalizeOptionalString(body.walletAddress);
-  const walletProvider = normalizeNullableString(body.walletProvider);
+  const walletProvider = normalizeWalletProvider(body.walletProvider);
 
   if (!isEvmAddress(walletAddress)) {
     details.push("walletAddress must be an EVM address");
@@ -221,7 +315,7 @@ export function validateWalletChallengeRequest(input) {
 
   return {
     walletAddress,
-    walletAddressNormalized: walletAddress.toLowerCase(),
+    walletAddressNormalized: normalizeEvmAddress(walletAddress),
     walletProvider
   };
 }
@@ -231,7 +325,7 @@ export function validateWalletVerifyRequest(input) {
   const details = [];
   const challengeId = normalizeOptionalString(body.challengeId);
   const walletAddress = normalizeOptionalString(body.walletAddress);
-  const walletProvider = normalizeNullableString(body.walletProvider);
+  const walletProvider = normalizeWalletProvider(body.walletProvider);
   const signature = normalizeOptionalString(body.signature);
 
   if (!challengeId) {
@@ -254,7 +348,7 @@ export function validateWalletVerifyRequest(input) {
   return {
     challengeId,
     walletAddress,
-    walletAddressNormalized: walletAddress.toLowerCase(),
+    walletAddressNormalized: normalizeEvmAddress(walletAddress),
     walletProvider,
     signature
   };
@@ -281,6 +375,255 @@ export function validateDemoCreditChargeRequest(input) {
   return {
     credits,
     priceMnt
+  };
+}
+
+export function validateCreditPackage(input) {
+  const body = ensureObject(input, "credit package");
+  const details = [];
+  const credits = Number(body.credits);
+  const priceMnt = normalizeOptionalString(body.priceMnt);
+  const priceWei = normalizeOptionalString(body.priceWei);
+
+  if (!Number.isInteger(credits) || credits <= 0 || credits > MAX_CREDIT_EXCHANGE_CREDITS) {
+    details.push(`credits must be an integer between 1 and ${MAX_CREDIT_EXCHANGE_CREDITS}`);
+  }
+
+  if (!priceMnt) {
+    details.push("priceMnt is required");
+  } else {
+    try {
+      const calculatedPriceWei = mntToWeiString(priceMnt);
+      if (priceWei && priceWei !== calculatedPriceWei) {
+        details.push("priceWei must match priceMnt");
+      }
+    } catch (error) {
+      details.push(...(error.details ?? ["priceMnt must be a valid MNT amount"]));
+    }
+  }
+
+  if (priceWei && !isPositiveIntegerString(priceWei)) {
+    details.push("priceWei must be a positive integer string");
+  }
+
+  if (details.length > 0) {
+    throw new ContractValidationError("Invalid credit package", details);
+  }
+
+  return {
+    credits,
+    priceMnt,
+    priceWei: priceWei || mntToWeiString(priceMnt)
+  };
+}
+
+export function validateCreditQuoteRequest(input, packages = DEFAULT_CREDIT_PACKAGES) {
+  const body = ensureObject(input, "request body");
+  const details = [];
+  const credits = Number(body.credits);
+  const walletAddress = normalizeOptionalString(body.walletAddress);
+  const creditPackage = findCreditPackageByCredits(credits, packages);
+
+  if (!Number.isInteger(credits) || credits <= 0 || credits > MAX_CREDIT_EXCHANGE_CREDITS) {
+    details.push(`credits must be an integer between 1 and ${MAX_CREDIT_EXCHANGE_CREDITS}`);
+  } else if (!creditPackage) {
+    details.push("credits must match a supported credit package");
+  }
+
+  if (walletAddress && !isEvmAddress(walletAddress)) {
+    details.push("walletAddress must be an EVM address when provided");
+  }
+
+  if (details.length > 0) {
+    throw new ContractValidationError("Invalid credit quote request", details);
+  }
+
+  return {
+    credits,
+    walletAddress: walletAddress || null,
+    walletAddressNormalized: walletAddress ? normalizeEvmAddress(walletAddress) : null,
+    package: { ...creditPackage }
+  };
+}
+
+export function validateCreditQuoteResponse(input) {
+  const body = ensureObject(input, "credit quote response");
+  const quote = body.quote && typeof body.quote === "object" && !Array.isArray(body.quote) ? body.quote : body;
+  const details = [];
+  const id = normalizeOptionalString(quote.id);
+  const credits = Number(quote.credits);
+  const priceMnt = normalizeOptionalString(quote.priceMnt);
+  const priceWei = normalizeOptionalString(quote.priceWei);
+  const tokenSymbol = normalizeOptionalString(quote.tokenSymbol) || MNT_SYMBOL;
+  const chainId = Number(quote.chainId);
+  const receiverAddress = normalizeOptionalString(quote.receiverAddress);
+  const walletAddress = normalizeOptionalString(quote.walletAddress);
+  const expiresAt = normalizeOptionalString(quote.expiresAt);
+
+  if (!id) {
+    details.push("quote.id is required");
+  }
+  if (!Number.isInteger(credits) || credits <= 0 || credits > MAX_CREDIT_EXCHANGE_CREDITS) {
+    details.push(`quote.credits must be an integer between 1 and ${MAX_CREDIT_EXCHANGE_CREDITS}`);
+  }
+  if (!priceMnt) {
+    details.push("quote.priceMnt is required");
+  }
+  if (!isPositiveIntegerString(priceWei)) {
+    details.push("quote.priceWei must be a positive integer string");
+  }
+  if (!Number.isInteger(chainId) || chainId <= 0) {
+    details.push("quote.chainId must be a positive integer");
+  }
+  if (!isEvmAddress(receiverAddress)) {
+    details.push("quote.receiverAddress must be an EVM address");
+  }
+  if (walletAddress && !isEvmAddress(walletAddress)) {
+    details.push("quote.walletAddress must be an EVM address when provided");
+  }
+  if (!isIsoDateString(expiresAt)) {
+    details.push("quote.expiresAt must be an ISO date string");
+  }
+
+  if (details.length > 0) {
+    throw new ContractValidationError("Invalid credit quote response", details);
+  }
+
+  return {
+    id,
+    credits,
+    priceMnt,
+    priceWei,
+    tokenSymbol,
+    chainId,
+    receiverAddress,
+    receiverAddressNormalized: normalizeEvmAddress(receiverAddress),
+    walletAddress: walletAddress || null,
+    walletAddressNormalized: walletAddress ? normalizeEvmAddress(walletAddress) : null,
+    expiresAt
+  };
+}
+
+export function validateCreditExchangeRequest(input) {
+  const body = ensureObject(input, "request body");
+  const details = [];
+  const quoteId = normalizeOptionalString(body.quoteId);
+  const txHash = normalizeOptionalString(body.txHash);
+
+  if (!quoteId) {
+    details.push("quoteId is required");
+  }
+  if (!isTxHash(txHash)) {
+    details.push("txHash must be a 32-byte transaction hash");
+  }
+
+  if (details.length > 0) {
+    throw new ContractValidationError("Invalid credit exchange request", details);
+  }
+
+  return {
+    quoteId,
+    txHash,
+    txHashNormalized: normalizeTxHash(txHash)
+  };
+}
+
+export function validateCreditExchangeMetadata(input) {
+  const body = ensureObject(input, "credit exchange metadata");
+  const details = [];
+  const quoteId = normalizeOptionalString(body.quoteId);
+  const chainId = Number(body.chainId);
+  const txHash = normalizeOptionalString(body.txHash);
+  const from = normalizeOptionalString(body.from);
+  const to = normalizeOptionalString(body.to);
+  const valueWei = normalizeOptionalString(body.valueWei);
+  const confirmations = body.confirmations === undefined || body.confirmations === null ? null : Number(body.confirmations);
+
+  if (quoteId === "") {
+    details.push("quoteId is required");
+  }
+  if (!Number.isInteger(chainId) || chainId <= 0) {
+    details.push("chainId must be a positive integer");
+  }
+  if (!isTxHash(txHash)) {
+    details.push("txHash must be a 32-byte transaction hash");
+  }
+  if (!isEvmAddress(from)) {
+    details.push("from must be an EVM address");
+  }
+  if (!isEvmAddress(to)) {
+    details.push("to must be an EVM address");
+  }
+  if (!isPositiveIntegerString(valueWei)) {
+    details.push("valueWei must be a positive integer string");
+  }
+  if (confirmations !== null && (!Number.isInteger(confirmations) || confirmations < 0)) {
+    details.push("confirmations must be a non-negative integer when provided");
+  }
+
+  if (details.length > 0) {
+    throw new ContractValidationError("Invalid credit exchange metadata", details);
+  }
+
+  return {
+    quoteId,
+    chainId,
+    txHash,
+    txHashNormalized: normalizeTxHash(txHash),
+    from,
+    fromNormalized: normalizeEvmAddress(from),
+    to,
+    toNormalized: normalizeEvmAddress(to),
+    valueWei,
+    confirmations
+  };
+}
+
+export function validateCreditExchangeResponse(input) {
+  const body = ensureObject(input, "credit exchange response");
+  const transaction = ensureNestedObject(body.transaction, "transaction", []);
+  const details = [];
+  const balance = Number(body.balance);
+
+  if (!Number.isInteger(balance) || balance < 0) {
+    details.push("balance must be a non-negative integer");
+  }
+
+  if (!transaction) {
+    details.push("transaction must be an object");
+  } else {
+    if (!normalizeOptionalString(transaction.id)) {
+      details.push("transaction.id is required");
+    }
+    if (!Number.isInteger(Number(transaction.amount)) || Number(transaction.amount) <= 0) {
+      details.push("transaction.amount must be a positive integer");
+    }
+    if (transaction.reason !== CreditTransactionReason.MNT_EXCHANGE) {
+      details.push(`transaction.reason must be ${CreditTransactionReason.MNT_EXCHANGE}`);
+    }
+    if (!Number.isInteger(Number(transaction.balanceAfter)) || Number(transaction.balanceAfter) < 0) {
+      details.push("transaction.balanceAfter must be a non-negative integer");
+    }
+    try {
+      validateCreditExchangeMetadata(transaction.metadata ?? transaction.metadataJson);
+    } catch (error) {
+      details.push(...(error.details ?? [error.message]));
+    }
+  }
+
+  if (details.length > 0) {
+    throw new ContractValidationError("Invalid credit exchange response", details);
+  }
+
+  return {
+    balance,
+    transaction: {
+      id: String(transaction.id),
+      amount: Number(transaction.amount),
+      reason: transaction.reason,
+      balanceAfter: Number(transaction.balanceAfter),
+      metadata: validateCreditExchangeMetadata(transaction.metadata ?? transaction.metadataJson)
+    }
   };
 }
 
@@ -646,6 +989,29 @@ function normalizeNullableString(value) {
   }
   const normalized = normalizeOptionalString(value);
   return normalized || null;
+}
+
+function normalizeWalletProvider(value) {
+  return normalizeNullableString(value);
+}
+
+function isPositiveIntegerString(value) {
+  if (typeof value !== "string" || !/^\d+$/.test(value)) {
+    return false;
+  }
+  try {
+    return BigInt(value) > 0n;
+  } catch {
+    return false;
+  }
+}
+
+function isIsoDateString(value) {
+  if (!normalizeOptionalString(value)) {
+    return false;
+  }
+  const parsed = new Date(value);
+  return Number.isFinite(parsed.getTime()) && parsed.toISOString() === value;
 }
 
 function isReservedNickname(value) {
