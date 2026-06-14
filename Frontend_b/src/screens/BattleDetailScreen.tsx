@@ -53,7 +53,7 @@ export function BattleDetailScreen({
   const isCompleted = battle.status === 'COMPLETED';
   const isClosed = !isOpen && !isEvaluating && !isCompleted;
   const canWriteComments = isOpen && isParticipated;
-  const canViewComments = isParticipated || !isOpen;
+  const canViewComments = true;
   const safeOptions = battle.options ?? [];
   const optionStats = result.optionStats ?? result.optionResults;
   const shouldShowOptionRatio = battle.type === 'OPTION' && Boolean(selectedOption || isCompleted) && optionStats;
@@ -72,6 +72,11 @@ export function BattleDetailScreen({
 
   const handleReplySubmit = (event: React.FormEvent<HTMLFormElement>, commentId: string) => {
     event.preventDefault();
+
+    if (!canWriteComments) {
+      onRequireParticipation();
+      return;
+    }
 
     onCommentReplyAdd(commentId, replyInput);
     setReplyInput('');
@@ -331,6 +336,12 @@ export function BattleDetailScreen({
             {battle.comments.map(renderComment)}
           </section>
 
+          {!canWriteComments && (
+            <section className="detail-comment-locked" aria-label="댓글 작성 잠김">
+              참여 후 댓글을 작성할 수 있습니다.
+            </section>
+          )}
+
           {canWriteComments && (
             <form className="detail-comment-form" onSubmit={handleCommentSubmit}>
               <input
@@ -345,7 +356,7 @@ export function BattleDetailScreen({
         </>
       ) : (
         <section className="detail-comment-locked" aria-label="댓글 잠김">
-          참여 후 댓글을 확인할 수 있습니다.
+          참여 후 댓글을 작성할 수 있습니다.
         </section>
       )}
 

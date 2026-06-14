@@ -3279,6 +3279,16 @@ select {
   font-weight: 500;
 }
 
+.comment-write-locked {
+  margin: 8px 0 0;
+  padding-top: 8px;
+  border-top: 1px solid rgba(14, 14, 14, 0.12);
+  color: rgba(14, 14, 14, 0.62);
+  font-size: 11px;
+  line-height: 1.45;
+  text-align: center;
+}
+
 .comment-locked-message,
 .detail-comment-locked {
   width: 371px;

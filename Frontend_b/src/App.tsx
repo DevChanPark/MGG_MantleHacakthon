@@ -262,7 +262,7 @@ export default function App() {
   };
 
   const handleRequireParticipation = () => {
-    showNotice('참여하기를 눌러야 댓글을 등록할 수 있습니다.');
+    showNotice('참여 후 댓글을 작성할 수 있습니다.');
   };
 
   const handleShareBattle = () => {

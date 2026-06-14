@@ -55,7 +55,7 @@ export function BattleCard({
   const isCompleted = battle.status === 'COMPLETED';
   const isClosed = !isOpen && !isEvaluating && !isCompleted;
   const canWriteComments = isOpen && isParticipated;
-  const canViewComments = isParticipated || !isOpen;
+  const canViewComments = true;
   const cardClassName = `battle-card battle-card-${battle.type.toLowerCase().replace('_', '-')}`;
   const hasManyComments = battle.comments.length > 2;
   const safeOptions = battle.type === 'OPTION' ? (battle.options ?? []).filter(Boolean) : [];
@@ -65,6 +65,11 @@ export function BattleCard({
   const handleCommentSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     event.stopPropagation();
+    if (!canWriteComments) {
+      onRequireParticipation();
+      return;
+    }
+
     onCommentAdd(commentInput);
     setCommentInput('');
     setIsCommentComposerOpen(false);
@@ -73,6 +78,11 @@ export function BattleCard({
   const handleReplySubmit = (event: React.FormEvent<HTMLFormElement>, commentId: string) => {
     event.preventDefault();
     event.stopPropagation();
+    if (!canWriteComments) {
+      onRequireParticipation();
+      return;
+    }
+
     onCommentReplyAdd(commentId, replyInput);
     setReplyInput('');
     setReplyingCommentId(null);
@@ -330,6 +340,10 @@ export function BattleCard({
             </button>
           )}
 
+          {!canWriteComments && (
+            <p className="comment-write-locked">참여 후 댓글을 작성할 수 있습니다.</p>
+          )}
+
           {canWriteComments && isCommentComposerOpen && (
             <form className="comment-composer" onSubmit={handleCommentSubmit}>
               <input
@@ -344,7 +358,7 @@ export function BattleCard({
         </div>
       ) : (
         <div className="comment-locked-message" onClick={(event) => event.stopPropagation()}>
-          참여 후 댓글을 확인할 수 있습니다.
+          참여 후 댓글을 작성할 수 있습니다.
         </div>
       )}
 
