@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
-import commentIcon from '../../assets/action-icons/comment.svg';
-import heartIcon from '../../assets/action-icons/heart.svg';
-import { ShareIcon } from '../components/icons/ShareIcon';
+import commentIcon from '../../assets/action-icons/댓글아이콘3.png';
+import shareIcon from '../../assets/action-icons/공유하기 아이콘3.png';
+import { HeartIcon } from '../components/icons/HeartIcon';
 import { getMockBattleResult, type FeedBattle, type PreviewComment } from '../mocks/battles';
 
 interface BattleDetailScreenProps {
@@ -150,7 +150,7 @@ export function BattleDetailScreen({
             aria-label={`${comment.author} 댓글 좋아요`}
             onClick={() => onCommentLike(comment.id)}
           >
-            <img className="comment-heart-img" src={heartIcon} alt="" aria-hidden="true" />
+            <HeartIcon className="comment-heart-img heart-action-icon" />
             <small>{comment.likeCount}</small>
           </button>
         </div>
@@ -174,7 +174,7 @@ export function BattleDetailScreen({
                     aria-label={`${reply.author} 대댓글 좋아요`}
                     onClick={() => onCommentLike(reply.id)}
                   >
-                    <img className="comment-heart-img" src={heartIcon} alt="" aria-hidden="true" />
+                    <HeartIcon className="comment-heart-img heart-action-icon" />
                     <small>{reply.likeCount}</small>
                   </button>
                 </div>
@@ -287,11 +287,11 @@ export function BattleDetailScreen({
           aria-pressed={isBattleLiked}
           onClick={onBattleLike}
         >
-          <img className="action-icon-img heart-icon-img" src={heartIcon} alt="" aria-hidden="true" />
+          <HeartIcon className="action-icon-img heart-icon-img heart-action-icon" />
           좋아요 {battle.likeCount}
         </button>
         <button className="battle-card-share" type="button" onClick={onShareBattle}>
-          <ShareIcon className="action-icon-img share-action-icon" />
+          <img className="action-icon-img share-action-icon" src={shareIcon} alt="" aria-hidden="true" />
           공유하기
         </button>
       </section>

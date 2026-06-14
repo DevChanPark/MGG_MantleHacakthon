@@ -9,7 +9,7 @@
   --brand-black: #0e0e0e;
   --avatar-size: 57px;
   --action-icon-size: 15px;
-  --bottom-nav-height: 96px;
+  --bottom-nav-height: 82px;
   color: #111;
   background: var(--brand-lime);
   font-family: var(--font-family-base);
@@ -1880,6 +1880,11 @@ select {
   border-right: 1px solid rgba(11, 11, 11, 0.08);
 }
 
+.app-shell,
+.app-shell * {
+  font-weight: 400 !important;
+}
+
 /* ===============================================
    Header Styles
    =============================================== */
@@ -2096,8 +2101,8 @@ select {
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  height: 96px;
-  padding: 14px 34px 16px;
+  height: var(--bottom-nav-height);
+  padding: 9px 34px 11px;
   border-top: 1px solid rgba(255, 255, 255, 0.05);
   background: var(--brand-black);
   box-shadow: 0 -8px 18px rgba(0, 0, 0, 0.14);
@@ -2110,9 +2115,9 @@ select {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 7px;
+  gap: 5px;
   min-width: 64px;
-  min-height: 70px;
+  min-height: 60px;
   padding: 4px 0;
   border: 0;
   border-radius: 8px;
@@ -2133,16 +2138,16 @@ select {
 
 .bottom-nav-item svg {
   display: block;
-  width: 38px;
-  height: 38px;
+  width: 40px;
+  height: 40px;
   fill: currentColor;
   color: inherit;
 }
 
 .nav-label {
   display: block;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 10px;
+  font-weight: 400;
   letter-spacing: 0;
   text-align: center;
   color: inherit;
@@ -2153,9 +2158,9 @@ select {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 82px;
-  height: 82px;
-  margin-top: -40px;
+  width: 94px;
+  height: 94px;
+  margin-top: -16px;
   padding: 0;
   border: 2px solid var(--brand-black);
   border-radius: 50%;
@@ -2177,8 +2182,8 @@ select {
 
 .bottom-nav-center svg {
   display: block;
-  width: 42px;
-  height: 42px;
+  width: 44px;
+  height: 44px;
   fill: none;
   stroke: currentColor;
   stroke-width: 1.7;
@@ -2641,6 +2646,7 @@ select {
   justify-content: flex-start;
   gap: 0;
   width: 100%;
+  height: 47px;
   padding: 11px 16px 10px;
   background: #fdfdfd;
   border-bottom: 1px solid #0e0e0e;
@@ -2656,7 +2662,7 @@ select {
   display: grid;
   flex: 0 0 auto;
   grid-template-columns: repeat(3, 87px);
-  gap: 17px;
+  gap: 8px;
   min-width: 0;
 }
 
@@ -2673,8 +2679,8 @@ select {
   border-radius: 5px;
   background: #fdfdfd;
   color: #0e0e0e;
-  font-size: 10.5px;
-  font-weight: 500;
+  font-size: 12px;
+  font-weight: 400;
   letter-spacing: 0;
   cursor: pointer;
   transition: all 200ms ease;
@@ -2688,7 +2694,7 @@ select {
 .filter-btn.active {
   background: #e3f4a6;
   border-color: #0e0e0e;
-  font-weight: 600;
+  font-weight: 400;
 }
 
 .sort-control {
@@ -2702,7 +2708,8 @@ select {
   align-items: center;
   justify-content: flex-end;
   flex: 0 0 auto;
-  min-width: 68px;
+  width: 64px;
+  min-width: 64px;
   height: 22px;
   min-height: 22px;
   padding: 0;
@@ -2710,7 +2717,7 @@ select {
   background: transparent;
   color: #0e0e0e;
   font-size: 10px;
-  font-weight: 500;
+  font-weight: 400;
   letter-spacing: 0;
   white-space: nowrap;
   overflow: visible;
@@ -2752,7 +2759,7 @@ select {
 .home-battles {
   display: block;
   gap: 0;
-  padding: 0 0 184px;
+  padding: 0 0 142px;
   overflow: visible;
 }
 
@@ -2763,7 +2770,7 @@ select {
 .battle-card {
   display: block;
   width: 100%;
-  padding: 14px 15px 16px;
+  padding: 17px 15px 20px;
   border-bottom: 1px solid rgba(14, 14, 14, 0.55);
   background: #fdfdfd;
   color: #0e0e0e;
@@ -2847,8 +2854,8 @@ select {
 
 .battle-card-main {
   display: grid;
-  grid-template-columns: 67px minmax(0, 1fr);
-  gap: 12px;
+  grid-template-columns: 57px minmax(0, 1fr);
+  gap: 11px;
   width: 100%;
   padding: 0;
   border: 0;
@@ -2877,7 +2884,7 @@ select {
   display: flex;
   min-width: 0;
   flex-direction: column;
-  gap: 8px;
+  gap: 3px;
 }
 
 .battle-card-author {
@@ -2890,7 +2897,7 @@ select {
 
 .battle-card-title {
   margin: 0;
-  font-size: 20px;
+  font-size: 21px;
   font-weight: 400;
   letter-spacing: 0;
   line-height: 1.5;
@@ -2899,7 +2906,7 @@ select {
 }
 
 .battle-card-description {
-  margin: 2px 0 0;
+  margin: 4px 0 0;
   color: #0e0e0e;
   font-size: var(--body-font-size);
   font-weight: 400;
@@ -3008,12 +3015,13 @@ select {
 }
 
 .battle-card-actions {
-  display: flex;
+  display: grid;
+  grid-template-columns: 59px 65px 66px;
   align-items: center;
-  justify-content: space-between;
-  gap: 0;
-  width: calc(100% - 90px);
-  margin: 20px 17px 14px 45px;
+  justify-content: start;
+  column-gap: 58px;
+  width: auto;
+  margin: 21px 0 17px 30px;
   color: #0e0e0e;
   font-size: 10px;
   font-weight: 400;
@@ -3024,9 +3032,10 @@ select {
 .battle-card-share {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 6px;
+  justify-content: flex-start;
+  gap: 7px;
   min-width: 0;
+  height: 15px;
   border: 0;
   background: transparent;
   color: inherit;
@@ -3036,12 +3045,12 @@ select {
 }
 
 .like-action {
-  width: 60px;
+  width: 65px;
   height: 15px;
 }
 
 .battle-card-share {
-  width: 55px;
+  width: 66px;
   height: 15px;
 }
 
@@ -3086,34 +3095,60 @@ select {
 }
 
 .comment-icon-img {
-  width: 22px;
-  height: 18px;
+  width: 17px;
+  height: 13.635px;
+  object-fit: fill;
 }
 
 .heart-icon-img {
-  width: 20px;
-  height: 20px;
+  width: 14px;
+  height: 13px;
+}
+
+.heart-action-icon {
+  overflow: visible;
+}
+
+.heart-action-shape {
+  fill: #e3f4a6;
+  stroke: #0e0e0e;
+  stroke-width: 0.8;
+  transition: fill 120ms ease;
+}
+
+.like-action.is-liked .heart-action-shape,
+.comment-like-button.is-liked .heart-action-shape {
+  fill: #ff4d3d;
 }
 
 .share-action-icon {
-  width: 15px;
-  height: 15px;
+  width: 13px;
+  height: 13px;
   overflow: visible;
   color: #0e0e0e;
 }
 
+.share-action-rail,
 .share-action-line {
   fill: none;
-  stroke: #0e0e0e;
-  stroke-width: 1.4;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+.share-action-rail {
+  stroke: #0e0e0e;
+  stroke-width: 2.05;
+}
+
+.share-action-line {
+  stroke: #e3f4a6;
+  stroke-width: 1.35;
 }
 
 .share-action-node {
   fill: #e3f4a6;
   stroke: #0e0e0e;
-  stroke-width: 1.1;
+  stroke-width: 0.45;
 }
 
 .comment-heart-img {
@@ -3415,7 +3450,7 @@ select {
 .ai-result-summary span {
   color: #0e0e0e;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 400;
   line-height: 1.35;
 }
 
@@ -4472,16 +4507,6 @@ select {
   cursor: pointer;
   font-size: 28px;
   line-height: 1;
-}
-
-.like-action .heart-icon-img,
-.comment-like-button .comment-heart-img {
-  filter: grayscale(1) brightness(2.7);
-}
-
-.like-action.is-liked .heart-icon-img,
-.comment-like-button.is-liked .comment-heart-img {
-  filter: none;
 }
 
 .comment-thread,

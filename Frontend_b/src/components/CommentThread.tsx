@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import heartIcon from '../../assets/action-icons/heart.svg';
+import { HeartIcon } from './icons/HeartIcon';
 import type { PreviewComment } from '../mocks/battles';
 
 interface CommentThreadProps {
@@ -95,7 +95,7 @@ function CommentNode({
           aria-label={`${comment.author} 댓글 좋아요`}
           onClick={() => onCommentLike(comment.id)}
         >
-          <img className="comment-heart-img" src={heartIcon} alt="" aria-hidden="true" />
+          <HeartIcon className="comment-heart-img heart-action-icon" />
           <small>{comment.likeCount}</small>
         </button>
       </div>
