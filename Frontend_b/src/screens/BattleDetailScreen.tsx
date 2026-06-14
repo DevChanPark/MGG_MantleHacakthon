@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import commentIcon from '../../assets/action-icons/comment.svg';
 import heartIcon from '../../assets/action-icons/heart.svg';
-import shareIcon from '../../assets/action-icons/share.svg';
+import { ShareIcon } from '../components/icons/ShareIcon';
 import { getMockBattleResult, type FeedBattle, type PreviewComment } from '../mocks/battles';
 
 interface BattleDetailScreenProps {
@@ -291,7 +291,7 @@ export function BattleDetailScreen({
           좋아요 {battle.likeCount}
         </button>
         <button className="battle-card-share" type="button" onClick={onShareBattle}>
-          <img className="action-icon-img share-icon-img" src={shareIcon} alt="" aria-hidden="true" />
+          <ShareIcon className="action-icon-img share-action-icon" />
           공유하기
         </button>
       </section>

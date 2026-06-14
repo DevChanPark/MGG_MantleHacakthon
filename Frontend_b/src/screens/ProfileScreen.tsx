@@ -6,9 +6,9 @@ import commentOutlineIcon from '../../assets/profile-icons/comment-outline.png';
 import heartFilledIcon from '../../assets/profile-icons/heart-filled.png';
 import heartOutlineIcon from '../../assets/profile-icons/heart-outline.png';
 import settingIcon from '../../assets/profile-icons/setting.png';
-import shareIcon from '../../assets/profile-icons/share.png';
 import stackIcon from '../../assets/profile-icons/stack.png';
 import profileAvatar from '../../assets/profile-avatar.png';
+import { ShareIcon } from '../components/icons/ShareIcon';
 
 const profilePosts = [
   {
@@ -31,12 +31,12 @@ const profilePosts = [
 type ProfileContentTab = 'posts' | 'comments' | 'likes';
 type ProfileBattleFilter = 'open' | 'option' | 'image';
 
-type CreditPackage = {
+export type CreditPackage = {
   credits: number;
   price: number;
 };
 
-const creditPackages: CreditPackage[] = [
+export const creditPackages: CreditPackage[] = [
   { credits: 10, price: 10 },
   { credits: 30, price: 30 },
   { credits: 50, price: 50 },
@@ -190,7 +190,7 @@ export function ProfileScreen({ credits = 30, walletAddress = '0x12ab...89ef', o
                 <div className="profile-post-actions" aria-label="게시글 반응">
                   <span><img className="profile-action-icon profile-action-comment" src={commentFilledIcon} alt="" aria-hidden="true" /> 댓글 3</span>
                   <span><img className="profile-action-icon profile-action-heart" src={heartFilledIcon} alt="" aria-hidden="true" /> 좋아요 24</span>
-                  <span><img className="profile-action-icon profile-action-share" src={shareIcon} alt="" aria-hidden="true" /> 공유하기</span>
+                  <span><ShareIcon className="profile-action-icon profile-action-share share-action-icon" /> 공유하기</span>
                 </div>
 
                 {index === 0 ? (
@@ -277,7 +277,7 @@ type CreditChargePanelProps = {
   onApprovePayment: (creditPackage: CreditPackage) => void;
 };
 
-function CreditChargePanel({
+export function CreditChargePanel({
   isOpen,
   isInfoOpen,
   currentCredits,
@@ -363,7 +363,7 @@ type CreditPurchaseCompleteModalProps = {
   onClose: () => void;
 };
 
-function CreditPurchaseCompleteModal({ creditTotal, onClose }: CreditPurchaseCompleteModalProps) {
+export function CreditPurchaseCompleteModal({ creditTotal, onClose }: CreditPurchaseCompleteModalProps) {
   return (
     <div className={`credit-complete-overlay${creditTotal !== null ? ' is-open' : ''}`} aria-hidden={creditTotal === null}>
       <section className="credit-complete-modal" role="dialog" aria-modal="true" aria-label="크레딧 구매 완료">

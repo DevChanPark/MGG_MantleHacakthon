@@ -1,9 +1,13 @@
 import { useState } from 'react';
 import type { FeedBattle } from '../mocks/battles';
+import {
+  CreditChargePanel,
+  CreditPurchaseCompleteModal,
+  creditPackages,
+  type CreditPackage,
+} from '../screens/ProfileScreen';
 
 export const PARTICIPATION_COST = 3;
-
-const CREDIT_OPTIONS = [30, 100, 300];
 
 interface ParticipationModalProps {
   battle: FeedBattle | null;
@@ -28,7 +32,10 @@ export function ParticipationModal({
   onParticipate,
   onAddCredits,
 }: ParticipationModalProps) {
-  const [isChargeOpen, setIsChargeOpen] = useState(false);
+  const [isChargePanelOpen, setIsChargePanelOpen] = useState(false);
+  const [isCreditInfoOpen, setIsCreditInfoOpen] = useState(false);
+  const [selectedCreditPackage, setSelectedCreditPackage] = useState<CreditPackage | null>(null);
+  const [completedCreditTotal, setCompletedCreditTotal] = useState<number | null>(null);
 
   if (!battle) {
     return null;
@@ -36,10 +43,41 @@ export function ParticipationModal({
 
   const hasEnoughCredits = credits >= PARTICIPATION_COST;
   const needsOption = battle.type === 'OPTION' && Boolean(battle.options?.length);
-  const handleAddCredits = (amount: number) => {
-    onAddCredits(amount);
-    setIsChargeOpen(false);
+  const closeChargePanel = () => {
+    setIsChargePanelOpen(false);
+    setIsCreditInfoOpen(false);
+    setSelectedCreditPackage(null);
   };
+  const handleApproveCreditPurchase = (creditPackage: CreditPackage) => {
+    onAddCredits(creditPackage.credits);
+    closeChargePanel();
+    setCompletedCreditTotal(credits + creditPackage.credits);
+  };
+
+  if (isChargePanelOpen || completedCreditTotal !== null) {
+    return (
+      <div className="modal-overlay participation-overlay credit-charge-modal-overlay" role="presentation">
+        <CreditChargePanel
+          isOpen={isChargePanelOpen}
+          isInfoOpen={isCreditInfoOpen}
+          currentCredits={credits}
+          walletAddress={walletAddress}
+          packages={creditPackages}
+          selectedPackage={selectedCreditPackage}
+          onClose={closeChargePanel}
+          onToggleInfo={() => setIsCreditInfoOpen((isOpen) => !isOpen)}
+          onCloseInfo={() => setIsCreditInfoOpen(false)}
+          onSelectPackage={setSelectedCreditPackage}
+          onClosePayment={() => setSelectedCreditPackage(null)}
+          onApprovePayment={handleApproveCreditPurchase}
+        />
+        <CreditPurchaseCompleteModal
+          creditTotal={completedCreditTotal}
+          onClose={() => setCompletedCreditTotal(null)}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="modal-overlay participation-overlay" role="presentation">
@@ -82,16 +120,6 @@ export function ParticipationModal({
           <p className="participation-error">진영을 먼저 선택해주세요.</p>
         )}
 
-        {!hasEnoughCredits && isChargeOpen && (
-          <div className="participation-charge-options" aria-label="크레딧 충전 옵션">
-            {CREDIT_OPTIONS.map((amount) => (
-              <button type="button" key={amount} onClick={() => handleAddCredits(amount)}>
-                {amount} C 충전
-              </button>
-            ))}
-          </div>
-        )}
-
         <p className="participation-helper">
           참여 시 크레딧 {PARTICIPATION_COST}개가 차감됩니다. 보상 지급은 mock 결과 흐름에서만 처리됩니다.
         </p>
@@ -117,7 +145,7 @@ export function ParticipationModal({
               <button
                 className="participation-confirm-button"
                 type="button"
-                onClick={() => setIsChargeOpen((isOpen) => !isOpen)}
+                onClick={() => setIsChargePanelOpen(true)}
               >
                 충전하기
               </button>
