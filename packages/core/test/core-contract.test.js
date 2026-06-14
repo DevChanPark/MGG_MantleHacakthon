@@ -134,11 +134,13 @@ test("validates credit package, quote, and exchange DTOs", () => {
         from: WALLET,
         to: RECEIVER,
         valueWei: quote.priceWei,
-        confirmations: 1
+        confirmations: 1,
+        blockTimestamp: "2026-06-15T00:00:00.000Z"
       }
     }
   });
   assert.equal(exchange.transaction.metadata.txHashNormalized, TX_HASH);
+  assert.equal(exchange.transaction.metadata.blockTimestamp, "2026-06-15T00:00:00.000Z");
 });
 
 test("builds deterministic verdict hash packages for equivalent inputs", () => {

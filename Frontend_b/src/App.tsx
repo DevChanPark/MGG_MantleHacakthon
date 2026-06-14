@@ -363,7 +363,7 @@ export default function App() {
       valueWei: quote.quote.priceWei,
       chainId: quote.quote.chainId,
     });
-    const exchanged = await exchangeCredits({
+    const exchanged = await exchangeCreditsWithRetry({
       quoteId: quote.quote.id,
       txHash,
     });
@@ -631,6 +631,36 @@ function getInitialCredits() {
   }
 
   return MOCK_CURRENT_USER.credits;
+}
+
+const CREDIT_EXCHANGE_RETRYABLE_CODES = new Set(['CREDIT_TX_NOT_FOUND', 'CREDIT_TX_UNCONFIRMED']);
+
+async function exchangeCreditsWithRetry(input: { quoteId: string; txHash: string }) {
+  const maxAttempts = 8;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      return await exchangeCredits(input);
+    } catch (error) {
+      if (
+        !(error instanceof ApiClientError) ||
+        !CREDIT_EXCHANGE_RETRYABLE_CODES.has(error.code) ||
+        attempt === maxAttempts
+      ) {
+        throw error;
+      }
+
+      await wait(1500 + attempt * 500);
+    }
+  }
+
+  return exchangeCredits(input);
+}
+
+function wait(ms: number) {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
 }
 
 function getUserFacingErrorMessage(error: unknown) {

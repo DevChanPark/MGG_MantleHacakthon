@@ -713,7 +713,9 @@ async function exchangeCredits(repository, input, userId, config) {
   if (quote.walletAddressNormalized !== userWalletAddressNormalized) {
     throw new ApiError(403, "WALLET_MISMATCH", "Quote wallet must match the linked wallet");
   }
-  if (new Date(quote.expiresAt).getTime() <= Date.now()) {
+  const quoteExpiresAtMs = new Date(quote.expiresAt).getTime();
+  const quoteExpired = quoteExpiresAtMs <= Date.now();
+  if (quoteExpired && isCreditExchangeMockMode(config)) {
     throw new ApiError(409, "CREDIT_QUOTE_EXPIRED", "Credit quote expired");
   }
 
@@ -723,6 +725,7 @@ async function exchangeCredits(repository, input, userId, config) {
   }
 
   const metadata = await verifyCreditExchangeTransaction(config, quote, normalized.txHashNormalized, user);
+  validateCreditTransactionTimestamp(quote, metadata, quoteExpired, quoteExpiresAtMs);
   let result;
   try {
     result = await repository.completeCreditQuoteExchange({
@@ -996,7 +999,7 @@ function getCreditTreasuryAddress(config) {
 }
 
 async function verifyCreditExchangeTransaction(config, quote, txHash, user) {
-  if (config.mockCreditExchange ?? config.mockMantle) {
+  if (isCreditExchangeMockMode(config)) {
     return validateCreditExchangeMetadata({
       quoteId: quote.id,
       chainId: quote.chainId,
@@ -1004,7 +1007,8 @@ async function verifyCreditExchangeTransaction(config, quote, txHash, user) {
       from: user.walletAddress,
       to: quote.receiverAddress,
       valueWei: quote.priceWei,
-      confirmations: Number(config.mantleCreditConfirmations ?? 1)
+      confirmations: Number(config.mantleCreditConfirmations ?? 1),
+      blockTimestamp: new Date().toISOString()
     });
   }
 
@@ -1058,7 +1062,10 @@ async function verifyCreditExchangeTransaction(config, quote, txHash, user) {
     throw new ApiError(409, "CREDIT_TX_VALUE_MISMATCH", "Credit exchange value does not match quote");
   }
 
-  const currentBlock = await publicClient.getBlockNumber();
+  const [currentBlock, transactionBlock] = await Promise.all([
+    publicClient.getBlockNumber(),
+    publicClient.getBlock({ blockNumber: receipt.blockNumber })
+  ]);
   const confirmations = Number(currentBlock - receipt.blockNumber + 1n);
   const requiredConfirmations = Number(config.mantleCreditConfirmations ?? 1);
   if (confirmations < requiredConfirmations) {
@@ -1072,8 +1079,29 @@ async function verifyCreditExchangeTransaction(config, quote, txHash, user) {
     from: transaction.from,
     to: transaction.to,
     valueWei: transaction.value.toString(),
-    confirmations
+    confirmations,
+    blockTimestamp: new Date(Number(transactionBlock.timestamp) * 1000).toISOString()
   });
+}
+
+function isCreditExchangeMockMode(config) {
+  return config.mockCreditExchange ?? config.mockMantle;
+}
+
+function validateCreditTransactionTimestamp(quote, metadata, quoteExpired, quoteExpiresAtMs) {
+  if (!quoteExpired) {
+    return;
+  }
+
+  const blockTimestampMs = Date.parse(metadata.blockTimestamp || "");
+  if (!Number.isFinite(blockTimestampMs) || blockTimestampMs > quoteExpiresAtMs) {
+    throw new ApiError(409, "CREDIT_QUOTE_EXPIRED", "Credit quote expired");
+  }
+
+  const quoteCreatedAtMs = Date.parse(quote.createdAt || "");
+  if (Number.isFinite(quoteCreatedAtMs) && blockTimestampMs < quoteCreatedAtMs) {
+    throw new ApiError(409, "CREDIT_TX_BEFORE_QUOTE", "Credit exchange transaction was sent before the quote was created");
+  }
 }
 
 async function getOrCreateJudgingRule(repository, battle) {

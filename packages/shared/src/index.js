@@ -539,6 +539,7 @@ export function validateCreditExchangeMetadata(input) {
   const to = normalizeOptionalString(body.to);
   const valueWei = normalizeOptionalString(body.valueWei);
   const confirmations = body.confirmations === undefined || body.confirmations === null ? null : Number(body.confirmations);
+  const blockTimestamp = normalizeOptionalString(body.blockTimestamp);
 
   if (quoteId === "") {
     details.push("quoteId is required");
@@ -561,6 +562,9 @@ export function validateCreditExchangeMetadata(input) {
   if (confirmations !== null && (!Number.isInteger(confirmations) || confirmations < 0)) {
     details.push("confirmations must be a non-negative integer when provided");
   }
+  if (blockTimestamp && !isIsoDateString(blockTimestamp)) {
+    details.push("blockTimestamp must be an ISO date string when provided");
+  }
 
   if (details.length > 0) {
     throw new ContractValidationError("Invalid credit exchange metadata", details);
@@ -576,7 +580,8 @@ export function validateCreditExchangeMetadata(input) {
     to,
     toNormalized: normalizeEvmAddress(to),
     valueWei,
-    confirmations
+    confirmations,
+    blockTimestamp: blockTimestamp || null
   };
 }
 
