@@ -27,19 +27,19 @@ const loginWalletOptions = [
     iconSrc: metamaskLogo,
     iconClassName: 'metamask-logo',
     strongLabel: 'MetaMask',
-    suffix: '로 로그인하기',
+    suffix: ' Login',
   },
   {
     iconSrc: okxLogo,
     iconClassName: 'okx-logo',
     strongLabel: 'OKX Wallet',
-    suffix: '으로 로그인하기',
+    suffix: ' Login',
   },
   {
     iconSrc: walletConnectLogo,
     iconClassName: 'walletconnect-logo',
     strongLabel: 'WalletConnect',
-    suffix: '로 로그인하기',
+    suffix: ' Login',
   },
 ];
 
@@ -293,9 +293,9 @@ function WelcomeContent() {
   return (
     <>
       <h1 className="welcome-title">
-        MGG에 오신 것을
+        Welcome to MGG.
         <br />
-        환영합니다!
+        Bad takes judged fairly.
       </h1>
 
       <div className="welcome-art" aria-hidden="true">
@@ -331,16 +331,16 @@ function TypeSelectPage({ showActions = true, isWalletConnecting, walletError, o
 function TypeSelectContent() {
   return (
     <>
-      <div className="type-select-cards" aria-label="배틀 유형 선택">
-        <img className="type-card type-card-open" src={typeOpenCard} alt="오픈 답변형" />
-        <img className="type-card type-card-option" src={typeOptionCard} alt="선택지형" />
-        <img className="type-card type-card-image" src={typeImageCard} alt="이미지형" />
+      <div className="type-select-cards" aria-label="Battle type selection">
+        <img className="type-card type-card-open" src={typeOpenCard} alt="Open Mic" />
+        <img className="type-card type-card-option" src={typeOptionCard} alt="Side Pick" />
+        <img className="type-card type-card-image" src={typeImageCard} alt="Caption Lab" />
       </div>
 
       <h1 className="type-select-title">
-        유형을 선택하고,
+        Pick a format,
         <br />
-        다양한 의견을 나눠보세요
+        start a debate nobody requested
       </h1>
     </>
   );
@@ -369,7 +369,7 @@ function AiJudgePage({ showActions = true, isWalletConnecting, walletError, onWa
 function AiJudgeContent() {
   return (
     <>
-      <h1 className="ai-judge-title">판단은 AI가!</h1>
+      <h1 className="ai-judge-title">Let AI hold the tiny gavel.</h1>
       <img className="ai-judge-hammer" src={judgeHammer} alt="" aria-hidden="true" />
     </>
   );
@@ -402,9 +402,9 @@ function ShareResultContent() {
       <img className="share-result-icon" src={shareIcon} alt="" aria-hidden="true" />
 
       <h1 className="share-result-title">
-        결과는 기록으로 남아요
+        Receipts stay on record.
         <br />
-        친구들과 공유해봐요!
+        Share the nonsense.
       </h1>
     </>
   );
@@ -434,14 +434,14 @@ function AuthActions({ isWalletConnecting = false, walletError = '', onWalletCon
   return (
     <div className="welcome-actions">
       <button className="welcome-button" type="button" onClick={() => setIsLoginOpen(true)}>
-        로그인하기
+        Log In
       </button>
       <button className="welcome-button" type="button" onClick={openSignupFeed}>
-        회원가입하기
+        Sign Up
       </button>
       <p className="welcome-terms">
-        계정을 생성하거나 로그인하면 당사의 <a href="#terms">이용약관(EULA)</a> 및{' '}
-        <a href="#privacy">개인정보 처리 방침</a>에 동의하는 것으로 간주됩니다.
+        By logging in or signing up, you agree to the <a href="#terms">Terms (EULA)</a> and{' '}
+        <a href="#privacy">Privacy Policy</a>. Yes, even the boring parts.
       </p>
       {isLoginOpen ? (
         <LoginModal
@@ -472,9 +472,9 @@ function LoginModal({ onClose, isWalletConnecting = false, walletError = '', onW
   return (
     <div className="login-modal-layer" role="presentation" onMouseDown={closeOnBackdrop}>
       <section className="login-modal" role="dialog" aria-modal="true" aria-labelledby="login-modal-title">
-        <h2 className="login-modal-title" id="login-modal-title">로그인하기</h2>
-        <button className="login-modal-close" type="button" aria-label="로그인 팝업 닫기" onClick={onClose}>
-          ×
+        <h2 className="login-modal-title" id="login-modal-title">Log In</h2>
+        <button className="login-modal-close" type="button" aria-label="Close login popup" onClick={onClose}>
+          X
         </button>
 
         <div className="login-wallet-options">

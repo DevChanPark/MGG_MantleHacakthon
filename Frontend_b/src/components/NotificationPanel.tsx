@@ -28,11 +28,11 @@ export function NotificationPanel({
   }
 
   return (
-    <section className="notification-panel" aria-label="알림 목록">
+    <section className="notification-panel" aria-label="Notifications">
       <div className="notification-panel-header">
-        <h2>알림 ({notifications.length})</h2>
-        <button type="button" aria-label="알림 닫기" onClick={onClose}>
-          ×
+        <h2>Alerts ({notifications.length})</h2>
+        <button type="button" aria-label="Close alerts" onClick={onClose}>
+          X
         </button>
       </div>
 
@@ -51,7 +51,7 @@ export function NotificationPanel({
               <small>{notification.time}</small>
             </span>
             <span className="notification-arrow" aria-hidden="true">
-              ↗
+              &gt;
             </span>
           </button>
         ))}

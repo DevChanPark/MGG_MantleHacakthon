@@ -7,17 +7,17 @@ const walletOptions = [
   {
     iconSrc: metamaskLogo,
     iconClassName: 'metamask-logo',
-    label: 'MetaMask로 연결하기',
+    label: 'Connect MetaMask',
   },
   {
     iconSrc: okxLogo,
     iconClassName: 'okx-logo',
-    label: 'OKX Wallet으로 연결하기',
+    label: 'Connect OKX Wallet',
   },
   {
     iconSrc: walletConnectLogo,
     iconClassName: 'walletconnect-logo',
-    label: 'WalletConnect로 다른 지갑 연결하기',
+    label: 'Connect another wallet with WalletConnect',
   },
 ];
 
@@ -46,12 +46,12 @@ export function SignupWalletScreen({ isConnecting = false, walletError = '', onW
         <div className="signup-white-panel" aria-hidden="true" />
 
         <img className="app-logo-small" src={mggLogo} alt="MGG" />
-        <h1 className="signup-title">회원가입</h1>
+        <h1 className="signup-title">Sign Up</h1>
         <div className="signup-profile-circle" aria-hidden="true" />
 
         <div className="signup-wallet-section">
           <p className="signup-wallet-label">
-            지갑 연결 <span aria-hidden="true">*</span>
+            Wallet Connection <span aria-hidden="true">*</span>
           </p>
 
           <div className="signup-wallet-options">

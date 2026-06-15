@@ -3,9 +3,9 @@ import type { CreateBattleType } from '../components/BoardSelectSheet';
 import { isValidBattleDeadline, type CreateBattleDraft } from '../mocks/battles';
 
 const BATTLE_TYPE_LABELS: Record<CreateBattleType, string> = {
-  TEXT_OPEN: '오픈 답변형',
-  OPTION: '선택지형',
-  IMAGE_CAPTION: '이미지형',
+  TEXT_OPEN: 'Open Mic',
+  OPTION: 'Side Pick',
+  IMAGE_CAPTION: 'Caption Lab',
 };
 
 interface MockUploadImageResponse {
@@ -146,37 +146,37 @@ export function CreateBattleScreen({ battleType, onCreateBattle }: CreateBattleS
     <main className="create-screen">
       <section
         className={`create-panel create-panel-${battleType.toLowerCase().replace('_', '-')}`}
-        aria-label={`${BATTLE_TYPE_LABELS[battleType]} 게시글 작성`}
+        aria-label={`Create ${BATTLE_TYPE_LABELS[battleType]} battle`}
       >
         <div className="create-toolbar">
-          <h2>게시글 작성</h2>
+          <h2>Start a Battle</h2>
           <div className="create-toolbar-actions">
             <button className="create-temp-button" type="button" onClick={handleSaveDraft}>
-              임시 저장
+              Save Excuse
             </button>
             <button className="create-upload-button" type="button" onClick={handleMockSubmit}>
-              업로드
+              Launch Nonsense
             </button>
-            <button className="create-close-button" type="button" aria-label="닫기" onClick={handleClose}>
-              ×
+            <button className="create-close-button" type="button" aria-label="Close" onClick={handleClose}>
+              X
             </button>
           </div>
         </div>
 
         <div className="create-settings-row">
           <label className="deadline-control">
-            <span>마감 기한 설정</span>
+            <span>Argument Expiry</span>
             <input
               value={deadline}
               inputMode="numeric"
               onChange={(event) => handleDeadlineChange(event.target.value)}
-              aria-label="마감 기한"
+              aria-label="Argument expiry"
               placeholder="2026-"
             />
           </label>
 
           <label className="anonymous-toggle">
-            <span>익명 여부</span>
+            <span>Post in Disguise</span>
             <input
               type="checkbox"
               checked={isAnonymous}
@@ -190,7 +190,7 @@ export function CreateBattleScreen({ battleType, onCreateBattle }: CreateBattleS
           className="create-title-input"
           value={title}
           onChange={(event) => setTitle(event.target.value)}
-          placeholder="제목을 입력하세요."
+          placeholder="Name your terrible take."
         />
 
         <div className="create-content-block">
@@ -198,17 +198,17 @@ export function CreateBattleScreen({ battleType, onCreateBattle }: CreateBattleS
             className="create-content-input"
             value={content}
             onChange={(event) => setContent(event.target.value)}
-            placeholder="내용을 입력하세요."
+            placeholder="Defend it like your group chat depends on it."
           />
 
           {battleType === 'OPTION' && (
-            <div className="option-fields" aria-label="선택지 입력">
+            <div className="option-fields" aria-label="Choice inputs">
               {options.map((option, index) => (
                 <input
                   key={`option-${index}`}
                   value={option}
                   onChange={(event) => handleOptionChange(index, event.target.value)}
-                  placeholder={index === 0 ? '부먹' : index === 1 ? '찍먹' : `선택지 ${index + 1}`}
+                  placeholder={index === 0 ? 'Milk first' : index === 1 ? 'Cereal first' : `Option ${index + 1}`}
                 />
               ))}
               <button className="option-add-button" type="button" onClick={handleAddOption}>
@@ -229,13 +229,13 @@ export function CreateBattleScreen({ battleType, onCreateBattle }: CreateBattleS
 
               {imagePreviewUrl ? (
                 <div className="image-preview-box">
-                  <img src={imagePreviewUrl} alt="선택한 이미지 미리보기" />
+                  <img src={imagePreviewUrl} alt="Selected image preview" />
                   <div className="image-preview-actions">
                     <button type="button" onClick={handlePhotoSelect}>
-                      교체
+                      Replace
                     </button>
                     <button type="button" onClick={handleRemoveImage}>
-                      삭제
+                      Delete
                     </button>
                   </div>
                 </div>
@@ -244,19 +244,19 @@ export function CreateBattleScreen({ battleType, onCreateBattle }: CreateBattleS
                   <button
                     className="image-upload-plus"
                     type="button"
-                    aria-label="이미지 추가"
+                    aria-label="Add image"
                     onClick={() => setIsImageMenuOpen((isOpen) => !isOpen)}
                   >
                     +
                   </button>
 
                   {isImageMenuOpen && (
-                    <div className="image-upload-menu" role="menu" aria-label="이미지 선택 메뉴">
+                    <div className="image-upload-menu" role="menu" aria-label="Image source menu">
                       <button type="button" role="menuitem" onClick={() => setIsImageMenuOpen(false)}>
-                        카메라로 촬영
+                        Use Camera
                       </button>
                       <button type="button" role="menuitem" onClick={handlePhotoSelect}>
-                        사진 선택
+                        Pick Photo
                       </button>
                     </div>
                   )}
@@ -267,11 +267,11 @@ export function CreateBattleScreen({ battleType, onCreateBattle }: CreateBattleS
         </div>
 
         <p className="create-status-message" aria-live="polite">
-          {submitState === 'saved' && '임시 저장되었습니다.'}
-          {submitState === 'uploaded' && 'mock 업로드가 완료되었습니다.'}
-          {submitState === 'deadlineError' && '마감 기한을 입력해주세요.'}
-          {submitState === 'optionError' && '선택지를 2개 이상 입력해주세요.'}
-          {submitState === 'imageError' && '이미지를 선택해주세요.'}
+          {submitState === 'saved' && 'Excuse saved for later.'}
+          {submitState === 'uploaded' && 'Mock launch complete. The discourse trembles.'}
+          {submitState === 'deadlineError' && 'Give this argument an expiry date.'}
+          {submitState === 'optionError' && 'Add at least two sides to the chaos.'}
+          {submitState === 'imageError' && 'Pick an image before asking for captions.'}
         </p>
       </section>
     </main>

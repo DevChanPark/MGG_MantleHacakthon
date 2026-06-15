@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import commentIcon from '../../assets/action-icons/댓글아이콘3.png';
-import shareIcon from '../../assets/action-icons/공유하기 아이콘3.png';
+import commentIcon from '../../assets/action-icons/comment-icon.png';
+import shareIcon from '../../assets/action-icons/share-icon.png';
 import { HeartIcon } from '../components/icons/HeartIcon';
 import { getMockBattleResult, type FeedBattle, type PreviewComment } from '../mocks/battles';
 
@@ -102,7 +102,7 @@ export function BattleDetailScreen({
           disabled={isParticipated}
           onClick={onParticipationRequest}
         >
-          {isParticipated ? '참여 완료' : '참여하기'}
+          {isParticipated ? "You're In" : 'Enter the Arena'}
         </button>
       );
     }
@@ -110,8 +110,8 @@ export function BattleDetailScreen({
     if (isEvaluating) {
       return (
         <div className="detail-state-actions">
-          <span className="battle-status-chip">AI 평가 중</span>
-          <span className="battle-status-chip is-deadline">마감</span>
+          <span className="battle-status-chip">AI Thinking</span>
+          <span className="battle-status-chip is-deadline">Closed</span>
         </div>
       );
     }
@@ -119,13 +119,13 @@ export function BattleDetailScreen({
     if (isCompleted) {
       return (
         <div className="detail-state-actions">
-          <span className="battle-status-chip is-complete">AI 평가 완료</span>
-          <span className="battle-status-chip is-deadline">마감</span>
+          <span className="battle-status-chip is-complete">AI Verdict Ready</span>
+          <span className="battle-status-chip is-deadline">Closed</span>
         </div>
       );
     }
 
-    return <span className="battle-status-chip is-closed">마감</span>;
+    return <span className="battle-status-chip is-closed">Closed</span>;
   };
 
   const renderComment = (comment: PreviewComment) => {
@@ -138,13 +138,13 @@ export function BattleDetailScreen({
           <div className="detail-comment-avatar" aria-hidden="true" />
           <div className="detail-comment-copy">
             <strong>
-              {isWinningComment && <span className="winner-crown" aria-label="우승자">👑</span>}
+              {isWinningComment && <span className="winner-crown" aria-label="Champion">WIN</span>}
               {comment.author}
             </strong>
             <p>{comment.text}</p>
             {canWriteComments && (
               <button type="button" onClick={() => handleReplyClick(comment.id)}>
-                답글달기
+                Reply
               </button>
             )}
           </div>
@@ -152,7 +152,7 @@ export function BattleDetailScreen({
             className={`comment-like-button${isCommentLiked ? ' is-liked' : ''}`}
             type="button"
             aria-pressed={isCommentLiked}
-            aria-label={`${comment.author} 댓글 좋아요`}
+            aria-label={`${comment.author} comment like`}
             onClick={() => onCommentLike(comment.id)}
           >
             <HeartIcon className="comment-heart-img heart-action-icon" />
@@ -176,7 +176,7 @@ export function BattleDetailScreen({
                     className={`comment-like-button${isReplyLiked ? ' is-liked' : ''}`}
                     type="button"
                     aria-pressed={isReplyLiked}
-                    aria-label={`${reply.author} 대댓글 좋아요`}
+                    aria-label={`${reply.author} reply like`}
                     onClick={() => onCommentLike(reply.id)}
                   >
                     <HeartIcon className="comment-heart-img heart-action-icon" />
@@ -193,10 +193,10 @@ export function BattleDetailScreen({
             <input
               value={replyInput}
               onChange={(event) => setReplyInput(event.target.value)}
-              placeholder="답글을 입력하세요"
-              aria-label="대댓글 입력"
+              placeholder="Write a reply"
+              aria-label="Reply input"
             />
-            <button type="submit">등록</button>
+            <button type="submit">Send</button>
           </form>
         )}
       </article>
@@ -205,11 +205,11 @@ export function BattleDetailScreen({
 
   return (
     <main className="battle-detail-screen">
-      <section className="battle-detail-topbar" aria-label="상세 상단">
-        <button className="detail-back-button" type="button" aria-label="뒤로가기" onClick={onBack}>
-          ‹
+      <section className="battle-detail-topbar" aria-label="Detail header">
+        <button className="detail-back-button" type="button" aria-label="Back" onClick={onBack}>
+          &lt;
         </button>
-        <span className="detail-deadline">마감 기한&nbsp;&nbsp;{battle.deadline}</span>
+        <span className="detail-deadline">Ends {battle.deadline}</span>
         {renderTopbarAction()}
       </section>
 
@@ -221,7 +221,7 @@ export function BattleDetailScreen({
           <p>{battle.description}</p>
 
           {battle.type === 'OPTION' && !shouldShowOptionRatio && safeOptions.length > 0 && (
-            <div className="battle-option-list detail-option-list" aria-label="상세 선택지">
+            <div className="battle-option-list detail-option-list" aria-label="Detail choices">
               {safeOptions.map((option) => (
                 <button
                   className={`battle-option-pill${selectedOption === option ? ' is-selected' : ''}`}
@@ -238,7 +238,7 @@ export function BattleDetailScreen({
           )}
 
           {battle.type === 'OPTION' && shouldShowOptionRatio && optionStats && (
-            <div className="battle-result-options detail-result-options" aria-label="상세 선택지 결과">
+            <div className="battle-result-options detail-result-options" aria-label="Detail choice results">
               {optionStats.map((option) => (
                 <div
                   className={`battle-result-option${
@@ -256,35 +256,35 @@ export function BattleDetailScreen({
           {battle.type === 'IMAGE_CAPTION' && (
             <div className="battle-image-frame detail-image-frame">
               {battle.imageUrl ? (
-                <button className="battle-image-button" type="button" onClick={() => setPreviewImageUrl(battle.imageUrl ?? null)} aria-label="이미지 확대">
+                <button className="battle-image-button" type="button" onClick={() => setPreviewImageUrl(battle.imageUrl ?? null)} aria-label="Zoom image">
                   <img className="battle-card-thumbnail" src={battle.imageUrl} alt="" />
                 </button>
               ) : (
-                <div className="battle-image-placeholder">이미지 준비중</div>
+                <div className="battle-image-placeholder">Image still warming up</div>
               )}
             </div>
           )}
         </div>
       </section>
 
-      <section className="battle-detail-controls" aria-label="게시글 상태">
+      <section className="battle-detail-controls" aria-label="Battle status">
         {isEvaluating && (
           <button className="battle-complete-button is-dev-action" type="button" onClick={onCompleteEvaluation}>
-            AI 평가 완료 처리
+            Verdict
           </button>
         )}
         {isCompleted && (
           <button className="battle-winner-button" type="button" onClick={onOpenWinnerModal}>
-            우승자 확인
+            Champion
           </button>
         )}
-        {isClosed && <span className="battle-status-chip is-closed">마감</span>}
+        {isClosed && <span className="battle-status-chip is-closed">Closed</span>}
       </section>
 
-      <section className="battle-card-actions detail-actions" aria-label="상세 반응">
+      <section className="battle-card-actions detail-actions" aria-label="Detail reactions">
         <button className="battle-card-action" type="button" onClick={isOpen ? onRequireParticipation : onParticipationRequest}>
           <img className="action-icon-img comment-icon-img" src={commentIcon} alt="" aria-hidden="true" />
-          댓글 {battle.comments.length}
+          Replies {battle.comments.length}
         </button>
         <button
           className={`battle-card-action like-action${isBattleLiked ? ' is-liked' : ''}`}
@@ -293,32 +293,32 @@ export function BattleDetailScreen({
           onClick={onBattleLike}
         >
           <HeartIcon className="action-icon-img heart-icon-img heart-action-icon" />
-          좋아요 {battle.likeCount}
+          Applause {battle.likeCount}
         </button>
         <button className="battle-card-share" type="button" onClick={onShareBattle}>
           <img className="action-icon-img share-action-icon" src={shareIcon} alt="" aria-hidden="true" />
-          공유하기
+          Share
         </button>
       </section>
 
       {isEvaluating && (
         <section className="ai-evaluating-box detail-ai-box" role="status">
-          <strong>AI 평가 중</strong>
-          <p>AI가 댓글의 반응, 우기기 강도, 밈 잠재력을 mock 기준으로 채점하고 있습니다.</p>
+          <strong>AI Thinking</strong>
+          <p>Scoring reaction heat, nonsense density, and meme radiation in mock mode.</p>
         </section>
       )}
 
       {isCompleted && (
         <section className="ai-result-box detail-ai-box">
-          <strong>AI 판결문</strong>
+          <strong>AI Verdict</strong>
           <div className="ai-result-summary">
-            <span>참여자 {result.participantCount}명</span>
-            <span>우승자: {result.winnerName}</span>
-            <span>지급 받을 크레딧: {result.rewardCredits}개</span>
+            <span>Players {result.participantCount}</span>
+            <span>Champion: {result.winnerName}</span>
+            <span>Credits to grab: {result.rewardCredits}</span>
           </div>
           {battle.type !== 'OPTION' && (
             <p className="ai-winner-line">
-              우승자 {result.winnerName} · {result.winnerDetail}
+              Champion {result.winnerName} - {result.winnerDetail}
             </p>
           )}
           <div className="ai-summary-lines">
@@ -332,13 +332,13 @@ export function BattleDetailScreen({
 
       {canViewComments ? (
         <>
-          <section className="battle-detail-comments" aria-label="댓글 목록">
+          <section className="battle-detail-comments" aria-label="Reply list">
             {battle.comments.map(renderComment)}
           </section>
 
           {!canWriteComments && (
-            <section className="detail-comment-locked" aria-label="댓글 작성 잠김">
-              참여 후 댓글을 작성할 수 있습니다.
+            <section className="detail-comment-locked" aria-label="Comment writing locked">
+              Enter the arena before dropping a comment.
             </section>
           )}
 
@@ -347,24 +347,24 @@ export function BattleDetailScreen({
               <input
                 value={commentInput}
                 onChange={(event) => setCommentInput(event.target.value)}
-                placeholder="댓글을 입력하세요"
-                aria-label="상세 댓글 입력"
+                placeholder="Write a comment"
+                aria-label="Detail comment input"
               />
-              <button type="submit">등록</button>
+              <button type="submit">Send</button>
             </form>
           )}
         </>
       ) : (
-        <section className="detail-comment-locked" aria-label="댓글 잠김">
-          참여 후 댓글을 작성할 수 있습니다.
+        <section className="detail-comment-locked" aria-label="Comments locked">
+          Enter the arena before dropping a comment.
         </section>
       )}
 
       {previewImageUrl && (
         <div className="image-zoom-overlay" role="presentation" onClick={() => setPreviewImageUrl(null)}>
-          <div className="image-zoom-modal" role="dialog" aria-modal="true" aria-label="이미지 확대" onClick={(event) => event.stopPropagation()}>
-            <button className="image-zoom-close" type="button" onClick={() => setPreviewImageUrl(null)} aria-label="이미지 닫기">
-              ×
+          <div className="image-zoom-modal" role="dialog" aria-modal="true" aria-label="Zoom image" onClick={(event) => event.stopPropagation()}>
+            <button className="image-zoom-close" type="button" onClick={() => setPreviewImageUrl(null)} aria-label="Close image">
+              X
             </button>
             <img src={previewImageUrl} alt="" />
           </div>

@@ -24,13 +24,13 @@ export function WinnerModal({
   }
 
   const isWinner = isCurrentUserWinner(result, currentUserId);
-  const title = isWinner ? '우승자로 선정되었습니다!' : `이번 우승자는 ${result.winnerName}입니다.`;
+  const title = isWinner ? 'You have been crowned champion.' : `Champion: ${result.winnerName}`;
 
   return (
     <div className="modal-overlay result-overlay" role="presentation">
       <section className="winner-modal" role="dialog" aria-modal="true" aria-labelledby="winner-modal-title">
-        <button className="modal-close-button" type="button" aria-label="우승자 확인 모달 닫기" onClick={onClose}>
-          ×
+        <button className="modal-close-button" type="button" aria-label="Close champion modal" onClick={onClose}>
+          X
         </button>
 
         <h2 id="winner-modal-title">{title}</h2>
@@ -39,21 +39,21 @@ export function WinnerModal({
           <>
             <div className="winner-summary-box">
               <div>
-                <span>참여자</span>
+                <span>Player</span>
                 <strong>{result.winnerName || currentUserNickname}</strong>
               </div>
               <div>
-                <span>지급 받을 크레딧</span>
-                <strong>{result.rewardCredits}개</strong>
+                <span>Credits to Grab</span>
+                <strong>{result.rewardCredits}</strong>
               </div>
             </div>
 
             <p className="winner-detail">
-              {isRewarded ? '이미 지급 완료된 보상입니다.' : result.winnerDetail}
+              {isRewarded ? 'Already claimed. The vault is dramatic, not infinite.' : result.winnerDetail}
             </p>
 
             <button className="winner-claim-button" type="button" onClick={onClaimReward} disabled={isRewarded}>
-              {isRewarded ? '지급 완료' : '크레딧 받기'}
+              {isRewarded ? 'Claimed' : 'Grab Credits'}
             </button>
           </>
         ) : (
@@ -69,7 +69,7 @@ export function WinnerModal({
             </div>
 
             <button className="winner-claim-button" type="button" onClick={onClose}>
-              확인
+              Got it
             </button>
           </>
         )}
@@ -91,12 +91,12 @@ export function RewardCompleteModal({ isOpen, onClose }: RewardCompleteModalProp
   return (
     <div className="modal-overlay result-overlay" role="presentation">
       <section className="reward-complete-modal" role="dialog" aria-modal="true" aria-labelledby="reward-complete-title">
-        <button className="modal-close-button" type="button" aria-label="크레딧 지급 완료 닫기" onClick={onClose}>
-          ×
+        <button className="modal-close-button" type="button" aria-label="Close credit reward" onClick={onClose}>
+          X
         </button>
-        <h2 id="reward-complete-title">크레딧이 지급되었습니다!</h2>
+        <h2 id="reward-complete-title">Credits landed!</h2>
         <button className="reward-complete-confirm" type="button" onClick={onClose}>
-          확인
+          Nice
         </button>
       </section>
     </div>

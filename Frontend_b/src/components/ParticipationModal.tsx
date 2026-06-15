@@ -82,25 +82,25 @@ export function ParticipationModal({
   return (
     <div className="modal-overlay participation-overlay" role="presentation">
       <section className="participation-modal" role="dialog" aria-modal="true" aria-labelledby="participation-title">
-        <button className="modal-close-button" type="button" aria-label="참여 모달 닫기" onClick={onClose}>
-          ×
+        <button className="modal-close-button" type="button" aria-label="Close participation modal" onClick={onClose}>
+          X
         </button>
 
-        <h2 id="participation-title">참여하기</h2>
-        <p className="participation-credit-line">사용 가능 크레딧: {credits}개</p>
+        <h2 id="participation-title">Enter the Arena</h2>
+        <p className="participation-credit-line">Available demo credits: {credits}</p>
 
         <div className="participation-wallet-box">
-          <span>연동 지갑</span>
+          <span>Linked Wallet</span>
           <strong>{walletAddress}</strong>
         </div>
 
         <div className="participation-cost-box">
-          <span>참여 비용</span>
-          <strong>크레딧 {PARTICIPATION_COST}개</strong>
+          <span>Entry Fee</span>
+          <strong>{PARTICIPATION_COST} demo credits</strong>
         </div>
 
         {needsOption && (
-          <div className="participation-option-list" aria-label="참여 진영 선택">
+          <div className="participation-option-list" aria-label="Pick a side">
             {(battle.options ?? []).map((option) => (
               <button
                 className={`participation-option-button${selectedOption === option ? ' is-selected' : ''}`}
@@ -115,23 +115,23 @@ export function ParticipationModal({
           </div>
         )}
 
-        {!hasEnoughCredits && <p className="participation-error">크레딧이 부족합니다.</p>}
+        {!hasEnoughCredits && <p className="participation-error">Not enough pretend money.</p>}
         {hasEnoughCredits && needsOption && !selectedOption && (
-          <p className="participation-error">진영을 먼저 선택해주세요.</p>
+          <p className="participation-error">Pick a side before the drama can continue.</p>
         )}
 
         <p className="participation-helper">
-          참여 시 크레딧 {PARTICIPATION_COST}개가 차감됩니다. 보상 지급은 mock 결과 흐름에서만 처리됩니다.
+          Entering spends {PARTICIPATION_COST} demo credits. Rewards only exist inside this mock-powered circus.
         </p>
 
         {isParticipated ? (
           <button className="participation-done-button" type="button" onClick={onClose}>
-            참여 완료
+            You're In
           </button>
         ) : (
           <div className="participation-actions">
             <button className="participation-cancel-button" type="button" onClick={onClose}>
-              취소
+              Cancel
             </button>
             {hasEnoughCredits ? (
               <button
@@ -139,7 +139,7 @@ export function ParticipationModal({
                 type="button"
                 onClick={onParticipate}
               >
-                참여하기
+                Enter
               </button>
             ) : (
               <button
@@ -147,7 +147,7 @@ export function ParticipationModal({
                 type="button"
                 onClick={() => setIsChargePanelOpen(true)}
               >
-                충전하기
+                Refill Demo Credits
               </button>
             )}
           </div>
@@ -165,7 +165,7 @@ interface SelectionRequiredModalProps {
 
 export function SelectionRequiredModal({
   isOpen,
-  message = '진영을 먼저 선택해주세요.',
+  message = 'Pick a side before the drama can continue.',
   onClose,
 }: SelectionRequiredModalProps) {
   if (!isOpen) {
@@ -175,12 +175,12 @@ export function SelectionRequiredModal({
   return (
     <div className="modal-overlay participation-overlay" role="presentation">
       <section className="selection-warning-modal" role="alertdialog" aria-modal="true" aria-labelledby="selection-warning-title">
-        <button className="modal-close-button" type="button" aria-label="안내 닫기" onClick={onClose}>
-          ×
+        <button className="modal-close-button" type="button" aria-label="Close notice" onClick={onClose}>
+          X
         </button>
         <h2 id="selection-warning-title">{message}</h2>
         <button className="selection-warning-confirm" type="button" onClick={onClose}>
-          확인
+          Got it
         </button>
       </section>
     </div>
