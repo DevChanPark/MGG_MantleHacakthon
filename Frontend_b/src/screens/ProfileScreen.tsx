@@ -62,6 +62,8 @@ const battleTypeLabels: Record<BattleType, string> = {
 export type CreditPackage = {
   credits: number;
   price: number;
+  priceMnt?: string;
+  priceWei?: string;
 };
 
 export const creditPackages: CreditPackage[] = [
@@ -77,14 +79,18 @@ interface ProfileScreenProps {
   credits?: number;
   walletAddress?: string;
   battles?: FeedBattle[];
+  packages?: CreditPackage[];
   onAddCredits?: (amount: number) => void;
+  onPurchaseCredits?: (creditPackage: CreditPackage) => Promise<number>;
 }
 
 export function ProfileScreen({
   credits = 30,
   walletAddress = '0x12ab...89ef',
   battles = initialMockBattles,
+  packages = creditPackages,
   onAddCredits,
+  onPurchaseCredits,
 }: ProfileScreenProps) {
   const [activeContentTab, setActiveContentTab] = useState<ProfileContentTab>('posts');
   const [activeBattleFilter, setActiveBattleFilter] = useState<BattleType>('TEXT_OPEN');
@@ -93,6 +99,8 @@ export function ProfileScreen({
   const [isCreditInfoOpen, setIsCreditInfoOpen] = useState(false);
   const [selectedCreditPackage, setSelectedCreditPackage] = useState<CreditPackage | null>(null);
   const [completedCreditTotal, setCompletedCreditTotal] = useState<number | null>(null);
+  const [isCreditPurchasePending, setIsCreditPurchasePending] = useState(false);
+  const [creditPurchaseError, setCreditPurchaseError] = useState('');
   const [selectedVerification, setSelectedVerification] = useState<{
     battle: FeedBattle;
     verification: MantleVerification;
@@ -134,12 +142,27 @@ export function ProfileScreen({
     setSelectedCreditPackage(null);
   };
 
-  const approveCreditPurchase = (creditPackage: CreditPackage) => {
-    const nextCreditTotal = currentCredits + creditPackage.credits;
-    setCurrentCredits(nextCreditTotal);
-    onAddCredits?.(creditPackage.credits);
-    closeCreditPanel();
-    setCompletedCreditTotal(nextCreditTotal);
+  const approveCreditPurchase = async (creditPackage: CreditPackage) => {
+    setIsCreditPurchasePending(true);
+    setCreditPurchaseError('');
+
+    try {
+      const nextCreditTotal = onPurchaseCredits
+        ? await onPurchaseCredits(creditPackage)
+        : currentCredits + creditPackage.credits;
+
+      if (!onPurchaseCredits) {
+        onAddCredits?.(creditPackage.credits);
+      }
+
+      setCurrentCredits(nextCreditTotal);
+      closeCreditPanel();
+      setCompletedCreditTotal(nextCreditTotal);
+    } catch (error) {
+      setCreditPurchaseError(error instanceof Error ? error.message : 'Could not refill credits.');
+    } finally {
+      setIsCreditPurchasePending(false);
+    }
   };
 
   const openBattleDetail = (battleId: string) => {
@@ -354,8 +377,10 @@ export function ProfileScreen({
           isInfoOpen={isCreditInfoOpen}
           currentCredits={currentCredits}
           walletAddress={walletAddress}
-          packages={creditPackages}
+          packages={packages}
           selectedPackage={selectedCreditPackage}
+          isPurchasePending={isCreditPurchasePending}
+          purchaseError={creditPurchaseError}
           onClose={closeCreditPanel}
           onToggleInfo={() => setIsCreditInfoOpen((value) => !value)}
           onCloseInfo={() => setIsCreditInfoOpen(false)}
@@ -452,12 +477,14 @@ type CreditChargePanelProps = {
   walletAddress: string;
   packages: CreditPackage[];
   selectedPackage: CreditPackage | null;
+  isPurchasePending?: boolean;
+  purchaseError?: string;
   onClose: () => void;
   onToggleInfo: () => void;
   onCloseInfo: () => void;
   onSelectPackage: (creditPackage: CreditPackage) => void;
   onClosePayment: () => void;
-  onApprovePayment: (creditPackage: CreditPackage) => void;
+  onApprovePayment: (creditPackage: CreditPackage) => void | Promise<void>;
 };
 
 export function CreditChargePanel({
@@ -467,6 +494,8 @@ export function CreditChargePanel({
   walletAddress,
   packages,
   selectedPackage,
+  isPurchasePending = false,
+  purchaseError = '',
   onClose,
   onToggleInfo,
   onCloseInfo,
@@ -511,7 +540,7 @@ export function CreditChargePanel({
             onClick={() => onSelectPackage(creditPackage)}
           >
             <span>Credits <strong>{creditPackage.credits}</strong></span>
-            <strong>{creditPackage.price} MNT</strong>
+            <strong>{creditPackage.priceMnt ?? creditPackage.price} MNT</strong>
           </button>
         ))}
       </div>
@@ -526,15 +555,23 @@ export function CreditChargePanel({
             <div className="credit-payment-summary">
               <div>
                 <span>Credits {selectedPackage.credits}</span>
-                <strong>{selectedPackage.price} MNT</strong>
+                <strong>{selectedPackage.priceMnt ?? selectedPackage.price} MNT</strong>
               </div>
               <div>
                 <span>Wallet</span>
                 <span>{walletAddress}</span>
               </div>
             </div>
-            <button className="credit-approve-button" type="button" onClick={() => onApprovePayment(selectedPackage)}>
-              Approve Payment
+            {purchaseError ? <p className="credit-payment-error">{purchaseError}</p> : null}
+            <button
+              className="credit-approve-button"
+              type="button"
+              disabled={isPurchasePending}
+              onClick={() => {
+                void onApprovePayment(selectedPackage);
+              }}
+            >
+              {isPurchasePending ? 'Waiting for wallet' : 'Approve Payment'}
             </button>
           </>
         ) : null}

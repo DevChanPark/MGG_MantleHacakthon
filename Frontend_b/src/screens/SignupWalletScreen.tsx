@@ -8,16 +8,19 @@ const walletOptions = [
     iconSrc: metamaskLogo,
     iconClassName: 'metamask-logo',
     label: 'Connect MetaMask',
+    provider: 'MetaMask',
   },
   {
     iconSrc: okxLogo,
     iconClassName: 'okx-logo',
     label: 'Connect OKX Wallet',
+    provider: 'OKX Wallet',
   },
   {
     iconSrc: walletConnectLogo,
     iconClassName: 'walletconnect-logo',
     label: 'Connect another wallet with WalletConnect',
+    provider: 'WalletConnect',
   },
 ];
 
@@ -62,9 +65,7 @@ export function SignupWalletScreen({ isConnecting = false, walletError = '', onW
                 key={option.label}
                 disabled={isConnecting}
                 onClick={() => {
-                  void connectWallet(option.label.replace(/로 연결하기|으로 연결하기|로 다른 지갑 연결하기/g, '')).catch(
-                    () => undefined,
-                  );
+                  void connectWallet(option.provider).catch(() => undefined);
                 }}
               >
                 <img

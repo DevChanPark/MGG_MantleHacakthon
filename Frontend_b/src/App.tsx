@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { OnboardingFeed } from './screens/OnboardingFeed';
 import { HomeFeed } from './screens/HomeFeed';
 import { BattleDetailScreen } from './screens/BattleDetailScreen';
-import { ProfileScreen } from './screens/ProfileScreen';
+import { ProfileScreen, creditPackages as fallbackCreditPackages, type CreditPackage } from './screens/ProfileScreen';
 import { SignupProfileScreen } from './screens/SignupProfileScreen';
 import { SignupWalletScreen } from './screens/SignupWalletScreen';
 import { CreateBattleScreen } from './screens/CreateBattleScreen';
@@ -28,6 +28,18 @@ import {
   type FeedBattle,
   type PreviewComment,
 } from './mocks/battles';
+import {
+  ApiClientError,
+  createCreditQuote,
+  exchangeCredits,
+  getCreditPackages,
+  getCredits,
+  getMe,
+  getSavedClientUserId,
+  setClientUserId,
+  type ApiUser,
+} from './api/client';
+import { connectWalletWithSignature, sendNativeMntTransfer } from './api/wallet';
 
 export default function App() {
   const [route, setRoute] = useState(() => getRoute());
@@ -35,6 +47,13 @@ export default function App() {
   const [homeFilter, setHomeFilter] = useState<BattleType>(() => getSavedBattleType());
   const [searchTerm, setSearchTerm] = useState('');
   const [credits, setCredits] = useState(() => getInitialCredits());
+  const [currentUser, setCurrentUser] = useState<ApiUser | null>(null);
+  const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  const [walletProvider, setWalletProvider] = useState<string | null>(null);
+  const [creditPackageOptions, setCreditPackageOptions] = useState<CreditPackage[]>(fallbackCreditPackages);
+  const [isAuthHydrating, setIsAuthHydrating] = useState(true);
+  const [isWalletConnecting, setIsWalletConnecting] = useState(false);
+  const [walletError, setWalletError] = useState('');
   const [likedBattleIds, setLikedBattleIds] = useState<string[]>([]);
   const [likedCommentIds, setLikedCommentIds] = useState<string[]>([]);
   const [participatedBattleIds, setParticipatedBattleIds] = useState<string[]>([]);
@@ -60,6 +79,49 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    let isActive = true;
+    const savedUserId = getSavedClientUserId();
+
+    Promise.allSettled([
+      savedUserId ? getMe() : Promise.resolve(null),
+      savedUserId ? getCredits() : Promise.resolve(null),
+      getCreditPackages(),
+    ]).then(([userResult, creditsResult, packagesResult]) => {
+      if (!isActive) {
+        return;
+      }
+
+      if (userResult.status === 'fulfilled' && userResult.value?.walletAddress) {
+        setCurrentUser(userResult.value);
+        setWalletAddress(userResult.value.walletAddress);
+        setWalletProvider(userResult.value.walletProvider);
+        setCredits(userResult.value.creditBalance);
+      }
+
+      if (creditsResult.status === 'fulfilled' && creditsResult.value) {
+        setCredits(creditsResult.value.balance);
+      }
+
+      if (packagesResult.status === 'fulfilled') {
+        setCreditPackageOptions(
+          packagesResult.value.packages.map((creditPackage) => ({
+            credits: creditPackage.credits,
+            price: Number(creditPackage.priceMnt),
+            priceMnt: creditPackage.priceMnt,
+            priceWei: creditPackage.priceWei,
+          })),
+        );
+      }
+
+      setIsAuthHydrating(false);
+    });
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
+  useEffect(() => {
     window.sessionStorage.setItem('mgg:credits', String(credits));
   }, [credits]);
 
@@ -72,6 +134,21 @@ export default function App() {
 
     window.scrollTo({ top: 0, left: 0 });
   }, [route]);
+
+  useEffect(() => {
+    if (isAuthHydrating || walletAddress) {
+      return;
+    }
+
+    if (route === 'signup-profile') {
+      window.location.hash = 'signup';
+      return;
+    }
+
+    if (isProtectedRoute(route) && window.location.hash) {
+      window.location.hash = 'login';
+    }
+  }, [isAuthHydrating, route, walletAddress]);
 
   const handleCreateBattle = (draft: CreateBattleDraft) => {
     const nextBattle = createMockBattle(draft);
@@ -266,6 +343,49 @@ export default function App() {
     setCredits((currentCredits) => currentCredits + amount);
   };
 
+  const handleWalletConnect = async (providerName: string) => {
+    setIsWalletConnecting(true);
+    setWalletError('');
+
+    try {
+      const verified = await connectWalletWithSignature(providerName);
+      setClientUserId(verified.user.id);
+      setCurrentUser(verified.user);
+      setWalletAddress(verified.wallet.walletAddress);
+      setWalletProvider(verified.wallet.walletProvider);
+
+      const nextCredits = await getCredits();
+      setCredits(nextCredits.balance);
+    } catch (error) {
+      const message = getUserFacingErrorMessage(error);
+      setWalletError(message);
+      showNotice(message);
+      throw error;
+    } finally {
+      setIsWalletConnecting(false);
+    }
+  };
+
+  const handlePurchaseCredits = async (creditPackage: CreditPackage) => {
+    if (!walletAddress) {
+      await handleWalletConnect('MetaMask');
+    }
+
+    const quote = await createCreditQuote(creditPackage.credits);
+    const txHash = await sendNativeMntTransfer({
+      to: quote.quote.receiverAddress,
+      valueWei: quote.quote.priceWei,
+      chainId: quote.quote.chainId,
+    });
+    const exchanged = await exchangeCreditsWithRetry({
+      quoteId: quote.quote.id,
+      txHash,
+    });
+
+    setCredits(exchanged.balance);
+    return exchanged.balance;
+  };
+
   const handleRequireParticipation = () => {
     showNotice('Enter the arena before dropping your wisdom.');
   };
@@ -327,7 +447,7 @@ export default function App() {
           <ParticipationModal
             battle={participationBattle}
             credits={credits}
-            walletAddress={MOCK_WALLET_ADDRESS}
+            walletAddress={walletAddress ?? 'Wallet not linked'}
             isParticipated={participationBattle ? participatedBattleIds.includes(participationBattle.id) : false}
             selectedOption={pendingParticipationOption}
             onClose={() => {
@@ -362,7 +482,13 @@ export default function App() {
 
   // Onboarding routes (no layout wrapper)
   if (route === 'signup') {
-    return <SignupWalletScreen />;
+    return (
+      <SignupWalletScreen
+        isConnecting={isWalletConnecting}
+        walletError={walletError}
+        onWalletConnect={handleWalletConnect}
+      />
+    );
   }
 
   if (route === 'signup-profile') {
@@ -370,7 +496,14 @@ export default function App() {
   }
 
   if (route === 'login') {
-    return <OnboardingFeed initialLoginOpen />;
+    return (
+      <OnboardingFeed
+        initialLoginOpen
+        isWalletConnecting={isWalletConnecting}
+        walletError={walletError}
+        onWalletConnect={handleWalletConnect}
+      />
+    );
   }
 
   // App routes (with layout wrapper)
@@ -442,8 +575,10 @@ export default function App() {
       <ProfileScreen
         battles={visibleBattles}
         credits={credits}
-        walletAddress={MOCK_WALLET_ADDRESS}
+        walletAddress={walletAddress ?? 'Wallet not linked'}
+        packages={creditPackageOptions}
         onAddCredits={handleAddCredits}
+        onPurchaseCredits={handlePurchaseCredits}
       />,
       { hideHeader: true },
     );
@@ -455,11 +590,21 @@ export default function App() {
     );
   }
 
-  return <OnboardingFeed />;
+  return (
+    <OnboardingFeed
+      isWalletConnecting={isWalletConnecting}
+      walletError={walletError}
+      onWalletConnect={handleWalletConnect}
+    />
+  );
 }
 
 function getRoute() {
   return window.location.hash.replace('#', '') || 'login';
+}
+
+function isProtectedRoute(route: string) {
+  return route === 'home' || route === 'profile' || route.startsWith('battle/') || route.startsWith('create');
 }
 
 function getSavedBattleType(): BattleType {
@@ -502,6 +647,53 @@ function getInitialCredits() {
   }
 
   return MOCK_CURRENT_USER.credits;
+}
+
+const CREDIT_EXCHANGE_RETRYABLE_CODES = new Set(['CREDIT_TX_NOT_FOUND', 'CREDIT_TX_UNCONFIRMED']);
+
+async function exchangeCreditsWithRetry(input: { quoteId: string; txHash: string }) {
+  const maxAttempts = 8;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      return await exchangeCredits(input);
+    } catch (error) {
+      if (
+        !(error instanceof ApiClientError) ||
+        !CREDIT_EXCHANGE_RETRYABLE_CODES.has(error.code) ||
+        attempt === maxAttempts
+      ) {
+        throw error;
+      }
+
+      await wait(1500 + attempt * 500);
+    }
+  }
+
+  return exchangeCredits(input);
+}
+
+function wait(ms: number) {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
+}
+
+function getUserFacingErrorMessage(error: unknown) {
+  if (error instanceof ApiClientError) {
+    if (error.code === 'CREDIT_EXCHANGE_DISABLED') {
+      return 'Credit exchange is not enabled yet.';
+    }
+    if (error.code === 'WALLET_REQUIRED') {
+      return 'Connect a wallet first.';
+    }
+    if (error.code === 'CREDIT_EXCHANGE_NOT_READY') {
+      return 'Credit exchange configuration is not ready.';
+    }
+    return error.message;
+  }
+
+  return error instanceof Error ? error.message : 'Could not process the request.';
 }
 
 function updateCommentLikeTree(comments: PreviewComment[], commentId: string, wasLiked: boolean): PreviewComment[] {
