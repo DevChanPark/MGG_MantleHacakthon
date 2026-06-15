@@ -84,6 +84,33 @@ export const REWARD_CREDITS = 30;
 
 export const initialMockBattles: FeedBattle[] = [
   {
+    id: 'battle-open-queue-win',
+    type: 'TEXT_OPEN',
+    author: 'Me',
+    title: 'Why Waiting in Line Is a Competitive Sport',
+    description: 'I trained by standing behind one person who needed five separate receipts.',
+    likeCount: 31,
+    status: 'COMPLETED',
+    recommendedScore: 92,
+    createdAt: '2026-06-13T18:20:00+09:00',
+    deadline: '2026-06-13 23:59',
+    createdByMe: true,
+    comments: [
+      {
+        id: 'comment-queue-win-1',
+        author: MOCK_CURRENT_USER.nickname,
+        text: 'The queue moved so slowly that my patience developed a loading screen.',
+        likeCount: 18,
+      },
+      {
+        id: 'comment-queue-win-2',
+        author: 'Line Referee',
+        text: 'The person in front of me paid in side quests.',
+        likeCount: 6,
+      },
+    ],
+  },
+  {
     id: 'battle-open-flat-earth',
     type: 'TEXT_OPEN',
     author: 'Bad-Take Baron',
