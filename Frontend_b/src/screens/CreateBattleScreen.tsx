@@ -268,7 +268,7 @@ export function CreateBattleScreen({ battleType, onCreateBattle }: CreateBattleS
 
         <p className="create-status-message" aria-live="polite">
           {submitState === 'saved' && 'Excuse saved for later.'}
-          {submitState === 'uploaded' && 'Mock launch complete. The discourse trembles.'}
+          {submitState === 'uploaded' && 'Battle launched. The discourse trembles.'}
           {submitState === 'deadlineError' && 'Give this argument an expiry date.'}
           {submitState === 'optionError' && 'Add at least two sides to the chaos.'}
           {submitState === 'imageError' && 'Pick an image before asking for captions.'}

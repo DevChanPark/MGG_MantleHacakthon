@@ -304,7 +304,7 @@ export function BattleDetailScreen({
       {isEvaluating && (
         <section className="ai-evaluating-box detail-ai-box" role="status">
           <strong>AI Thinking</strong>
-          <p>Scoring reaction heat, nonsense density, and meme radiation in mock mode.</p>
+          <p>Scoring reaction heat, nonsense density, and meme radiation.</p>
         </section>
       )}
 

@@ -290,7 +290,7 @@ export function ProfileScreen({
           <button className="profile-edit-button" type="button">Edit Profile</button>
 
           <button className="profile-credit-row" type="button" onClick={() => setIsCreditPanelOpen(true)}>
-            <span>My Demo Credits <strong>{currentCredits}</strong></span>
+            <span>My Credits <strong>{currentCredits}</strong></span>
             <span>Refill</span>
           </button>
 
@@ -476,29 +476,29 @@ export function CreditChargePanel({
   return (
     <section className={`credit-charge-panel${isOpen ? ' is-open' : ''}`} aria-hidden={!isOpen}>
       <div className="credit-charge-header">
-        <h2>Refill Demo Credits</h2>
+        <h2>Refill Credits</h2>
         <button className="credit-info-button" type="button" onClick={onToggleInfo}>What are these?</button>
-        <button className="credit-panel-close" type="button" aria-label="Close demo credit refill" onClick={onClose}>X</button>
+        <button className="credit-panel-close" type="button" aria-label="Close credit refill" onClick={onClose}>X</button>
       </div>
 
       {isInfoOpen ? (
-        <div className="credit-info-popover" role="dialog" aria-label="Demo credit explanation">
-          <button type="button" aria-label="Close demo credit explanation" onClick={onCloseInfo}>X</button>
+        <div className="credit-info-popover" role="dialog" aria-label="Credit explanation">
+          <button type="button" aria-label="Close credit explanation" onClick={onCloseInfo}>X</button>
           <p>
-            Pretend fuel for
+            Credits fuel
             <br />
-            <strong>very real arguments</strong>.
+            <strong>entries and rewards</strong>.
             <br />
-            No financial advice,
+            Check the wallet prompt
             <br />
-            only emotional invoices.
+            before approving.
           </p>
         </div>
       ) : null}
 
-      <div className="credit-owned-box">Current stash <strong>{currentCredits}</strong></div>
+      <div className="credit-owned-box">Current balance <strong>{currentCredits}</strong></div>
 
-      <h3>Refill Packs</h3>
+      <h3>Credit Packs</h3>
       <div className="credit-package-list">
         {packages.map((creditPackage) => (
           <button
@@ -507,7 +507,7 @@ export function CreditChargePanel({
             key={creditPackage.credits}
             onClick={() => onSelectPackage(creditPackage)}
           >
-            <span>Demo credits <strong>{creditPackage.credits}</strong></span>
+            <span>Credits <strong>{creditPackage.credits}</strong></span>
             <strong>{creditPackage.price} MNT</strong>
           </button>
         ))}
@@ -517,12 +517,12 @@ export function CreditChargePanel({
         {selectedPackage ? (
           <>
             <div className="credit-payment-header">
-              <h3>Checkout-ish</h3>
-              <button type="button" aria-label="Close checkout-ish sheet" onClick={onClosePayment}>X</button>
+              <h3>Checkout</h3>
+              <button type="button" aria-label="Close checkout sheet" onClick={onClosePayment}>X</button>
             </div>
             <div className="credit-payment-summary">
               <div>
-                <span>Demo credits {selectedPackage.credits}</span>
+                <span>Credits {selectedPackage.credits}</span>
                 <strong>{selectedPackage.price} MNT</strong>
               </div>
               <div>
@@ -531,7 +531,7 @@ export function CreditChargePanel({
               </div>
             </div>
             <button className="credit-approve-button" type="button" onClick={() => onApprovePayment(selectedPackage)}>
-              Ask Wallet Nicely
+              Approve Payment
             </button>
           </>
         ) : null}
@@ -548,11 +548,11 @@ type CreditPurchaseCompleteModalProps = {
 export function CreditPurchaseCompleteModal({ creditTotal, onClose }: CreditPurchaseCompleteModalProps) {
   return (
     <div className={`credit-complete-overlay${creditTotal !== null ? ' is-open' : ''}`} aria-hidden={creditTotal === null}>
-      <section className="credit-complete-modal" role="dialog" aria-modal="true" aria-label="Demo credit refill complete">
+      <section className="credit-complete-modal" role="dialog" aria-modal="true" aria-label="Credit refill complete">
         <button className="credit-complete-close" type="button" aria-label="Close refill complete popup" onClick={onClose}>X</button>
-        <h2>Demo credits refilled!</h2>
-        <p>Current stash <strong>{creditTotal ?? 0}</strong></p>
-        <button className="credit-complete-confirm" type="button" onClick={onClose}>Nice</button>
+        <h2>Credits refilled!</h2>
+        <p>Current balance <strong>{creditTotal ?? 0}</strong></p>
+        <button className="credit-complete-confirm" type="button" onClick={onClose}>Done</button>
       </section>
     </div>
   );

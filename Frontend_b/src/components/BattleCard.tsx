@@ -365,7 +365,7 @@ export function BattleCard({
       {isEvaluating && (
         <div className="ai-evaluating-box" role="status">
           <strong>AI Thinking</strong>
-          <p>Scoring reaction heat, nonsense density, and meme radiation in mock mode.</p>
+          <p>Scoring reaction heat, nonsense density, and meme radiation.</p>
         </div>
       )}
 

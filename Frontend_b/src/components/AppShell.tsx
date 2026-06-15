@@ -46,7 +46,7 @@ const INITIAL_NOTIFICATIONS: AppNotification[] = [
   {
     id: 'notification-credit',
     title: 'Credit Alert',
-    body: 'Your demo credit trail is hiding in Profile.',
+    body: 'Your credit balance is waiting in Profile.',
     time: '1 hr ago',
     isRead: true,
     targetType: 'profile',

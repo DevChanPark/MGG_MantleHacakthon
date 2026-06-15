@@ -87,7 +87,7 @@ export function ParticipationModal({
         </button>
 
         <h2 id="participation-title">Enter the Arena</h2>
-        <p className="participation-credit-line">Available demo credits: {credits}</p>
+        <p className="participation-credit-line">Available credits: {credits}</p>
 
         <div className="participation-wallet-box">
           <span>Linked Wallet</span>
@@ -96,7 +96,7 @@ export function ParticipationModal({
 
         <div className="participation-cost-box">
           <span>Entry Fee</span>
-          <strong>{PARTICIPATION_COST} demo credits</strong>
+          <strong>{PARTICIPATION_COST} credits</strong>
         </div>
 
         {needsOption && (
@@ -115,13 +115,13 @@ export function ParticipationModal({
           </div>
         )}
 
-        {!hasEnoughCredits && <p className="participation-error">Not enough pretend money.</p>}
+        {!hasEnoughCredits && <p className="participation-error">Not enough credits.</p>}
         {hasEnoughCredits && needsOption && !selectedOption && (
           <p className="participation-error">Pick a side before the drama can continue.</p>
         )}
 
         <p className="participation-helper">
-          Entering spends {PARTICIPATION_COST} demo credits. Rewards only exist inside this mock-powered circus.
+          Entering spends {PARTICIPATION_COST} credits. Rewards settle after the result.
         </p>
 
         {isParticipated ? (
@@ -147,7 +147,7 @@ export function ParticipationModal({
                 type="button"
                 onClick={() => setIsChargePanelOpen(true)}
               >
-                Refill Demo Credits
+                Refill Credits
               </button>
             )}
           </div>
