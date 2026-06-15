@@ -141,7 +141,8 @@ export function HomeFeed({
             aria-expanded={isSortOpen}
             onClick={() => setIsSortOpen((isOpen) => !isOpen)}
           >
-            {selectedSortLabel} v
+            <span>{selectedSortLabel}</span>
+            <span className="sort-caret" aria-hidden="true" />
           </button>
           {isSortOpen && (
             <div className="sort-menu" role="menu" aria-label="Sort order">
