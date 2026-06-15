@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import backIcon from '../../assets/action-icons/back-left.png';
 import commentIcon from '../../assets/action-icons/comment-icon.png';
 import shareIcon from '../../assets/action-icons/share-icon.png';
 import { HeartIcon } from '../components/icons/HeartIcon';
@@ -220,7 +221,7 @@ export function BattleDetailScreen({
     <main className="battle-detail-screen">
       <section className="battle-detail-topbar" aria-label="Detail header">
         <button className="detail-back-button" type="button" aria-label="Back" onClick={onBack}>
-          &lt;
+          <img className="detail-back-icon" src={backIcon} alt="" aria-hidden="true" />
         </button>
         <span className="detail-deadline">Ends {battle.deadline}</span>
         {renderTopbarAction()}

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 
+import closeIcon from '../../assets/action-icons/close-union.png';
 import mggLogo from '../../assets/brand/mgg-logo.png';
 import commentFilledIcon from '../../assets/profile-icons/comment-filled.png';
 import commentOutlineIcon from '../../assets/profile-icons/comment-outline.png';
@@ -478,7 +479,9 @@ export function CreditChargePanel({
       <div className="credit-charge-header">
         <h2>Refill Credits</h2>
         <button className="credit-info-button" type="button" onClick={onToggleInfo}>What are these?</button>
-        <button className="credit-panel-close" type="button" aria-label="Close credit refill" onClick={onClose}>X</button>
+        <button className="credit-panel-close" type="button" aria-label="Close credit refill" onClick={onClose}>
+          <img className="credit-panel-close-icon" src={closeIcon} alt="" aria-hidden="true" />
+        </button>
       </div>
 
       {isInfoOpen ? (
