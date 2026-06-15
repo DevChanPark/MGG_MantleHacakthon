@@ -19,8 +19,6 @@ interface BattleCardProps {
   onRequireParticipation: () => void;
   onParticipationRequest: (preselectedOption?: string) => void;
   onCloseBattle: () => void;
-  onCompleteEvaluation: () => void;
-  onOpenWinnerModal: () => void;
   onOpenDetail: () => void;
 }
 
@@ -38,8 +36,6 @@ export function BattleCard({
   onShare,
   onRequireParticipation,
   onParticipationRequest,
-  onCompleteEvaluation,
-  onOpenWinnerModal,
   onOpenDetail,
 }: BattleCardProps) {
   const [isCommentComposerOpen, setIsCommentComposerOpen] = useState(false);
@@ -60,7 +56,7 @@ export function BattleCard({
   const hasManyComments = battle.comments.length > 2;
   const safeOptions = battle.type === 'OPTION' ? (battle.options ?? []).filter(Boolean) : [];
   const optionStats = result.optionStats ?? result.optionResults;
-  const shouldShowOptionRatio = battle.type === 'OPTION' && Boolean(selectedOption || isCompleted) && optionStats;
+  const shouldShowOptionRatio = battle.type === 'OPTION' && isCompleted && optionStats;
 
   const handleCommentSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -104,15 +100,6 @@ export function BattleCard({
   };
 
   const handleOptionClick = (option: string) => {
-    if (!isOpen) {
-      return;
-    }
-
-    if (!isParticipated) {
-      onParticipationRequest(option);
-      return;
-    }
-
     onOptionSelect(option);
   };
 
@@ -198,18 +185,12 @@ export function BattleCard({
           <>
             <span className="battle-status-chip">AI Thinking</span>
             <span className="battle-status-chip is-deadline">Closed</span>
-            <button className="battle-complete-button is-dev-action" type="button" onClick={(event) => stopAndRun(event, onCompleteEvaluation)}>
-              Verdict
-            </button>
           </>
         )}
         {isCompleted && (
           <>
             <span className="battle-status-chip is-complete">AI Verdict Ready</span>
             <span className="battle-status-chip is-deadline">Closed</span>
-            <button className="battle-winner-button" type="button" onClick={(event) => stopAndRun(event, onOpenWinnerModal)}>
-              Champion
-            </button>
           </>
         )}
         {isClosed && <span className="battle-status-chip is-closed">Closed</span>}
@@ -231,7 +212,6 @@ export function BattleCard({
                   type="button"
                   key={`${battle.id}-${option}`}
                   aria-pressed={selectedOption === option}
-                  disabled={!isOpen}
                   onClick={(event) => stopAndRun(event, () => handleOptionClick(option))}
                 >
                   {option}

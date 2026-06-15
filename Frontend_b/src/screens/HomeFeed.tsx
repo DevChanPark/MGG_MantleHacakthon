@@ -34,8 +34,6 @@ interface HomeFeedProps {
   onRequireParticipation: () => void;
   onParticipationRequest: (battle: FeedBattle, preselectedOption?: string) => void;
   onCloseBattle: (battleId: string) => void;
-  onCompleteEvaluation: (battleId: string) => void;
-  onOpenWinnerModal: (battle: FeedBattle) => void;
   onOpenDetail: (battleId: string) => void;
 }
 
@@ -57,8 +55,6 @@ export function HomeFeed({
   onRequireParticipation,
   onParticipationRequest,
   onCloseBattle,
-  onCompleteEvaluation,
-  onOpenWinnerModal,
   onOpenDetail,
 }: HomeFeedProps) {
   const [selectedSort, setSelectedSort] = useState<SortType>('recommended');
@@ -183,8 +179,6 @@ export function HomeFeed({
             onRequireParticipation={onRequireParticipation}
             onParticipationRequest={(option) => onParticipationRequest(battle, option)}
             onCloseBattle={() => onCloseBattle(battle.id)}
-            onCompleteEvaluation={() => onCompleteEvaluation(battle.id)}
-            onOpenWinnerModal={() => onOpenWinnerModal(battle)}
             onOpenDetail={() => onOpenDetail(battle.id)}
           />
         ))}

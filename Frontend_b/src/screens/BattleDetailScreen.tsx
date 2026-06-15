@@ -20,8 +20,6 @@ interface BattleDetailScreenProps {
   onRequireParticipation: () => void;
   onParticipationRequest: (preselectedOption?: string) => void;
   onCloseBattle: () => void;
-  onCompleteEvaluation: () => void;
-  onOpenWinnerModal: () => void;
 }
 
 export function BattleDetailScreen({
@@ -39,8 +37,6 @@ export function BattleDetailScreen({
   onShareBattle,
   onRequireParticipation,
   onParticipationRequest,
-  onCompleteEvaluation,
-  onOpenWinnerModal,
 }: BattleDetailScreenProps) {
   const [commentInput, setCommentInput] = useState('');
   const [replyingCommentId, setReplyingCommentId] = useState<string | null>(null);
@@ -56,7 +52,7 @@ export function BattleDetailScreen({
   const canViewComments = true;
   const safeOptions = battle.options ?? [];
   const optionStats = result.optionStats ?? result.optionResults;
-  const shouldShowOptionRatio = battle.type === 'OPTION' && Boolean(selectedOption || isCompleted) && optionStats;
+  const shouldShowOptionRatio = battle.type === 'OPTION' && isCompleted && optionStats;
 
   const handleCommentSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -94,15 +90,6 @@ export function BattleDetailScreen({
   };
 
   const handleOptionClick = (option: string) => {
-    if (!isOpen) {
-      return;
-    }
-
-    if (!isParticipated) {
-      onParticipationRequest(option);
-      return;
-    }
-
     onOptionSelect(option);
   };
 
@@ -241,7 +228,6 @@ export function BattleDetailScreen({
                   type="button"
                   key={`${battle.id}-detail-${option}`}
                   aria-pressed={selectedOption === option}
-                  disabled={!isOpen}
                   onClick={() => handleOptionClick(option)}
                 >
                   {option}
@@ -278,20 +264,6 @@ export function BattleDetailScreen({
             </div>
           )}
         </div>
-      </section>
-
-      <section className="battle-detail-controls" aria-label="Battle status">
-        {isEvaluating && (
-          <button className="battle-complete-button is-dev-action" type="button" onClick={onCompleteEvaluation}>
-            Verdict
-          </button>
-        )}
-        {isCompleted && (
-          <button className="battle-winner-button" type="button" onClick={onOpenWinnerModal}>
-            Champion
-          </button>
-        )}
-        {isClosed && <span className="battle-status-chip is-closed">Closed</span>}
       </section>
 
       <section className="battle-card-actions detail-actions" aria-label="Detail reactions">

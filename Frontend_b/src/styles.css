@@ -3085,8 +3085,6 @@ select {
 }
 
 .battle-close-button,
-.battle-complete-button,
-.battle-winner-button,
 .battle-status-chip {
   display: inline-flex;
   min-height: 28px;
@@ -3108,8 +3106,7 @@ select {
 }
 
 .battle-status-chip,
-.battle-status-chip.is-complete,
-.battle-winner-button {
+.battle-status-chip.is-complete {
   background: #e3f4a6;
 }
 
@@ -3125,15 +3122,6 @@ select {
 .battle-status-chip.is-closed {
   background: #eeeeee;
   color: rgba(14, 14, 14, 0.66);
-}
-
-.battle-complete-button.is-dev-action {
-  min-height: 24px;
-  padding: 0 9px;
-  border-color: rgba(14, 14, 14, 0.36);
-  background: #f6f6f6;
-  color: rgba(14, 14, 14, 0.62);
-  font-size: 11px;
 }
 
 .battle-card-main {
@@ -4254,13 +4242,6 @@ select {
 
 .detail-image-frame {
   margin-top: 16px;
-}
-
-.battle-detail-controls {
-  display: flex;
-  justify-content: flex-end;
-  gap: 7px;
-  padding: 0 14px;
 }
 
 .detail-actions {

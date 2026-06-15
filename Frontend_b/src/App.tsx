@@ -13,14 +13,11 @@ import {
   ParticipationModal,
   SelectionRequiredModal,
 } from './components/ParticipationModal';
-import { RewardCompleteModal, WinnerModal } from './components/RewardModal';
 import {
   canParticipateInBattle,
   createMockBattle,
   getBattleEffectiveStatus,
-  getMockBattleResult,
   initialMockBattles,
-  isCurrentUserWinner,
   MOCK_CURRENT_USER,
   MOCK_WALLET_ADDRESS,
   type CreateBattleDraft,
@@ -43,9 +40,6 @@ export default function App() {
   const [pendingParticipationOption, setPendingParticipationOption] = useState('');
   const [isSelectionWarningOpen, setIsSelectionWarningOpen] = useState(false);
   const [noticeMessage, setNoticeMessage] = useState('Pick a side before the drama can continue.');
-  const [winnerBattle, setWinnerBattle] = useState<FeedBattle | null>(null);
-  const [rewardedBattleIds, setRewardedBattleIds] = useState<string[]>([]);
-  const [isRewardCompleteOpen, setIsRewardCompleteOpen] = useState(false);
 
   const visibleBattles = battles.map((battle) => ({
     ...battle,
@@ -84,13 +78,7 @@ export default function App() {
   const handleOptionSelect = (battleId: string, option: string) => {
     const battle = visibleBattles.find((currentBattle) => currentBattle.id === battleId);
 
-    if (!battle || !canParticipateInBattle(battle)) {
-      showNotice('That argument is closed. The nonsense has left the building.');
-      return;
-    }
-
-    if (!participatedBattleIds.includes(battleId)) {
-      showNotice('Enter the arena before picking a side.');
+    if (battle?.type !== 'OPTION' || !battle.options?.includes(option)) {
       return;
     }
 
@@ -289,34 +277,6 @@ export default function App() {
     );
   };
 
-  const handleCompleteEvaluation = (battleId: string) => {
-    setBattles((currentBattles) =>
-      currentBattles.map((battle) => (battle.id === battleId ? { ...battle, status: 'COMPLETED' } : battle)),
-    );
-  };
-
-  const handleOpenWinnerModal = (battle: FeedBattle) => {
-    if (battle.status === 'COMPLETED') {
-      setWinnerBattle(battle);
-    }
-  };
-
-  const handleClaimReward = () => {
-    if (!winnerBattle || rewardedBattleIds.includes(winnerBattle.id)) {
-      return;
-    }
-
-    const result = getMockBattleResult(winnerBattle);
-    if (!isCurrentUserWinner(result, MOCK_CURRENT_USER.id)) {
-      return;
-    }
-
-    setCredits((currentCredits) => currentCredits + result.rewardCredits);
-    setRewardedBattleIds((currentIds) => [...currentIds, winnerBattle.id]);
-    setWinnerBattle(null);
-    setIsRewardCompleteOpen(true);
-  };
-
   const renderWithAppShell = (children: ReactNode, options: { hideHeader?: boolean } = {}) => (
     <AppShell
       hideHeader={options.hideHeader}
@@ -343,16 +303,6 @@ export default function App() {
             message={noticeMessage}
             onClose={() => setIsSelectionWarningOpen(false)}
           />
-          <WinnerModal
-            battle={winnerBattle}
-            result={winnerBattle ? getMockBattleResult(winnerBattle) : null}
-            currentUserId={MOCK_CURRENT_USER.id}
-            currentUserNickname={MOCK_CURRENT_USER.nickname}
-            isRewarded={winnerBattle ? rewardedBattleIds.includes(winnerBattle.id) : false}
-            onClose={() => setWinnerBattle(null)}
-            onClaimReward={handleClaimReward}
-          />
-          <RewardCompleteModal isOpen={isRewardCompleteOpen} onClose={() => setIsRewardCompleteOpen(false)} />
         </>
       }
     >
@@ -394,8 +344,6 @@ export default function App() {
         onRequireParticipation={handleRequireParticipation}
         onParticipationRequest={handleParticipationRequest}
         onCloseBattle={handleCloseBattle}
-        onCompleteEvaluation={handleCompleteEvaluation}
-        onOpenWinnerModal={handleOpenWinnerModal}
         onOpenDetail={(battleId) => {
           window.location.hash = `battle/${battleId}`;
         }}
@@ -431,8 +379,6 @@ export default function App() {
         onRequireParticipation={handleRequireParticipation}
         onParticipationRequest={(option) => handleParticipationRequest(selectedBattle, option)}
         onCloseBattle={() => handleCloseBattle(selectedBattle.id)}
-        onCompleteEvaluation={() => handleCompleteEvaluation(selectedBattle.id)}
-        onOpenWinnerModal={() => handleOpenWinnerModal(selectedBattle)}
       />,
     );
   }
