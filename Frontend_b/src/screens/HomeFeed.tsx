@@ -32,7 +32,7 @@ interface HomeFeedProps {
   onCommentReplyAdd: (battleId: string, commentId: string, text: string) => void;
   onShareBattle: (battle: FeedBattle) => void;
   onRequireParticipation: () => void;
-  onParticipationRequest: (battle: FeedBattle) => void;
+  onParticipationRequest: (battle: FeedBattle, preselectedOption?: string) => void;
   onCloseBattle: (battleId: string) => void;
   onCompleteEvaluation: (battleId: string) => void;
   onOpenWinnerModal: (battle: FeedBattle) => void;
@@ -181,7 +181,7 @@ export function HomeFeed({
             onCommentReplyAdd={(commentId, text) => onCommentReplyAdd(battle.id, commentId, text)}
             onShare={() => onShareBattle(battle)}
             onRequireParticipation={onRequireParticipation}
-            onParticipationRequest={() => onParticipationRequest(battle)}
+            onParticipationRequest={(option) => onParticipationRequest(battle, option)}
             onCloseBattle={() => onCloseBattle(battle.id)}
             onCompleteEvaluation={() => onCompleteEvaluation(battle.id)}
             onOpenWinnerModal={() => onOpenWinnerModal(battle)}

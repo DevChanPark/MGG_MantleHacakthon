@@ -109,7 +109,7 @@ export function OnboardingFeed(props: OnboardingFeedProps) {
   );
 }
 
-function AutoOnboardingCarousel({ isWalletConnecting, walletError, onWalletConnect }: OnboardingFeedProps) {
+function AutoOnboardingCarousel({ initialLoginOpen, isWalletConnecting, walletError, onWalletConnect }: OnboardingFeedProps) {
   const [activePageIndex, setActivePageIndex] = useState(0);
   const [dragStartX, setDragStartX] = useState<number | null>(null);
 
@@ -168,6 +168,7 @@ function AutoOnboardingCarousel({ isWalletConnecting, walletError, onWalletConne
 
         <PageDots activeIndex={activePageIndex} />
         <AuthActions
+          initialLoginOpen={initialLoginOpen}
           isWalletConnecting={isWalletConnecting}
           walletError={walletError}
           onWalletConnect={onWalletConnect}
@@ -194,7 +195,9 @@ type AuthPageProps = {
   onWalletConnect?: (walletProvider: string) => Promise<void>;
 };
 
-type OnboardingFeedProps = Omit<AuthPageProps, 'showActions'>;
+type OnboardingFeedProps = Omit<AuthPageProps, 'showActions'> & {
+  initialLoginOpen?: boolean;
+};
 
 function getWrappedPageIndex(pageIndex: number, pageCount: number) {
   return (pageIndex + pageCount) % pageCount;
@@ -424,8 +427,8 @@ function PageDots({ activeIndex }: PageDotsProps) {
   );
 }
 
-function AuthActions({ isWalletConnecting = false, walletError = '', onWalletConnect }: OnboardingFeedProps) {
-  const [isLoginOpen, setIsLoginOpen] = useState(false);
+function AuthActions({ initialLoginOpen = false, isWalletConnecting = false, walletError = '', onWalletConnect }: OnboardingFeedProps) {
+  const [isLoginOpen, setIsLoginOpen] = useState(initialLoginOpen);
 
   const openSignupFeed = () => {
     window.location.hash = 'signup';

@@ -18,7 +18,7 @@ interface BattleDetailScreenProps {
   onCommentReplyAdd: (commentId: string, text: string) => void;
   onShareBattle: () => void;
   onRequireParticipation: () => void;
-  onParticipationRequest: () => void;
+  onParticipationRequest: (preselectedOption?: string) => void;
   onCloseBattle: () => void;
   onCompleteEvaluation: () => void;
   onOpenWinnerModal: () => void;
@@ -93,6 +93,19 @@ export function BattleDetailScreen({
     setReplyingCommentId((currentId) => (currentId === commentId ? null : commentId));
   };
 
+  const handleOptionClick = (option: string) => {
+    if (!isOpen) {
+      return;
+    }
+
+    if (!isParticipated) {
+      onParticipationRequest(option);
+      return;
+    }
+
+    onOptionSelect(option);
+  };
+
   const renderTopbarAction = () => {
     if (isOpen) {
       return (
@@ -100,7 +113,7 @@ export function BattleDetailScreen({
           className={`detail-participate-button${isParticipated ? ' is-complete' : ''}`}
           type="button"
           disabled={isParticipated}
-          onClick={onParticipationRequest}
+          onClick={() => onParticipationRequest()}
         >
           {isParticipated ? "You're In" : 'Enter the Arena'}
         </button>
@@ -228,8 +241,8 @@ export function BattleDetailScreen({
                   type="button"
                   key={`${battle.id}-detail-${option}`}
                   aria-pressed={selectedOption === option}
-                  disabled={!isOpen || !isParticipated}
-                  onClick={() => onOptionSelect(option)}
+                  disabled={!isOpen}
+                  onClick={() => handleOptionClick(option)}
                 >
                   {option}
                 </button>
@@ -282,7 +295,15 @@ export function BattleDetailScreen({
       </section>
 
       <section className="battle-card-actions detail-actions" aria-label="Detail reactions">
-        <button className="battle-card-action" type="button" onClick={isOpen ? onRequireParticipation : onParticipationRequest}>
+        <button
+          className="battle-card-action"
+          type="button"
+          onClick={() => {
+            if (isOpen && !canWriteComments) {
+              onRequireParticipation();
+            }
+          }}
+        >
           <img className="action-icon-img comment-icon-img" src={commentIcon} alt="" aria-hidden="true" />
           Replies {battle.comments.length}
         </button>

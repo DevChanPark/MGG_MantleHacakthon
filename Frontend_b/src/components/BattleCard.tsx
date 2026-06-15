@@ -17,7 +17,7 @@ interface BattleCardProps {
   onCommentReplyAdd: (commentId: string, text: string) => void;
   onShare: () => void;
   onRequireParticipation: () => void;
-  onParticipationRequest: () => void;
+  onParticipationRequest: (preselectedOption?: string) => void;
   onCloseBattle: () => void;
   onCompleteEvaluation: () => void;
   onOpenWinnerModal: () => void;
@@ -103,6 +103,19 @@ export function BattleCard({
     setReplyingCommentId((currentId) => (currentId === commentId ? null : commentId));
   };
 
+  const handleOptionClick = (option: string) => {
+    if (!isOpen) {
+      return;
+    }
+
+    if (!isParticipated) {
+      onParticipationRequest(option);
+      return;
+    }
+
+    onOptionSelect(option);
+  };
+
   const renderComment = (comment: PreviewComment) => {
     const isCommentLiked = likedCommentIds.includes(comment.id);
     const isWinningComment = isCompleted && result.winnerCommentId === comment.id;
@@ -179,17 +192,7 @@ export function BattleCard({
   };
 
   return (
-    <article
-      className={`${cardClassName} is-clickable`}
-      tabIndex={0}
-      role="button"
-      onClick={onOpenDetail}
-      onKeyDown={(event) => {
-        if (event.key === 'Enter') {
-          onOpenDetail();
-        }
-      }}
-    >
+    <article className={cardClassName}>
       <div className="battle-status-row">
         {isEvaluating && (
           <>
@@ -228,8 +231,8 @@ export function BattleCard({
                   type="button"
                   key={`${battle.id}-${option}`}
                   aria-pressed={selectedOption === option}
-                  disabled={!isOpen || !isParticipated}
-                  onClick={(event) => stopAndRun(event, () => onOptionSelect(option))}
+                  disabled={!isOpen}
+                  onClick={(event) => stopAndRun(event, () => handleOptionClick(option))}
                 >
                   {option}
                 </button>
@@ -281,7 +284,6 @@ export function BattleCard({
             stopAndRun(event, () => {
               if (!canWriteComments) {
                 if (!isOpen) {
-                  onParticipationRequest();
                   return;
                 }
 
@@ -334,7 +336,7 @@ export function BattleCard({
             )}
           </div>
 
-          {battle.comments.length > 2 && (
+          {battle.comments.length > 0 && (
             <button className="comment-view-all-button" type="button" onClick={onOpenDetail}>
               View all replies
             </button>

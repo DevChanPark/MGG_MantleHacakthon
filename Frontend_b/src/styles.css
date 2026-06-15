@@ -3070,15 +3070,6 @@ select {
   overflow: visible;
 }
 
-.battle-card.is-clickable {
-  cursor: pointer;
-}
-
-.battle-card.is-clickable:focus-visible {
-  outline: 2px solid #0e0e0e;
-  outline-offset: -3px;
-}
-
 .battle-status-row {
   display: flex;
   min-height: 0;
@@ -4206,9 +4197,9 @@ select {
 
 .battle-detail-hero {
   display: grid;
-  grid-template-columns: 68px minmax(0, 1fr);
-  gap: 14px;
-  padding: 18px 20px 16px;
+  grid-template-columns: 57px minmax(0, 1fr);
+  gap: 11px;
+  padding: 17px 15px 16px;
   border-bottom: 0;
 }
 
@@ -4221,8 +4212,9 @@ select {
 }
 
 .battle-detail-avatar {
-  width: 58px;
-  height: 58px;
+  width: 57px;
+  height: 57px;
+  border-width: 0.5px;
 }
 
 .battle-detail-copy {
@@ -4237,9 +4229,9 @@ select {
 }
 
 .battle-detail-copy h1 {
-  margin: 0 0 12px;
+  margin: 0 0 4px;
   color: #0e0e0e;
-  font-size: 20px;
+  font-size: 21px;
   font-weight: 400;
   letter-spacing: 0;
   line-height: 1.5;
@@ -5149,19 +5141,19 @@ body,
 }
 
 .battle-detail-hero {
-  grid-template-columns: clamp(58px, calc(68 / 402 * var(--frame)), 68px) minmax(0, 1fr);
-  gap: clamp(10px, calc(14 / 402 * var(--frame)), 14px);
-  padding-right: clamp(14px, calc(20 / 402 * var(--frame)), 20px);
-  padding-left: clamp(14px, calc(20 / 402 * var(--frame)), 20px);
+  grid-template-columns: clamp(56px, calc(57 / 402 * var(--frame)), 57px) minmax(0, 1fr);
+  gap: clamp(10px, calc(11 / 402 * var(--frame)), 11px);
+  padding-right: clamp(12px, calc(15 / 402 * var(--frame)), 15px);
+  padding-left: clamp(12px, calc(15 / 402 * var(--frame)), 15px);
 }
 
 .battle-detail-avatar {
-  width: clamp(52px, calc(58 / 402 * var(--frame)), 58px);
-  height: clamp(52px, calc(58 / 402 * var(--frame)), 58px);
+  width: clamp(52px, calc(57 / 402 * var(--frame)), 57px);
+  height: clamp(52px, calc(57 / 402 * var(--frame)), 57px);
 }
 
 .battle-detail-copy h1 {
-  font-size: clamp(18px, calc(20 / 402 * var(--frame)), 20px);
+  font-size: clamp(18px, calc(21 / 402 * var(--frame)), 21px);
 }
 
 .detail-actions {
@@ -5183,6 +5175,7 @@ body,
 
   .battle-card-actions,
   .detail-actions {
+    width: 100%;
     margin-left: 0;
     padding-left: 0;
   }

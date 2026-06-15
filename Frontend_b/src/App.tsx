@@ -218,7 +218,7 @@ export default function App() {
     );
   };
 
-  const handleParticipationRequest = (battle: FeedBattle) => {
+  const handleParticipationRequest = (battle: FeedBattle, preselectedOption = '') => {
     const effectiveBattle = {
       ...battle,
       status: getBattleEffectiveStatus(battle),
@@ -229,7 +229,12 @@ export default function App() {
       return;
     }
 
-    setPendingParticipationOption('');
+    const safePreselectedOption =
+      effectiveBattle.type === 'OPTION' && effectiveBattle.options?.includes(preselectedOption)
+        ? preselectedOption
+        : '';
+
+    setPendingParticipationOption(safePreselectedOption);
     setParticipationBattle(effectiveBattle);
   };
 
@@ -364,6 +369,10 @@ export default function App() {
     return <SignupProfileScreen />;
   }
 
+  if (route === 'login') {
+    return <OnboardingFeed initialLoginOpen />;
+  }
+
   // App routes (with layout wrapper)
   if (route === 'home') {
     return renderWithAppShell(
@@ -420,7 +429,7 @@ export default function App() {
         onCommentReplyAdd={(commentId, text) => handleCommentReplyAdd(selectedBattle.id, commentId, text)}
         onShareBattle={handleShareBattle}
         onRequireParticipation={handleRequireParticipation}
-        onParticipationRequest={() => handleParticipationRequest(selectedBattle)}
+        onParticipationRequest={(option) => handleParticipationRequest(selectedBattle, option)}
         onCloseBattle={() => handleCloseBattle(selectedBattle.id)}
         onCompleteEvaluation={() => handleCompleteEvaluation(selectedBattle.id)}
         onOpenWinnerModal={() => handleOpenWinnerModal(selectedBattle)}
@@ -450,7 +459,7 @@ export default function App() {
 }
 
 function getRoute() {
-  return window.location.hash.replace('#', '') || 'home';
+  return window.location.hash.replace('#', '') || 'login';
 }
 
 function getSavedBattleType(): BattleType {
