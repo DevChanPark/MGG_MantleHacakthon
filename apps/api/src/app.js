@@ -79,6 +79,10 @@ export function createApiApp({ repository, config, aiJudgeService, settlementSer
         return ok({ comments: await battleService.listMyComments(userId) });
       }
 
+      if (method === "GET" && path === "/api/users/me/wins") {
+        return ok({ wins: await battleService.listMyWins(userId) });
+      }
+
       if (method === "GET" && path === "/api/users/me/likes") {
         return ok({ likes: await battleService.listMyLikes(userId) });
       }

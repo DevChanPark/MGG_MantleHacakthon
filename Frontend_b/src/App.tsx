@@ -42,7 +42,7 @@ export default function App() {
   const [participationBattle, setParticipationBattle] = useState<FeedBattle | null>(null);
   const [pendingParticipationOption, setPendingParticipationOption] = useState('');
   const [isSelectionWarningOpen, setIsSelectionWarningOpen] = useState(false);
-  const [noticeMessage, setNoticeMessage] = useState('진영을 먼저 선택해주세요.');
+  const [noticeMessage, setNoticeMessage] = useState('Pick a side before the drama can continue.');
   const [winnerBattle, setWinnerBattle] = useState<FeedBattle | null>(null);
   const [rewardedBattleIds, setRewardedBattleIds] = useState<string[]>([]);
   const [isRewardCompleteOpen, setIsRewardCompleteOpen] = useState(false);
@@ -85,12 +85,12 @@ export default function App() {
     const battle = visibleBattles.find((currentBattle) => currentBattle.id === battleId);
 
     if (!battle || !canParticipateInBattle(battle)) {
-      showNotice('마감된 게시글입니다.');
+      showNotice('That argument is closed. The nonsense has left the building.');
       return;
     }
 
     if (!participatedBattleIds.includes(battleId)) {
-      showNotice('참여하기를 눌러야 선택할 수 있습니다.');
+      showNotice('Enter the arena before picking a side.');
       return;
     }
 
@@ -142,12 +142,12 @@ export default function App() {
     }
 
     if (!battle || !canParticipateInBattle(battle)) {
-      showNotice('마감된 게시글입니다.');
+      showNotice('That argument is closed. The nonsense has left the building.');
       return;
     }
 
     if (!participatedBattleIds.includes(battleId)) {
-      showNotice('참여하기를 눌러야 댓글을 등록할 수 있습니다.');
+      showNotice('Enter the arena before dropping a comment.');
       return;
     }
 
@@ -160,7 +160,7 @@ export default function App() {
                 ...battle.comments,
                 {
                   id: `${battle.id}-local-comment-${Date.now()}`,
-                  author: '나',
+                  author: 'Me',
                   text: nextComment,
                   likeCount: 0,
                   replies: [],
@@ -181,12 +181,12 @@ export default function App() {
     }
 
     if (!battle || !canParticipateInBattle(battle)) {
-      showNotice('마감된 게시글입니다.');
+      showNotice('That argument is closed. The nonsense has left the building.');
       return;
     }
 
     if (!participatedBattleIds.includes(battleId)) {
-      showNotice('참여하기를 눌러야 답글을 등록할 수 있습니다.');
+      showNotice('Enter the arena before dropping a reply.');
       return;
     }
 
@@ -225,7 +225,7 @@ export default function App() {
     };
 
     if (!canParticipateInBattle(effectiveBattle)) {
-      showNotice('마감된 게시글입니다.');
+      showNotice('That argument is closed. The nonsense has left the building.');
       return;
     }
 
@@ -239,7 +239,7 @@ export default function App() {
     }
 
     if (participationBattle.type === 'OPTION' && !pendingParticipationOption) {
-      showNotice('진영을 먼저 선택해주세요.');
+      showNotice('Pick a side before the drama can continue.');
       return;
     }
 
@@ -262,11 +262,11 @@ export default function App() {
   };
 
   const handleRequireParticipation = () => {
-    showNotice('참여 후 댓글을 작성할 수 있습니다.');
+    showNotice('Enter the arena before dropping your wisdom.');
   };
 
   const handleShareBattle = () => {
-    showNotice('공유 링크가 준비되었습니다.');
+    showNotice('Share link ready. Use it with suspicious confidence.');
   };
 
   const showNotice = (message: string) => {
@@ -430,7 +430,12 @@ export default function App() {
 
   if (route === 'profile') {
     return renderWithAppShell(
-      <ProfileScreen credits={credits} walletAddress={MOCK_WALLET_ADDRESS} onAddCredits={handleAddCredits} />,
+      <ProfileScreen
+        battles={visibleBattles}
+        credits={credits}
+        walletAddress={MOCK_WALLET_ADDRESS}
+        onAddCredits={handleAddCredits}
+      />,
       { hideHeader: true },
     );
   }

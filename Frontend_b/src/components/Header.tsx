@@ -35,7 +35,7 @@ export function Header({
         <button
           className="header-icon-btn"
           type="button"
-          aria-label="검색"
+          aria-label="Search"
           aria-expanded={isSearchOpen}
           onClick={() => setIsSearchOpen((isOpen) => !isOpen)}
         >
@@ -47,7 +47,7 @@ export function Header({
         <button
           className={`header-icon-btn notification-trigger${isNotificationOpen ? ' is-active' : ''}${hasUnreadNotifications ? ' has-unread' : ''}`}
           type="button"
-          aria-label="알림"
+          aria-label="Notifications"
           aria-expanded={isNotificationOpen}
           onClick={onNotificationClick}
         >
@@ -64,11 +64,11 @@ export function Header({
             value={searchTerm}
             onChange={(event) => onSearchChange?.(event.target.value)}
             autoFocus
-            placeholder="검색어 입력"
-            aria-label="게시글 검색"
+            placeholder="Search bad takes"
+            aria-label="Search battles"
           />
-          <button type="button" onClick={closeSearch} aria-label="검색 닫기">
-            ×
+          <button type="button" onClick={closeSearch} aria-label="Close search">
+            X
           </button>
         </div>
       )}

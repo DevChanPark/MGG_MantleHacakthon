@@ -2,7 +2,7 @@ import { type ChangeEvent, useRef, useState } from 'react';
 import metamaskLogo from '../../assets/image13.png';
 import mggLogo from '../../assets/brand/mgg-logo.png';
 
-const mockDuplicateNicknames = new Set(['무기기', 'MGG', 'mgg', '관리자', 'admin']);
+const mockDuplicateNicknames = new Set(['mugigi', 'MGG', 'mgg', 'admin', 'moderator', 'official', 'support']);
 
 export function SignupProfileScreen() {
   const [nickname, setNickname] = useState('');
@@ -14,9 +14,9 @@ export function SignupProfileScreen() {
   const hasNickname = trimmedNickname.length > 0;
   const isDuplicateNickname = hasNickname && mockDuplicateNicknames.has(trimmedNickname);
   const nicknameHelperMessage = isDuplicateNickname
-    ? '이미 존재하는 닉네임입니다.'
+    ? 'That nickname is already causing trouble elsewhere.'
     : hasNickname
-      ? '사용 가능한 닉네임입니다.'
+      ? 'Nickname available. Dangerously available.'
       : '';
   const openImagePicker = (input: HTMLInputElement | null) => {
     if (!input) {
@@ -60,7 +60,7 @@ export function SignupProfileScreen() {
         <div className="signup-profile-white-panel" aria-hidden="true" />
 
         <img className="app-logo-small" src={mggLogo} alt="MGG" />
-        <h1 className="signup-title">회원가입</h1>
+        <h1 className="signup-title">Sign Up</h1>
 
         <div className="signup-profile-circle signup-profile-circle-large" aria-hidden="true">
           {profilePhotoPreview ? <img className="signup-profile-photo-preview" src={profilePhotoPreview} alt="" /> : null}
@@ -68,7 +68,7 @@ export function SignupProfileScreen() {
         <button
           className="signup-camera-button"
           type="button"
-          aria-label="프로필 사진 추가"
+          aria-label="Add profile photo"
           onClick={() => setIsPhotoSheetOpen(true)}
         >
           <svg aria-hidden="true" viewBox="0 0 24 24">
@@ -100,24 +100,24 @@ export function SignupProfileScreen() {
         <form className="signup-profile-form">
           <div className="signup-form-group">
             <label className="signup-form-label">
-              지갑 연결 <span aria-hidden="true">*</span>
+              Wallet Connection <span aria-hidden="true">*</span>
             </label>
             <div className="signup-connected-wallet" aria-label="MetaMask connected">
               <img className="wallet-icon metamask-logo" src={metamaskLogo} alt="" aria-hidden="true" />
-              <span><strong>MetaMask</strong>로 연결 완료</span>
+              <span><strong>MetaMask</strong> connected</span>
             </div>
           </div>
 
           <div className="signup-form-group">
             <label className="signup-form-label" htmlFor="signup-nickname">
-              닉네임 <span aria-hidden="true">*</span>
+              Nickname <span aria-hidden="true">*</span>
             </label>
             <input
               id="signup-nickname"
               className="signup-text-field"
               value={nickname}
               onChange={(event) => setNickname(event.target.value)}
-              placeholder="닉네임을 작성해주세요."
+              placeholder="Choose your courtroom name."
               aria-describedby={nicknameHelperMessage ? 'signup-nickname-helper' : undefined}
               aria-invalid={isDuplicateNickname}
             />
@@ -133,30 +133,30 @@ export function SignupProfileScreen() {
 
           <div className="signup-form-group">
             <label className="signup-form-label" htmlFor="signup-intro">
-              자기소개 <span aria-hidden="true">*</span>
+              Bio <span aria-hidden="true">*</span>
             </label>
-            <textarea id="signup-intro" className="signup-textarea-field" placeholder="자신을 소개해주세요." />
+            <textarea id="signup-intro" className="signup-textarea-field" placeholder="Introduce your argument persona." />
           </div>
 
           <label className="signup-age-check">
             <input type="checkbox" />
             <span>
-              만 14세 이상이며, <a href="#terms">서비스 이용약관</a> 및 <a href="#age">연령 확인</a>에 동의합니다.
+              I am at least 14 and agree to the <a href="#terms">Terms</a> and <a href="#age">Age Check</a>.
             </span>
           </label>
 
-          <button className="signup-complete-button" type="button">회원가입 완료</button>
+          <button className="signup-complete-button" type="button">Finish Sign Up</button>
         </form>
 
         {isPhotoSheetOpen ? (
-          <div className="profile-photo-sheet" role="dialog" aria-modal="false" aria-label="프로필 사진 설정">
+          <div className="profile-photo-sheet" role="dialog" aria-modal="false" aria-label="Profile photo settings">
             <div className="profile-photo-sheet-handle" aria-hidden="true" />
-            <p className="profile-photo-sheet-title">프로필 사진 설정</p>
+            <p className="profile-photo-sheet-title">Profile Photo</p>
             <button className="profile-photo-sheet-option" type="button" onClick={() => openImagePicker(cameraInputRef.current)}>
-              카메라로 촬영
+              Use Camera
             </button>
             <button className="profile-photo-sheet-option" type="button" onClick={() => openImagePicker(galleryInputRef.current)}>
-              사진에서 선택
+              Pick from Photos
             </button>
             <button
               className="profile-photo-sheet-option"
@@ -172,7 +172,7 @@ export function SignupProfileScreen() {
                 setIsPhotoSheetOpen(false);
               }}
             >
-              기본 프로필 사용
+              Use Default Profile
             </button>
           </div>
         ) : null}

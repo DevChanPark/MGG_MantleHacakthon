@@ -665,6 +665,20 @@ test("gAon feed flow supports create, participation spend, comments, evaluation,
   assert.equal(myLikes.statusCode, 200);
   assert.equal(myLikes.body.likes.some((item) => item.kind === "BATTLE_LIKE" && item.battleId === created.body.battle.id), true);
   assert.equal(myLikes.body.likes.some((item) => item.kind === "ENTRY_LIKE" && item.entryId === comment.body.comment.id), true);
+
+  const myWins = await app.inject({ method: "GET", url: "/api/users/me/wins", headers });
+  assert.equal(myWins.statusCode, 200);
+  assert.equal(myWins.body.wins.length, 1);
+  assert.equal(myWins.body.wins[0].battle.id, created.body.battle.id);
+  assert.equal(myWins.body.wins[0].winningComment.content, "My judged feed comment.");
+  assert.equal(myWins.body.wins[0].result.mantleVerification.battleType, BattleType.TEXT_OPEN);
+  assert.ok(myWins.body.wins[0].result.mantleVerification.contentHash);
+  assert.ok(myWins.body.wins[0].result.mantleVerification.entriesRoot);
+  assert.ok(myWins.body.wins[0].result.mantleVerification.rulesHash);
+  assert.ok(myWins.body.wins[0].result.mantleVerification.winnerHash);
+  assert.ok(myWins.body.wins[0].result.mantleVerification.aiVerdictHash);
+  assert.ok(myWins.body.wins[0].result.mantleVerification.mantleTx);
+  assert.ok(myWins.body.wins[0].result.mantleVerification.explorerUrl);
 });
 
 test("OPTION feed rewards can be claimed by participants on the winning option", async () => {

@@ -14,9 +14,9 @@ interface BoardSelectSheetProps {
 }
 
 const BOARD_OPTIONS: BoardSelectOption[] = [
-  { label: '오픈 답변형', value: 'TEXT_OPEN' },
-  { label: '선택지형', value: 'OPTION' },
-  { label: '이미지형', value: 'IMAGE_CAPTION' },
+  { label: 'Open Mic', value: 'TEXT_OPEN' },
+  { label: 'Side Pick', value: 'OPTION' },
+  { label: 'Caption Lab', value: 'IMAGE_CAPTION' },
 ];
 
 export function BoardSelectSheet({ isOpen, onClose, onSelect }: BoardSelectSheetProps) {
@@ -39,11 +39,11 @@ export function BoardSelectSheet({ isOpen, onClose, onSelect }: BoardSelectSheet
 
   return (
     <div className="board-sheet-layer" role="presentation">
-      <button className="board-sheet-backdrop" type="button" aria-label="게시판 선택 닫기" onClick={onClose} />
+      <button className="board-sheet-backdrop" type="button" aria-label="Close battle type picker" onClick={onClose} />
       <section className="board-select-sheet" role="dialog" aria-modal="true" aria-labelledby="board-sheet-title">
         <div className="board-sheet-handle" aria-hidden="true" />
         <h2 id="board-sheet-title" className="board-sheet-title">
-          게시판 선택
+          Choose Your Chaos
         </h2>
         <div className="board-sheet-options">
           {BOARD_OPTIONS.map((option) => (

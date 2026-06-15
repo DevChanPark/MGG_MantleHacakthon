@@ -20,7 +20,7 @@ export function CommentThread({
   variant = 'preview',
 }: CommentThreadProps) {
   if (comments.length === 0) {
-    return <p className="comment-empty">아직 댓글이 없습니다. 참여 후 첫 댓글을 남겨보세요.</p>;
+    return <p className="comment-empty">No replies yet. Be the first bad influence.</p>;
   }
 
   return (
@@ -84,7 +84,7 @@ function CommentNode({
           <p>{comment.text}</p>
           {canReply && (
             <button className="comment-reply-toggle" type="button" onClick={() => setIsReplyOpen((value) => !value)}>
-              답글 달기
+              Reply
             </button>
           )}
         </div>
@@ -92,7 +92,7 @@ function CommentNode({
           className={`comment-like-button${isCommentLiked ? ' is-liked' : ''}`}
           type="button"
           aria-pressed={isCommentLiked}
-          aria-label={`${comment.author} 댓글 좋아요`}
+          aria-label={`${comment.author} comment like`}
           onClick={() => onCommentLike(comment.id)}
         >
           <HeartIcon className="comment-heart-img heart-action-icon" />
@@ -105,10 +105,10 @@ function CommentNode({
           <input
             value={replyInput}
             onChange={(event) => setReplyInput(event.target.value)}
-            placeholder="답글을 입력하세요"
-            aria-label={`${comment.author}에게 답글 입력`}
+            placeholder="Write a reply"
+            aria-label={`Reply to ${comment.author}`}
           />
-          <button type="submit">등록</button>
+          <button type="submit">Send</button>
         </form>
       )}
 

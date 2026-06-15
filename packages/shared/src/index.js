@@ -89,7 +89,16 @@ export const MANTLE_TESTNET_CHAIN_ID = 5003;
 export const MNT_SYMBOL = "MNT";
 export const MNT_DECIMALS = 18;
 export const DEFAULT_CREDIT_EXCHANGE_CONFIRMATIONS = 1;
-export const RESERVED_NICKNAMES = Object.freeze(["무기기", "mgg", "관리자", "admin"]);
+export const RESERVED_NICKNAMES = Object.freeze([
+  "mugigi",
+  "mgg",
+  "admin",
+  "moderator",
+  "official",
+  "support",
+  "무기기",
+  "관리자"
+]);
 export const CREDIT_EXCHANGE_ENV_KEYS = Object.freeze([
   "MANTLE_CREDIT_EXCHANGE_ENABLED",
   "MANTLE_CREDIT_TREASURY_ADDRESS",

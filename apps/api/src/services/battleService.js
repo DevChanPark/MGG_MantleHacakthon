@@ -81,6 +81,7 @@ export function createBattleService({ repository, aiJudgeService, settlementServ
     exchangeCredits: (input, userId) => exchangeCredits(repository, input, userId, config),
     listMyBattles: (userId) => listMyBattles(repository, userId),
     listMyComments: (userId) => listMyComments(repository, userId),
+    listMyWins: (userId) => listMyWins(repository, userId),
     listMyLikes: (userId) => listMyLikes(repository, userId)
   };
 }
@@ -279,8 +280,8 @@ async function participateInBattle(repository, battleId, input, userId) {
   await repository.createNotification?.({
     userId: battle.createdByUserId,
     battleId,
-    title: `${user.displayName || user.nickname || "Someone"}님이 참여했습니다.`,
-    body: "내 게시글에 새 참여자가 생겼습니다."
+    title: `${user.displayName || user.nickname || "Someone"} entered your battle.`,
+    body: "A fresh argument has arrived. May the loudest nonsense win."
   });
 
   return {
@@ -436,8 +437,8 @@ async function claimFeedReward(repository, battleId, userId) {
   await repository.createNotification?.({
     userId: user.id,
     battleId,
-    title: "크레딧이 지급되었습니다!",
-    body: `우승 보상 ${DEFAULT_REWARD_CREDITS}크레딧이 지급되었습니다.`
+    title: "Credits landed!",
+    body: `Winner loot: ${DEFAULT_REWARD_CREDITS} demo credits just hit your account.`
   });
 
   return {
@@ -795,6 +796,79 @@ async function listMyLikes(repository, userId) {
   ].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
+async function listMyWins(repository, userId) {
+  const user = await repository.getOrCreateUser(userId);
+  const battles = await repository.listBattles();
+  const wins = [];
+
+  for (const battle of battles) {
+    let result;
+    try {
+      result = await getResult(repository, battle.id);
+    } catch (error) {
+      if (error.code === "RESULT_NOT_READY" || error.code === "BATTLE_NOT_FOUND") {
+        continue;
+      }
+      throw error;
+    }
+
+    const win = await buildUserWinDto(repository, result, user.id);
+    if (win) {
+      wins.push(win);
+    }
+  }
+
+  return wins.sort((a, b) => {
+    const left = a.battle?.settledAt || a.battle?.createdAt || "";
+    const right = b.battle?.settledAt || b.battle?.createdAt || "";
+    return right.localeCompare(left);
+  });
+}
+
+async function buildUserWinDto(repository, result, userId) {
+  const battle = result.battle;
+  const verdict = result.verdict ?? {};
+  const entries = result.entries ?? [];
+  const participation = await repository.getParticipation?.(battle.id, userId);
+  let winningEntry = null;
+
+  if (verdict.winnerType === "OPTION" && verdict.winnerOptionId) {
+    if (!participation || participation.optionId !== verdict.winnerOptionId) {
+      return null;
+    }
+    winningEntry =
+      entries.find((entry) => entry.id === participation.entryId) ??
+      entries.find((entry) => entry.submittedByUserId === userId && entry.optionId === verdict.winnerOptionId) ??
+      entries.find((entry) => entry.optionId === verdict.winnerOptionId) ??
+      null;
+  } else {
+    winningEntry = verdict.winnerEntryId
+      ? entries.find((entry) => entry.id === verdict.winnerEntryId)
+      : null;
+    if (!winningEntry || winningEntry.submittedByUserId !== userId) {
+      return null;
+    }
+  }
+
+  return {
+    battle: await toFeedBattle(repository, await getBattleOrThrow(repository, battle.id), userId),
+    result: {
+      ...toFeedResult(result),
+      mantleVerification: buildMantleVerification(result)
+    },
+    winningComment: winningEntry
+      ? {
+          id: winningEntry.id,
+          battleId: winningEntry.battleId,
+          authorUserId: winningEntry.submittedByUserId,
+          content: winningEntry.content,
+          optionId: winningEntry.optionId || null,
+          createdAt: winningEntry.createdAt
+        }
+      : null
+  };
+}
+
 async function closeBattle(repository, battleId) {
   const battle = await getBattleOrThrow(repository, battleId);
   const entries = (await repository.listEntriesByBattle(battleId)).filter((entry) => !entry.parentEntryId);
@@ -1108,8 +1182,8 @@ async function toFeedBattle(repository, battle, userId) {
   return {
     id: battle.id,
     type: battle.battleType,
-    author: battle.isAnonymous ? "익명 우기미" : battle.createdByUserId,
-    title: battle.title || battle.prompt || "새로운 우기기",
+    author: battle.isAnonymous ? "Anonymous Chaos Lawyer" : battle.createdByUserId,
+    title: battle.title || battle.prompt || "Fresh Argument",
     description: battle.description || battle.prompt || "",
     likeCount: stats.battleLikeCount ?? 0,
     status: getFeedStatus(battle),
@@ -1194,12 +1268,12 @@ function toFeedResult(result) {
     winningOptionId: winnerOption?.id ?? null,
     winnerName:
       verdict.winnerType === "OPTION"
-        ? winnerOption?.text ?? "우승 진영"
-        : winnerEntry?.submittedByUserId ?? winnerOption?.text ?? "우승자",
+        ? winnerOption?.text ?? "Winning Side"
+        : winnerEntry?.submittedByUserId ?? winnerOption?.text ?? "Winner",
     winnerDetail:
       verdict.winnerType === "OPTION"
         ? winnerOption
-          ? `${winnerOption.text} 진영`
+          ? `${winnerOption.text} side`
           : verdict.verdictText ?? ""
         : winnerEntry?.content ?? verdict.verdictText ?? "",
     participantCount,
@@ -1207,7 +1281,25 @@ function toFeedResult(result) {
     aiSummary: verdict.shareSummary ?? verdict.verdictText ?? "",
     verdictLines: [verdict.verdictTitle, verdict.verdictText, verdict.shareSummary].filter(Boolean),
     optionStats,
-    optionResults
+    optionResults,
+    mantleVerification: buildMantleVerification(result)
+  };
+}
+
+function buildMantleVerification(result) {
+  const hashPackage = result.hashPackage ?? {};
+  const settlement = result.settlement ?? {};
+
+  return {
+    battleId: result.battle?.id ?? "",
+    battleType: result.battle?.battleType ?? "",
+    contentHash: hashPackage.contentHash ?? settlement.contentHash ?? null,
+    entriesRoot: hashPackage.entriesRoot ?? settlement.entriesRoot ?? null,
+    rulesHash: hashPackage.rulesHash ?? settlement.rulesHash ?? null,
+    winnerHash: hashPackage.winnerHash ?? settlement.winnerHash ?? null,
+    aiVerdictHash: hashPackage.verdictHash ?? settlement.verdictHash ?? null,
+    mantleTx: settlement.txHash ?? null,
+    explorerUrl: settlement.explorerUrl ?? null
   };
 }
 

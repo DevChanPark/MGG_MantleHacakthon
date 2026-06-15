@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import mggLogo from '../../assets/brand/mgg-logo.png';
 import commentFilledIcon from '../../assets/profile-icons/comment-filled.png';
@@ -9,27 +9,54 @@ import settingIcon from '../../assets/profile-icons/setting.png';
 import stackIcon from '../../assets/profile-icons/stack.png';
 import profileAvatar from '../../assets/profile-avatar.png';
 import { ShareIcon } from '../components/icons/ShareIcon';
+import {
+  getWonBattlesForCurrentUser,
+  initialMockBattles,
+  MOCK_CURRENT_USER,
+  type BattleType,
+  type FeedBattle,
+  type MantleVerification,
+} from '../mocks/battles';
 
-const profilePosts = [
+const profilePosts: Array<{
+  type: BattleType;
+  author: string;
+  title: string;
+  body: string[];
+  comments: Array<{ author: string; text: string; likes: number; liked: boolean }>;
+}> = [
   {
-    author: '우김장인',
-    title: '지구가 평평한 이유',
-    body: ['반박은 받습니다. 근데 어차피 제가 이김', 'AI도 제편임. 한 줄이면 충분한데 길게 쓰는 이유는', '길게 쓰면 더 맞는 말 같아서'],
+    type: 'TEXT_OPEN',
+    author: 'Bad-Take Baron',
+    title: 'Why Earth Is Obviously a Pancake',
+    body: ['Counterarguments accepted, emotionally ignored.', 'AI is on my side because I said please.', 'Longer paragraphs look more correct. Science-ish.'],
     comments: [
-      { author: '둥근말이 김밥', text: '지구가 둥글면 제 통장은 왜 평평한가요?', likes: 4, liked: true },
-      { author: '평평주의자', text: '바다가 안쏟아지는 건 지구가 거대한 쟁반이라 그럼', likes: 2, liked: false },
+      { author: 'Wallet Flatliner', text: 'If Earth is round, explain my flat bank account.', likes: 4, liked: true },
+      { author: 'Tray Truther', text: 'The oceans stay put because Earth is a giant serving tray.', likes: 2, liked: false },
     ],
   },
   {
-    author: '새벽감성러',
-    title: '과제 마감이 새벽에만 존재하는 이유',
-    body: ['낮에는 존재감 없다가 밤만 되면 갑자기 세계관 최강자처럼 나타남'],
+    type: 'TEXT_OPEN',
+    author: '2AM Scholar',
+    title: 'Why Deadlines Only Exist After Midnight',
+    body: ['They hide all day, then arrive wearing a final-boss health bar.'],
     comments: [],
   },
 ];
 
-type ProfileContentTab = 'posts' | 'comments' | 'likes';
-type ProfileBattleFilter = 'open' | 'option' | 'image';
+type ProfileContentTab = 'posts' | 'comments' | 'wins';
+
+const PROFILE_BATTLE_FILTERS: Array<{ label: string; value: BattleType }> = [
+  { label: 'Open Mic', value: 'TEXT_OPEN' },
+  { label: 'Side Pick', value: 'OPTION' },
+  { label: 'Caption Lab', value: 'IMAGE_CAPTION' },
+];
+
+const battleTypeLabels: Record<BattleType, string> = {
+  TEXT_OPEN: 'Open Mic',
+  OPTION: 'Side Pick',
+  IMAGE_CAPTION: 'Caption Lab',
+};
 
 export type CreditPackage = {
   credits: number;
@@ -48,21 +75,57 @@ export const creditPackages: CreditPackage[] = [
 interface ProfileScreenProps {
   credits?: number;
   walletAddress?: string;
+  battles?: FeedBattle[];
   onAddCredits?: (amount: number) => void;
 }
 
-export function ProfileScreen({ credits = 30, walletAddress = '0x12ab...89ef', onAddCredits }: ProfileScreenProps) {
+export function ProfileScreen({
+  credits = 30,
+  walletAddress = '0x12ab...89ef',
+  battles = initialMockBattles,
+  onAddCredits,
+}: ProfileScreenProps) {
   const [activeContentTab, setActiveContentTab] = useState<ProfileContentTab>('posts');
-  const [activeBattleFilter, setActiveBattleFilter] = useState<ProfileBattleFilter>('open');
+  const [activeBattleFilter, setActiveBattleFilter] = useState<BattleType>('TEXT_OPEN');
   const [currentCredits, setCurrentCredits] = useState(credits);
   const [isCreditPanelOpen, setIsCreditPanelOpen] = useState(false);
   const [isCreditInfoOpen, setIsCreditInfoOpen] = useState(false);
   const [selectedCreditPackage, setSelectedCreditPackage] = useState<CreditPackage | null>(null);
   const [completedCreditTotal, setCompletedCreditTotal] = useState<number | null>(null);
+  const [selectedVerification, setSelectedVerification] = useState<{
+    battle: FeedBattle;
+    verification: MantleVerification;
+  } | null>(null);
 
   useEffect(() => {
     setCurrentCredits(credits);
   }, [credits]);
+
+  const profileComments = useMemo(
+    () =>
+      profilePosts.flatMap((post) =>
+        post.comments.map((comment) => ({
+          ...comment,
+          battleTitle: post.title,
+        })),
+      ),
+    [],
+  );
+
+  const wonBattles = useMemo(
+    () => getWonBattlesForCurrentUser(battles, MOCK_CURRENT_USER.id),
+    [battles],
+  );
+
+  const filteredPosts = useMemo(
+    () => profilePosts.filter((post) => post.type === activeBattleFilter),
+    [activeBattleFilter],
+  );
+
+  const filteredWonBattles = useMemo(
+    () => wonBattles.filter(({ battle }) => battle.type === activeBattleFilter),
+    [activeBattleFilter, wonBattles],
+  );
 
   const closeCreditPanel = () => {
     setIsCreditPanelOpen(false);
@@ -78,41 +141,164 @@ export function ProfileScreen({ credits = 30, walletAddress = '0x12ab...89ef', o
     setCompletedCreditTotal(nextCreditTotal);
   };
 
+  const openBattleDetail = (battleId: string) => {
+    window.location.hash = `battle/${battleId}`;
+  };
+
+  const renderPosts = () => (
+    <section className="profile-post-list" aria-label="My battles">
+      {filteredPosts.length > 0 ? (
+        filteredPosts.map((post, index) => (
+          <article className="profile-post-card" key={post.title}>
+            <div className="profile-post-avatar" aria-hidden="true" />
+            <div className="profile-post-content">
+              <p className="profile-post-author">{post.author}</p>
+              <h2>{post.title}</h2>
+              {post.body.map((line) => (
+                <p className="profile-post-body" key={line}>{line}</p>
+              ))}
+            </div>
+
+            <div className="profile-post-actions" aria-label="Battle reactions">
+              <span><img className="profile-action-icon profile-action-comment" src={commentFilledIcon} alt="" aria-hidden="true" /> Replies {post.comments.length}</span>
+              <span><img className="profile-action-icon profile-action-heart" src={heartFilledIcon} alt="" aria-hidden="true" /> Applause 24</span>
+              <span><ShareIcon className="profile-action-icon profile-action-share share-action-icon" /> Share</span>
+            </div>
+
+            {index === 0 && post.comments.length > 0 ? (
+              <div className="profile-comments-box">
+                <p className="profile-comments-title">Replies {post.comments.length}</p>
+                {post.comments.map((comment) => (
+                  <div className="profile-comment-row" key={comment.author}>
+                    <div className="profile-comment-avatar" aria-hidden="true" />
+                    <div className="profile-comment-copy">
+                      <p>{comment.author}</p>
+                      <span>{comment.text}</span>
+                    </div>
+                    <div className="profile-comment-like">
+                      <img
+                        className="profile-comment-like-icon"
+                        src={comment.liked ? heartFilledIcon : heartOutlineIcon}
+                        alt=""
+                        aria-hidden="true"
+                      />
+                      <span>{comment.likes}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </article>
+        ))
+      ) : (
+        <p className="profile-empty-state">No posts in this lane yet.</p>
+      )}
+    </section>
+  );
+
+  const renderComments = () => (
+    <section className="profile-post-list" aria-label="My replies">
+      {profileComments.map((comment) => (
+        <article className="profile-comment-card" key={`${comment.battleTitle}-${comment.author}`}>
+          <p className="profile-comments-title">{comment.battleTitle}</p>
+          <div className="profile-comment-row">
+            <div className="profile-comment-avatar" aria-hidden="true" />
+            <div className="profile-comment-copy">
+              <p>{comment.author}</p>
+              <span>{comment.text}</span>
+            </div>
+            <div className="profile-comment-like">
+              <img
+                className="profile-comment-like-icon"
+                src={comment.liked ? heartFilledIcon : heartOutlineIcon}
+                alt=""
+                aria-hidden="true"
+              />
+              <span>{comment.likes}</span>
+            </div>
+          </div>
+        </article>
+      ))}
+    </section>
+  );
+
+  const renderWins = () => (
+    <section className="profile-post-list" aria-label="My won games">
+      {filteredWonBattles.length > 0 ? (
+        filteredWonBattles.map(({ battle, result }) => {
+          const winningComment = battle.comments.find((comment) => comment.id === result.winnerCommentId);
+          const verification = result.mantleVerification;
+
+          return (
+            <article className="profile-post-card profile-win-card" key={battle.id}>
+              <div className="profile-post-avatar" aria-hidden="true" />
+              <div className="profile-post-content">
+                <div className="profile-win-kicker">
+                  <span>Won</span>
+                  <span>{battleTypeLabels[battle.type]}</span>
+                </div>
+                <p className="profile-post-author">{battle.author}</p>
+                <h2>{battle.title}</h2>
+                <p className="profile-post-body">{battle.description}</p>
+              </div>
+
+              <div className="profile-winning-comment-box">
+                <span>My Winning Comment</span>
+                <p>{winningComment?.text ?? result.winnerDetail}</p>
+              </div>
+
+              <div className="profile-win-actions">
+                <button type="button" onClick={() => openBattleDetail(battle.id)}>
+                  View All Replies
+                </button>
+                <button
+                  className="profile-verify-button"
+                  type="button"
+                  onClick={() => setSelectedVerification({ battle, verification })}
+                >
+                  Mantle Verification
+                </button>
+              </div>
+            </article>
+          );
+        })
+      ) : (
+        <p className="profile-empty-state">No trophies in this lane yet. Suspicious, but recoverable.</p>
+      )}
+    </section>
+  );
+
   return (
     <main className="profile-feed" aria-label="MGG profile page">
       <section className="profile-frame">
         <header className="profile-header">
           <img className="app-logo-small" src={mggLogo} alt="MGG" />
-          <button className="profile-settings-button" type="button" aria-label="설정">
+          <button className="profile-settings-button" type="button" aria-label="Settings">
             <img className="profile-settings-icon" src={settingIcon} alt="" aria-hidden="true" />
           </button>
         </header>
 
         <div className="profile-scroll">
-          <section className="profile-summary" aria-label="프로필 요약">
+          <section className="profile-summary" aria-label="Profile summary">
             <img className="profile-avatar" src={profileAvatar} alt="" />
             <div className="profile-copy">
-              <h1>우기기 장인</h1>
-              <p>
-                말 안 되는 주장도 끝까지 밀어붙이는 중
-                <br />
-                ㅋㅋ 영크크영크크영크크
-              </p>
+              <h1>Bad-Take Artist</h1>
+              <p>Bad takes, clean receipts. Wallet-ready nonsense.</p>
             </div>
           </section>
 
-          <button className="profile-edit-button" type="button">프로필 수정</button>
+          <button className="profile-edit-button" type="button">Edit Profile</button>
 
           <button className="profile-credit-row" type="button" onClick={() => setIsCreditPanelOpen(true)}>
-            <span>내 크레딧 <strong>{currentCredits}개</strong></span>
-            <span>충전하기</span>
+            <span>My Demo Credits <strong>{currentCredits}</strong></span>
+            <span>Refill</span>
           </button>
 
-          <nav className="profile-content-tabs" aria-label="프로필 콘텐츠 분류">
+          <nav className="profile-content-tabs" aria-label="Profile content tabs">
             <button
               className={activeContentTab === 'posts' ? 'is-active' : ''}
               type="button"
-              aria-label="내가 만든 글"
+              aria-label="My battles"
               aria-pressed={activeContentTab === 'posts'}
               onClick={() => setActiveContentTab('posts')}
             >
@@ -121,7 +307,7 @@ export function ProfileScreen({ credits = 30, walletAddress = '0x12ab...89ef', o
             <button
               className={activeContentTab === 'comments' ? 'is-active' : ''}
               type="button"
-              aria-label="댓글"
+              aria-label="Replies"
               aria-pressed={activeContentTab === 'comments'}
               onClick={() => setActiveContentTab('comments')}
             >
@@ -133,92 +319,33 @@ export function ProfileScreen({ credits = 30, walletAddress = '0x12ab...89ef', o
               />
             </button>
             <button
-              className={activeContentTab === 'likes' ? 'is-active' : ''}
+              className={activeContentTab === 'wins' ? 'is-active' : ''}
               type="button"
-              aria-label="좋아요"
-              aria-pressed={activeContentTab === 'likes'}
-              onClick={() => setActiveContentTab('likes')}
+              aria-label="Won games"
+              aria-pressed={activeContentTab === 'wins'}
+              onClick={() => setActiveContentTab('wins')}
             >
-              <img
-                className="profile-tab-icon-img profile-tab-heart-img"
-                src={activeContentTab === 'likes' ? heartFilledIcon : heartOutlineIcon}
-                alt=""
-                aria-hidden="true"
-              />
+              <span className="profile-tab-word">WIN</span>
             </button>
           </nav>
 
-          <div className="profile-type-filters" aria-label="배틀 유형 필터">
-            <button
-              className={activeBattleFilter === 'open' ? 'is-active' : ''}
-              type="button"
-              aria-pressed={activeBattleFilter === 'open'}
-              onClick={() => setActiveBattleFilter('open')}
-            >
-              오픈 답변형
-            </button>
-            <button
-              className={activeBattleFilter === 'option' ? 'is-active' : ''}
-              type="button"
-              aria-pressed={activeBattleFilter === 'option'}
-              onClick={() => setActiveBattleFilter('option')}
-            >
-              선택지형
-            </button>
-            <button
-              className={activeBattleFilter === 'image' ? 'is-active' : ''}
-              type="button"
-              aria-pressed={activeBattleFilter === 'image'}
-              onClick={() => setActiveBattleFilter('image')}
-            >
-              이미지형
-            </button>
+          <div className="profile-type-filters" aria-label="Battle type filters">
+            {PROFILE_BATTLE_FILTERS.map((filter) => (
+              <button
+                className={activeBattleFilter === filter.value ? 'is-active' : ''}
+                type="button"
+                aria-pressed={activeBattleFilter === filter.value}
+                onClick={() => setActiveBattleFilter(filter.value)}
+                key={filter.value}
+              >
+                {filter.label}
+              </button>
+            ))}
           </div>
 
-          <section className="profile-post-list" aria-label="내 게시글">
-            {profilePosts.map((post, index) => (
-              <article className="profile-post-card" key={post.title}>
-                <div className="profile-post-avatar" aria-hidden="true" />
-                <div className="profile-post-content">
-                  <p className="profile-post-author">{post.author}</p>
-                  <h2>{post.title}</h2>
-                  {post.body.map((line) => (
-                    <p className="profile-post-body" key={line}>{line}</p>
-                  ))}
-                </div>
-
-                <div className="profile-post-actions" aria-label="게시글 반응">
-                  <span><img className="profile-action-icon profile-action-comment" src={commentFilledIcon} alt="" aria-hidden="true" /> 댓글 3</span>
-                  <span><img className="profile-action-icon profile-action-heart" src={heartFilledIcon} alt="" aria-hidden="true" /> 좋아요 24</span>
-                  <span><ShareIcon className="profile-action-icon profile-action-share share-action-icon" /> 공유하기</span>
-                </div>
-
-                {index === 0 ? (
-                  <div className="profile-comments-box">
-                    <p className="profile-comments-title">댓글 3</p>
-                    {post.comments.map((comment) => (
-                      <div className="profile-comment-row" key={comment.author}>
-                        <div className="profile-comment-avatar" aria-hidden="true" />
-                        <div className="profile-comment-copy">
-                          <p>{comment.author}</p>
-                          <span>{comment.text}</span>
-                        </div>
-                        <div className="profile-comment-like">
-                          <img
-                            className="profile-comment-like-icon"
-                            src={comment.liked ? heartFilledIcon : heartOutlineIcon}
-                            alt=""
-                            aria-hidden="true"
-                          />
-                          <span>{comment.likes}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : null}
-              </article>
-            ))}
-          </section>
+          {activeContentTab === 'posts' && renderPosts()}
+          {activeContentTab === 'comments' && renderComments()}
+          {activeContentTab === 'wins' && renderWins()}
         </div>
 
         <CreditChargePanel
@@ -241,24 +368,79 @@ export function ProfileScreen({ credits = 30, walletAddress = '0x12ab...89ef', o
           onClose={() => setCompletedCreditTotal(null)}
         />
 
-        <nav className="profile-bottom-nav" aria-label="하단 내비게이션">
-          <button type="button" aria-label="홈">
+        <MantleVerificationModal
+          verification={selectedVerification?.verification ?? null}
+          battleTitle={selectedVerification?.battle.title ?? ''}
+          onClose={() => setSelectedVerification(null)}
+        />
+
+        <nav className="profile-bottom-nav" aria-label="Bottom navigation">
+          <button type="button" aria-label="Home">
             <svg aria-hidden="true" viewBox="0 0 24 24">
               <path d="M3 10.5 12 3l9 7.5V21h-6v-6H9v6H3V10.5Z" />
             </svg>
-            <span>홈</span>
+            <span>Home</span>
           </button>
-          <button className="profile-create-button" type="button" aria-label="새 배틀 만들기" />
-          <button type="button" aria-label="프로필">
+          <button className="profile-create-button" type="button" aria-label="Create new battle" />
+          <button type="button" aria-label="Profile">
             <svg aria-hidden="true" viewBox="0 0 24 24">
               <circle cx="12" cy="7" r="4" />
               <path d="M4 21a8 8 0 0 1 16 0H4Z" />
             </svg>
-            <span>프로필</span>
+            <span>Profile</span>
           </button>
         </nav>
       </section>
     </main>
+  );
+}
+
+type MantleVerificationModalProps = {
+  verification: MantleVerification | null;
+  battleTitle: string;
+  onClose: () => void;
+};
+
+function MantleVerificationModal({ verification, battleTitle, onClose }: MantleVerificationModalProps) {
+  if (!verification) {
+    return null;
+  }
+
+  const rows = [
+    ['Battle ID', verification.battleId],
+    ['Battle Type', verification.battleType],
+    ['Content Hash', verification.contentHash],
+    ['Entries Root', verification.entriesRoot],
+    ['Rules Hash', verification.rulesHash],
+    ['Winner Hash', verification.winnerHash],
+    ['AI Verdict Hash', verification.aiVerdictHash],
+    ['Mantle Tx', verification.mantleTx],
+  ];
+
+  return (
+    <div className="mantle-verify-overlay" role="presentation">
+      <section className="mantle-verify-modal" role="dialog" aria-modal="true" aria-labelledby="mantle-verify-title">
+        <button className="mantle-verify-close" type="button" aria-label="Close Mantle verification" onClick={onClose}>
+          X
+        </button>
+        <p className="mantle-verify-eyebrow">Verified on Mantle</p>
+        <h2 id="mantle-verify-title">{battleTitle}</h2>
+        <div className="mantle-verify-box">
+          {rows.map(([label, value]) => (
+            <div className="mantle-verify-row" key={label}>
+              <span>{label}</span>
+              <code>{value}</code>
+            </div>
+          ))}
+        </div>
+        <p className="mantle-verify-note">
+          This receipt lets users check that the AI verdict was not casually rewritten by the server after the fight.
+        </p>
+        <a className="mantle-verify-link" href={verification.explorerUrl} target="_blank" rel="noreferrer">
+          View on Mantle Explorer
+        </a>
+      </section>
+    </div>
   );
 }
 
@@ -294,29 +476,29 @@ export function CreditChargePanel({
   return (
     <section className={`credit-charge-panel${isOpen ? ' is-open' : ''}`} aria-hidden={!isOpen}>
       <div className="credit-charge-header">
-        <h2>크레딧 충전</h2>
-        <button className="credit-info-button" type="button" onClick={onToggleInfo}>크레딧이란?</button>
-        <button className="credit-panel-close" type="button" aria-label="크레딧 충전 닫기" onClick={onClose}>×</button>
+        <h2>Refill Demo Credits</h2>
+        <button className="credit-info-button" type="button" onClick={onToggleInfo}>What are these?</button>
+        <button className="credit-panel-close" type="button" aria-label="Close demo credit refill" onClick={onClose}>X</button>
       </div>
 
       {isInfoOpen ? (
-        <div className="credit-info-popover" role="dialog" aria-label="크레딧 설명">
-          <button type="button" aria-label="크레딧 설명 닫기" onClick={onCloseInfo}>×</button>
+        <div className="credit-info-popover" role="dialog" aria-label="Demo credit explanation">
+          <button type="button" aria-label="Close demo credit explanation" onClick={onCloseInfo}>X</button>
           <p>
-            MGG 참여를 위해 필요한
+            Pretend fuel for
             <br />
-            <strong>전용 결제수단</strong>입니다.
+            <strong>very real arguments</strong>.
             <br />
-            크레딧을 미리 구매하시면 복잡한
+            No financial advice,
             <br />
-            결제 과정이 간단해집니다.
+            only emotional invoices.
           </p>
         </div>
       ) : null}
 
-      <div className="credit-owned-box">현재 보유한 크레딧 <strong>{currentCredits}개</strong></div>
+      <div className="credit-owned-box">Current stash <strong>{currentCredits}</strong></div>
 
-      <h3>충전 패키지</h3>
+      <h3>Refill Packs</h3>
       <div className="credit-package-list">
         {packages.map((creditPackage) => (
           <button
@@ -325,7 +507,7 @@ export function CreditChargePanel({
             key={creditPackage.credits}
             onClick={() => onSelectPackage(creditPackage)}
           >
-            <span>크레딧 <strong>{creditPackage.credits}개</strong></span>
+            <span>Demo credits <strong>{creditPackage.credits}</strong></span>
             <strong>{creditPackage.price} MNT</strong>
           </button>
         ))}
@@ -335,21 +517,21 @@ export function CreditChargePanel({
         {selectedPackage ? (
           <>
             <div className="credit-payment-header">
-              <h3>결제하기</h3>
-              <button type="button" aria-label="결제창 닫기" onClick={onClosePayment}>×</button>
+              <h3>Checkout-ish</h3>
+              <button type="button" aria-label="Close checkout-ish sheet" onClick={onClosePayment}>X</button>
             </div>
             <div className="credit-payment-summary">
               <div>
-                <span>크레딧 {selectedPackage.credits}개</span>
+                <span>Demo credits {selectedPackage.credits}</span>
                 <strong>{selectedPackage.price} MNT</strong>
               </div>
               <div>
-                <span>지갑주소</span>
+                <span>Wallet</span>
                 <span>{walletAddress}</span>
               </div>
             </div>
             <button className="credit-approve-button" type="button" onClick={() => onApprovePayment(selectedPackage)}>
-              승인 요청하기
+              Ask Wallet Nicely
             </button>
           </>
         ) : null}
@@ -366,11 +548,11 @@ type CreditPurchaseCompleteModalProps = {
 export function CreditPurchaseCompleteModal({ creditTotal, onClose }: CreditPurchaseCompleteModalProps) {
   return (
     <div className={`credit-complete-overlay${creditTotal !== null ? ' is-open' : ''}`} aria-hidden={creditTotal === null}>
-      <section className="credit-complete-modal" role="dialog" aria-modal="true" aria-label="크레딧 구매 완료">
-        <button className="credit-complete-close" type="button" aria-label="구매 완료 팝업 닫기" onClick={onClose}>×</button>
-        <h2>크레딧 구매가 완료되었습니다!</h2>
-        <p>현재 보유한 크레딧 <strong>{creditTotal ?? 0}개</strong></p>
-        <button className="credit-complete-confirm" type="button" onClick={onClose}>확인</button>
+      <section className="credit-complete-modal" role="dialog" aria-modal="true" aria-label="Demo credit refill complete">
+        <button className="credit-complete-close" type="button" aria-label="Close refill complete popup" onClick={onClose}>X</button>
+        <h2>Demo credits refilled!</h2>
+        <p>Current stash <strong>{creditTotal ?? 0}</strong></p>
+        <button className="credit-complete-confirm" type="button" onClick={onClose}>Nice</button>
       </section>
     </div>
   );

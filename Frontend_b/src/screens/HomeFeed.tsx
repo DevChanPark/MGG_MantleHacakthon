@@ -5,15 +5,15 @@ import type { BattleType, FeedBattle } from '../mocks/battles';
 type SortType = 'popular' | 'recommended' | 'latest';
 
 const FILTERS: Array<{ label: string; value: BattleType }> = [
-  { label: '오픈 답변형', value: 'TEXT_OPEN' },
-  { label: '선택지형', value: 'OPTION' },
-  { label: '이미지형', value: 'IMAGE_CAPTION' },
+  { label: 'Open Mic', value: 'TEXT_OPEN' },
+  { label: 'Side Pick', value: 'OPTION' },
+  { label: 'Caption Lab', value: 'IMAGE_CAPTION' },
 ];
 
 const SORT_OPTIONS: Array<{ label: string; value: SortType }> = [
-  { label: '인기순', value: 'popular' },
-  { label: 'MGG 추천순', value: 'recommended' },
-  { label: '최신순', value: 'latest' },
+  { label: 'Popular', value: 'popular' },
+  { label: 'MGG Pick', value: 'recommended' },
+  { label: 'Newest', value: 'latest' },
 ];
 
 interface HomeFeedProps {
@@ -110,7 +110,7 @@ export function HomeFeed({
     });
   }, [activeFilter, battles, searchTerm, selectedSort]);
 
-  const selectedSortLabel = SORT_OPTIONS.find((option) => option.value === selectedSort)?.label ?? '정렬 기준';
+  const selectedSortLabel = SORT_OPTIONS.find((option) => option.value === selectedSort)?.label ?? 'Sort order';
 
   const handleFilterClick = (battleType: BattleType) => {
     onFilterChange(battleType);
@@ -119,7 +119,7 @@ export function HomeFeed({
 
   return (
     <main className="home-feed">
-      <section className="home-filters" aria-label="배틀 유형 필터">
+      <section className="home-filters" aria-label="Battle type filters">
         <div className="filter-group">
           {FILTERS.map((filter) => (
             <button
@@ -141,10 +141,10 @@ export function HomeFeed({
             aria-expanded={isSortOpen}
             onClick={() => setIsSortOpen((isOpen) => !isOpen)}
           >
-            {selectedSortLabel} ▼
+            {selectedSortLabel} v
           </button>
           {isSortOpen && (
-            <div className="sort-menu" role="menu" aria-label="정렬 기준">
+            <div className="sort-menu" role="menu" aria-label="Sort order">
               {SORT_OPTIONS.map((option) => (
                 <button
                   key={option.value}
@@ -164,7 +164,7 @@ export function HomeFeed({
         </div>
       </section>
 
-      <section className="home-battles" aria-label="배틀 피드">
+      <section className="home-battles" aria-label="Battle feed">
         {filteredBattles.map((battle) => (
           <BattleCard
             key={battle.id}

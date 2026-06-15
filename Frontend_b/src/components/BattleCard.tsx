@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import commentIcon from '../../assets/action-icons/댓글아이콘3.png';
-import shareIcon from '../../assets/action-icons/공유하기 아이콘3.png';
+import commentIcon from '../../assets/action-icons/comment-icon.png';
+import shareIcon from '../../assets/action-icons/share-icon.png';
 import { HeartIcon } from './icons/HeartIcon';
 import { getMockBattleResult, type FeedBattle, type PreviewComment } from '../mocks/battles';
 
@@ -113,13 +113,13 @@ export function BattleCard({
           <div className="comment-avatar" aria-hidden="true" />
           <div className="comment-copy">
             <strong>
-              {isWinningComment && <span className="winner-crown" aria-label="우승자">👑</span>}
+              {isWinningComment && <span className="winner-crown" aria-label="Champion">WIN</span>}
               {comment.author}
             </strong>
             <p>{comment.text}</p>
             {canWriteComments && (
               <button className="comment-reply-button" type="button" onClick={() => handleReplyClick(comment.id)}>
-                답글
+                Reply
               </button>
             )}
           </div>
@@ -127,7 +127,7 @@ export function BattleCard({
             className={`comment-like-button${isCommentLiked ? ' is-liked' : ''}`}
             type="button"
             aria-pressed={isCommentLiked}
-          aria-label={`${comment.author} 댓글 좋아요`}
+          aria-label={`${comment.author} comment like`}
           onClick={() => onCommentLike(comment.id)}
         >
             <HeartIcon className="comment-heart-img heart-action-icon" />
@@ -151,7 +151,7 @@ export function BattleCard({
                     className={`comment-like-button${isReplyLiked ? ' is-liked' : ''}`}
                     type="button"
                     aria-pressed={isReplyLiked}
-                    aria-label={`${reply.author} 대댓글 좋아요`}
+                    aria-label={`${reply.author} reply like`}
                     onClick={() => onCommentLike(reply.id)}
                   >
                     <HeartIcon className="comment-heart-img heart-action-icon" />
@@ -168,10 +168,10 @@ export function BattleCard({
             <input
               value={replyInput}
               onChange={(event) => setReplyInput(event.target.value)}
-              placeholder="답글을 입력하세요"
-              aria-label="답글 입력"
+              placeholder="Write a reply"
+              aria-label="Reply input"
             />
-            <button type="submit">등록</button>
+            <button type="submit">Send</button>
           </form>
         )}
       </div>
@@ -193,23 +193,23 @@ export function BattleCard({
       <div className="battle-status-row">
         {isEvaluating && (
           <>
-            <span className="battle-status-chip">AI 평가 중</span>
-            <span className="battle-status-chip is-deadline">마감</span>
+            <span className="battle-status-chip">AI Thinking</span>
+            <span className="battle-status-chip is-deadline">Closed</span>
             <button className="battle-complete-button is-dev-action" type="button" onClick={(event) => stopAndRun(event, onCompleteEvaluation)}>
-              AI 평가 완료 처리
+              Verdict
             </button>
           </>
         )}
         {isCompleted && (
           <>
-            <span className="battle-status-chip is-complete">AI 평가 완료</span>
-            <span className="battle-status-chip is-deadline">마감</span>
+            <span className="battle-status-chip is-complete">AI Verdict Ready</span>
+            <span className="battle-status-chip is-deadline">Closed</span>
             <button className="battle-winner-button" type="button" onClick={(event) => stopAndRun(event, onOpenWinnerModal)}>
-              우승자 확인
+              Champion
             </button>
           </>
         )}
-        {isClosed && <span className="battle-status-chip is-closed">마감</span>}
+        {isClosed && <span className="battle-status-chip is-closed">Closed</span>}
       </div>
 
       <div className="battle-card-main">
@@ -217,11 +217,11 @@ export function BattleCard({
         <div className="battle-card-body">
           <p className="battle-card-author">{battle.author}</p>
           <h2 className="battle-card-title">{battle.title}</h2>
-          <p className="battle-card-deadline">마감 기한 {battle.deadline}</p>
+          <p className="battle-card-deadline">Ends {battle.deadline}</p>
           <p className="battle-card-description">{battle.description}</p>
 
           {battle.type === 'OPTION' && !shouldShowOptionRatio && safeOptions.length > 0 && (
-            <div className="battle-option-list" aria-label="선택지">
+            <div className="battle-option-list" aria-label="Choices">
               {safeOptions.map((option) => (
                 <button
                   className={`battle-option-pill${selectedOption === option ? ' is-selected' : ''}`}
@@ -238,7 +238,7 @@ export function BattleCard({
           )}
 
           {battle.type === 'OPTION' && shouldShowOptionRatio && optionStats && (
-            <div className="battle-result-options" aria-label="선택지별 비율">
+            <div className="battle-result-options" aria-label="Choice results">
               {optionStats.map((option) => (
                 <div
                   className={`battle-result-option${
@@ -260,19 +260,19 @@ export function BattleCard({
                   className="battle-image-button"
                   type="button"
                   onClick={(event) => stopAndRun(event, () => setPreviewImageUrl(battle.imageUrl ?? null))}
-                  aria-label="이미지 확대"
+                  aria-label="Zoom image"
                 >
                   <img className="battle-card-thumbnail" src={battle.imageUrl} alt="" />
                 </button>
               ) : (
-                <div className="battle-image-placeholder">이미지 준비중</div>
+                <div className="battle-image-placeholder">Image still warming up</div>
               )}
             </div>
           )}
         </div>
       </div>
 
-      <div className="battle-card-actions" aria-label="게시글 반응">
+      <div className="battle-card-actions" aria-label="Battle reactions">
         <button
           className="battle-card-action"
           type="button"
@@ -294,7 +294,7 @@ export function BattleCard({
           }
         >
           <img className="action-icon-img comment-icon-img" src={commentIcon} alt="" aria-hidden="true" />
-          댓글 {commentCount}
+          Replies {commentCount}
         </button>
         <button
           className={`battle-card-action like-action${isBattleLiked ? ' is-liked' : ''}`}
@@ -303,11 +303,11 @@ export function BattleCard({
           onClick={(event) => stopAndRun(event, onBattleLike)}
         >
           <HeartIcon className="action-icon-img heart-icon-img heart-action-icon" />
-          좋아요 {battle.likeCount}
+          Applause {battle.likeCount}
         </button>
         <button className="battle-card-share" type="button" onClick={(event) => stopAndRun(event, onShare)}>
           <img className="action-icon-img share-action-icon" src={shareIcon} alt="" aria-hidden="true" />
-          공유하기
+          Share
         </button>
       </div>
 
@@ -318,30 +318,30 @@ export function BattleCard({
           disabled={isParticipated}
           onClick={(event) => stopAndRun(event, onParticipationRequest)}
         >
-          {isParticipated ? '참여 완료' : '참여하기'}
+          {isParticipated ? "You're In" : 'Enter the Arena'}
         </button>
       )}
 
       {canViewComments ? (
         <div className="comment-preview" onClick={(event) => event.stopPropagation()}>
-          <p className="comment-preview-title">댓글 {commentCount}</p>
+          <p className="comment-preview-title">Replies {commentCount}</p>
 
           <div className={`comment-preview-list${hasManyComments ? ' is-scrollable' : ''}`}>
             {battle.comments.length > 0 ? (
               battle.comments.slice(0, 2).map(renderComment)
             ) : (
-              <p className="comment-empty">아직 댓글이 없습니다. 참여 후 첫 댓글을 남겨보세요.</p>
+              <p className="comment-empty">No replies yet. Be the first bad influence.</p>
             )}
           </div>
 
           {battle.comments.length > 2 && (
             <button className="comment-view-all-button" type="button" onClick={onOpenDetail}>
-              댓글 전체보기
+              View all replies
             </button>
           )}
 
           {!canWriteComments && (
-            <p className="comment-write-locked">참여 후 댓글을 작성할 수 있습니다.</p>
+            <p className="comment-write-locked">Enter the arena before dropping a comment.</p>
           )}
 
           {canWriteComments && isCommentComposerOpen && (
@@ -349,37 +349,37 @@ export function BattleCard({
               <input
                 value={commentInput}
                 onChange={(event) => setCommentInput(event.target.value)}
-                placeholder="댓글을 입력하세요"
-                aria-label="댓글 입력"
+                placeholder="Write a comment"
+                aria-label="Comment input"
               />
-              <button type="submit">등록</button>
+              <button type="submit">Send</button>
             </form>
           )}
         </div>
       ) : (
         <div className="comment-locked-message" onClick={(event) => event.stopPropagation()}>
-          참여 후 댓글을 작성할 수 있습니다.
+          Enter the arena before dropping a comment.
         </div>
       )}
 
       {isEvaluating && (
         <div className="ai-evaluating-box" role="status">
-          <strong>AI 평가 중</strong>
-          <p>AI가 댓글의 반응, 우기기 강도, 밈 잠재력을 mock 기준으로 채점하고 있습니다.</p>
+          <strong>AI Thinking</strong>
+          <p>Scoring reaction heat, nonsense density, and meme radiation in mock mode.</p>
         </div>
       )}
 
       {isCompleted && (
         <div className="ai-result-box">
-          <strong>AI 판결문</strong>
+          <strong>AI Verdict</strong>
           <div className="ai-result-summary">
-            <span>참여자 {result.participantCount}명</span>
-            <span>우승자: {result.winnerName}</span>
-            <span>지급 받을 크레딧: {result.rewardCredits}개</span>
+            <span>Players {result.participantCount}</span>
+            <span>Champion: {result.winnerName}</span>
+            <span>Credits to grab: {result.rewardCredits}</span>
           </div>
           {battle.type !== 'OPTION' && (
             <p className="ai-winner-line">
-              우승자 {result.winnerName} · {result.winnerDetail}
+              Champion {result.winnerName} - {result.winnerDetail}
             </p>
           )}
           <div className="ai-summary-lines">
@@ -393,9 +393,9 @@ export function BattleCard({
 
       {previewImageUrl && (
         <div className="image-zoom-overlay" role="presentation" onClick={() => setPreviewImageUrl(null)}>
-          <div className="image-zoom-modal" role="dialog" aria-modal="true" aria-label="이미지 확대" onClick={(event) => event.stopPropagation()}>
-            <button className="image-zoom-close" type="button" onClick={() => setPreviewImageUrl(null)} aria-label="이미지 닫기">
-              ×
+          <div className="image-zoom-modal" role="dialog" aria-modal="true" aria-label="Zoom image" onClick={(event) => event.stopPropagation()}>
+            <button className="image-zoom-close" type="button" onClick={() => setPreviewImageUrl(null)} aria-label="Close image">
+              X
             </button>
             <img src={previewImageUrl} alt="" />
           </div>
