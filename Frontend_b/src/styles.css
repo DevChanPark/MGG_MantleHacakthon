@@ -1950,9 +1950,29 @@ select {
   background: transparent;
   color: #0e0e0e;
   cursor: pointer;
-  font-size: calc(31 / 402 * var(--frame));
-  font-weight: 300;
-  line-height: 0.8;
+  font-size: 0;
+  line-height: 1;
+}
+
+.credit-panel-close::before,
+.credit-panel-close::after {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: calc(31 / 402 * var(--frame));
+  height: calc(5 / 402 * var(--frame));
+  border-radius: 999px;
+  background: #0e0e0e;
+  content: '';
+  transform-origin: center;
+}
+
+.credit-panel-close::before {
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.credit-panel-close::after {
+  transform: translate(-50%, -50%) rotate(-45deg);
 }
 
 .credit-info-popover {
@@ -2969,6 +2989,7 @@ select {
   display: inline-flex;
   align-items: center;
   justify-content: flex-end;
+  gap: 4px;
   flex: 0 0 auto;
   width: 64px;
   min-width: 64px;
@@ -2984,6 +3005,17 @@ select {
   white-space: nowrap;
   overflow: visible;
   cursor: pointer;
+}
+
+.sort-caret {
+  display: inline-block;
+  width: 0;
+  height: 0;
+  flex: 0 0 auto;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 8px solid #000;
+  transform: translateY(1px);
 }
 
 .sort-menu {
@@ -4101,6 +4133,7 @@ select {
 }
 
 .detail-back-button {
+  position: relative;
   display: flex;
   width: 32px;
   height: 32px;
@@ -4111,9 +4144,19 @@ select {
   background: transparent;
   color: #0e0e0e;
   cursor: pointer;
-  font-size: 28px;
-  font-weight: 400;
+  font-size: 0;
   line-height: 1;
+}
+
+.detail-back-button::before {
+  display: block;
+  width: 15px;
+  height: 24px;
+  border-bottom: 6px solid #0e0e0e;
+  border-left: 6px solid #0e0e0e;
+  border-radius: 5px 0 0 5px;
+  content: '';
+  transform: rotate(45deg) translate(2px, -1px);
 }
 
 .detail-deadline {
@@ -4902,5 +4945,265 @@ select {
   .signup-feed,
   .profile-feed {
     justify-content: flex-start;
+  }
+}
+
+/* ===============================================
+   Responsive App Frame
+   =============================================== */
+
+@supports (height: 100dvh) {
+  :root {
+    --viewport-height: 100dvh;
+  }
+}
+
+@supports not (height: 100dvh) {
+  :root {
+    --viewport-height: 100vh;
+  }
+}
+
+html,
+body,
+#root {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.app-shell {
+  --frame: min(100vw, var(--app-width));
+  left: 50%;
+  right: auto;
+  width: min(100%, var(--app-width));
+  max-width: 100vw;
+  height: var(--viewport-height);
+  max-height: var(--viewport-height);
+  transform: translateX(-50%);
+}
+
+.app-header {
+  height: clamp(70px, calc(78 / 402 * var(--frame)), 78px);
+}
+
+.header-logo {
+  left: clamp(20px, calc(27 / 402 * var(--frame)), 27px);
+  top: clamp(24px, calc(28 / 402 * var(--frame)), 28px);
+}
+
+.header-logo-img {
+  width: clamp(76px, calc(84 / 402 * var(--frame)), 84px);
+  height: clamp(24px, calc(27 / 402 * var(--frame)), 27px);
+}
+
+.header-actions {
+  left: auto;
+  right: clamp(16px, calc(24 / 402 * var(--frame)), 24px);
+  top: clamp(24px, calc(28 / 402 * var(--frame)), 28px);
+  gap: clamp(10px, calc(15 / 402 * var(--frame)), 15px);
+}
+
+.header-icon-btn {
+  width: clamp(28px, calc(32 / 402 * var(--frame)), 32px);
+  height: clamp(28px, calc(32 / 402 * var(--frame)), 32px);
+}
+
+.header-icon-btn svg {
+  width: clamp(20px, calc(22 / 402 * var(--frame)), 22px);
+  height: clamp(20px, calc(22 / 402 * var(--frame)), 22px);
+}
+
+.home-filters {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: clamp(6px, calc(10 / 402 * var(--frame)), 10px);
+  height: clamp(43px, calc(47 / 402 * var(--frame)), 47px);
+  padding: clamp(9px, calc(11 / 402 * var(--frame)), 11px)
+    clamp(10px, calc(16 / 402 * var(--frame)), 16px)
+    clamp(8px, calc(10 / 402 * var(--frame)), 10px);
+}
+
+.filter-group {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  width: 100%;
+  gap: clamp(5px, calc(8 / 402 * var(--frame)), 8px);
+}
+
+.filter-btn {
+  width: 100%;
+  height: clamp(24px, calc(25 / 402 * var(--frame)), 25px);
+  min-height: clamp(24px, calc(25 / 402 * var(--frame)), 25px);
+  padding: 0 clamp(3px, calc(6 / 402 * var(--frame)), 6px);
+  font-size: clamp(10px, calc(12 / 402 * var(--frame)), 12px);
+}
+
+.sort-control {
+  align-self: center;
+}
+
+.sort-btn {
+  width: auto;
+  min-width: clamp(54px, calc(64 / 402 * var(--frame)), 64px);
+  max-width: clamp(58px, calc(76 / 402 * var(--frame)), 76px);
+  height: clamp(20px, calc(22 / 402 * var(--frame)), 22px);
+  min-height: clamp(20px, calc(22 / 402 * var(--frame)), 22px);
+  gap: clamp(2px, calc(4 / 402 * var(--frame)), 4px);
+  font-size: clamp(9px, calc(10 / 402 * var(--frame)), 10px);
+}
+
+.sort-btn > span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: clip;
+  white-space: nowrap;
+}
+
+.sort-caret {
+  border-left-width: clamp(4px, calc(5 / 402 * var(--frame)), 5px);
+  border-right-width: clamp(4px, calc(5 / 402 * var(--frame)), 5px);
+  border-top-width: clamp(6px, calc(8 / 402 * var(--frame)), 8px);
+}
+
+.sort-menu {
+  width: min(116px, calc(100vw - 24px));
+}
+
+.battle-card {
+  padding-right: clamp(12px, calc(15 / 402 * var(--frame)), 15px);
+  padding-left: clamp(12px, calc(15 / 402 * var(--frame)), 15px);
+}
+
+.battle-card-main {
+  grid-template-columns: clamp(52px, calc(57 / 402 * var(--frame)), 57px) minmax(0, 1fr);
+  gap: clamp(10px, calc(11 / 402 * var(--frame)), 11px);
+}
+
+.battle-card-avatar {
+  width: clamp(52px, calc(57 / 402 * var(--frame)), 57px);
+  height: clamp(52px, calc(57 / 402 * var(--frame)), 57px);
+}
+
+.battle-card-title {
+  font-size: clamp(19px, calc(21 / 402 * var(--frame)), 21px);
+}
+
+.battle-card-description {
+  font-size: clamp(14px, calc(15 / 402 * var(--frame)), 15px);
+}
+
+.battle-card-actions,
+.detail-actions {
+  column-gap: clamp(8px, calc(12 / 402 * var(--frame)), 12px);
+  font-size: clamp(9px, calc(10 / 402 * var(--frame)), 10px);
+}
+
+.battle-card-actions {
+  width: auto;
+  margin-right: clamp(8px, calc(14 / 402 * var(--frame)), 14px);
+  margin-left: clamp(62px, calc(72 / 402 * var(--frame)), 72px);
+}
+
+.battle-card-action,
+.battle-card-share {
+  gap: clamp(4px, calc(7 / 402 * var(--frame)), 7px);
+}
+
+.battle-card-thumbnail {
+  height: clamp(178px, calc(235 / 402 * var(--frame)), 235px);
+}
+
+.comment-preview {
+  width: min(371px, calc(100% - 0px));
+}
+
+.app-bottom-nav {
+  height: clamp(74px, calc(82 / 402 * var(--frame)), 82px);
+  padding-right: clamp(20px, calc(34 / 402 * var(--frame)), 34px);
+  padding-left: clamp(20px, calc(34 / 402 * var(--frame)), 34px);
+}
+
+.bottom-nav-item {
+  min-width: clamp(54px, calc(64 / 402 * var(--frame)), 64px);
+}
+
+.bottom-nav-center {
+  width: clamp(88px, calc(112 / 402 * var(--frame)), 112px);
+  height: clamp(88px, calc(112 / 402 * var(--frame)), 112px);
+  margin-top: clamp(-40px, calc(-54 / 402 * var(--frame)), -54px);
+}
+
+.modal-overlay {
+  padding: clamp(14px, calc(24 / 402 * var(--frame)), 24px);
+}
+
+.participation-modal,
+.selection-warning-modal,
+.reward-modal,
+.reward-complete-modal {
+  width: min(292px, calc(100vw - 32px), calc(100% - 24px));
+}
+
+.battle-detail-topbar {
+  grid-template-columns: clamp(28px, calc(32 / 402 * var(--frame)), 32px) minmax(0, 1fr) auto;
+  padding-right: clamp(10px, calc(14 / 402 * var(--frame)), 14px);
+  padding-left: clamp(10px, calc(14 / 402 * var(--frame)), 14px);
+}
+
+.battle-detail-hero {
+  grid-template-columns: clamp(58px, calc(68 / 402 * var(--frame)), 68px) minmax(0, 1fr);
+  gap: clamp(10px, calc(14 / 402 * var(--frame)), 14px);
+  padding-right: clamp(14px, calc(20 / 402 * var(--frame)), 20px);
+  padding-left: clamp(14px, calc(20 / 402 * var(--frame)), 20px);
+}
+
+.battle-detail-avatar {
+  width: clamp(52px, calc(58 / 402 * var(--frame)), 58px);
+  height: clamp(52px, calc(58 / 402 * var(--frame)), 58px);
+}
+
+.battle-detail-copy h1 {
+  font-size: clamp(18px, calc(20 / 402 * var(--frame)), 20px);
+}
+
+.detail-actions {
+  padding-left: clamp(70px, calc(88 / 402 * var(--frame)), 88px);
+}
+
+@media (max-width: 359px) {
+  .home-filters {
+    grid-template-columns: 1fr;
+    height: auto;
+    min-height: 72px;
+    align-items: start;
+  }
+
+  .sort-control {
+    justify-self: end;
+    margin-top: -2px;
+  }
+
+  .battle-card-actions,
+  .detail-actions {
+    margin-left: 0;
+    padding-left: 0;
+  }
+
+  .comment-preview-item,
+  .detail-comment-item {
+    grid-template-columns: 44px minmax(0, 1fr) 28px;
+    gap: 8px;
+  }
+
+  .comment-replies,
+  .detail-replies,
+  .reply-composer,
+  .detail-reply-composer {
+    margin-left: 36px;
+  }
+}
+
+@media (min-width: 720px) {
+  .app-shell {
+    box-shadow: 0 18px 48px rgba(14, 14, 14, 0.16);
   }
 }
